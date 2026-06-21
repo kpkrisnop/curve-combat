@@ -32,8 +32,8 @@ The system is split into three independent layers communicating through narrow i
 
 ```
 ┌─────────────────────────────────────────────────┐
-│  INPUT LAYER     MathLive field → expression str │
-│                  → math.js parse → Trajectory    │
+│  INPUT LAYER     MathQuill field → LaTeX string  │
+│                  → Compute Engine → Trajectory   │
 ├─────────────────────────────────────────────────┤
 │  SIMULATION      Pure, deterministic game logic. │
 │  (the "engine")  Knows: world, units, turns,     │
@@ -93,13 +93,13 @@ needs one collision pathway.
 | Language | **TypeScript** | Type-safe interfaces between layers; critical once multiplayer and new shot types arrive. |
 | Build tool | **Vite** | Instant dev server, near-zero config — ideal for fast prototyping. |
 | Rendering | **PixiJS** (WebGL) | High-quality "clean modern 2D" now; smooth upgrade path to 2.5D effects later. |
-| Math input | **MathLive** | Desmos-style live notation rendering (the #1 requirement). Actively maintained successor to MathQuill. |
-| Math evaluation | **math.js** | Parses and compiles expressions into fast, sampleable functions. Decoupled from the input widget. |
+| Math input | **MathQuill** (`@edtr-io/mathquill`) | Desmos-style live notation rendering (the #1 requirement). Swapped in from MathLive; isolated behind `ui/MathInput.ts` so the input library can change in one file. |
+| Math evaluation | **@cortex-js/compute-engine** | Parses MathQuill's LaTeX directly (no fragile LaTeX→text step) and compiles expressions into fast, sampleable functions. Decoupled from the input widget. |
 | Testing | **Vitest** | Integrates with Vite; unit-tests the pure simulation layer with no browser. |
 
-**Key decoupling:** MathLive (input rendering) and math.js (evaluation) are independent. The
-simulation only ever receives a plain expression string / compiled function, so the input UI
-can change without affecting game logic.
+**Key decoupling:** MathQuill (input rendering) and the Compute Engine (evaluation) are
+independent. The simulation only ever receives a compiled `(x) => number` function, so the
+input UI can change without affecting game logic.
 
 ---
 

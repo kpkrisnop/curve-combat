@@ -18,16 +18,21 @@ the design reuses them rather than reinventing:
 - **`Camera`** (`src/graph/Camera.ts`) — owns the world↔screen transform. The simulation
   works **entirely in world coordinates**; the renderer uses `Camera` to project. The
   engine never imports `Camera`.
-- **`compileExpression(latex) → { fn: (x) => number, error }`** (`src/math/Expression.ts`)
-  — the only bridge from input to math. The engine receives the compiled `fn`, never
-  LaTeX. `fn` returns `NaN` for undefined/non-real/non-finite points; the engine treats
-  `NaN` as "no point here" (a gap), exactly as `GraphRenderer.drawCurves` already does.
+- **`evaluateAll(rows) → Map<id, RowResult>`** (`src/math/Context.ts`) — the bridge from
+  input to math. It evaluates every expression row together (Desmos-style), so constants
+  (`a = 10`) and user function definitions (`f(x) = 2x`) declared in any row resolve when
+  compiling curves in other rows. Each curve `RowResult` carries `fn: (x) => number` — the
+  only thing the engine ever sees. `fn` returns `NaN` for undefined/non-real/non-finite
+  points; the engine treats `NaN` as "no point here" (a gap), exactly as
+  `GraphRenderer.drawCurves` already does. The engine never touches LaTeX or the row model —
+  the game layer pulls the active shooter's `fn` out of the `RowResult` and hands it to
+  `fire()` (§7).
 
-> **Stack note / deviation to reconcile:** the architecture doc names **math.js** for
-> evaluation (§5), but the code uses **@cortex-js/compute-engine**, which parses MathLive's
-> LaTeX directly with no fragile LaTeX→text step. This is a reasonable improvement. The
-> architecture doc's §5 row should be updated to match. No impact on the engine, which only
-> ever sees the compiled `(x) => number` closure.
+> **Stack note (reconciled):** the architecture doc originally named **math.js** for
+> evaluation and **MathLive** for input; the code instead uses **@cortex-js/compute-engine**
+> (parses LaTeX directly, no fragile LaTeX→text step) with a **MathQuill** input field. This
+> is now locked in across a rewrite, and §2/§5 of the architecture doc have been corrected to
+> match. No impact on the engine, which only ever sees the compiled `(x) => number` closure.
 
 ---
 
@@ -35,7 +40,7 @@ the design reuses them rather than reinventing:
 
 ```
 src/
-  math/        Expression compile (exists). Input→fn bridge.
+  math/        Context.ts: evaluateAll(rows)→RowResult (exists). Input→fn bridge.
   graph/       Camera + GraphRenderer (exists). Pure render/view.
   ui/          ExpressionPanel (exists). DOM widgets.
   sim/         ← NEW. The pure, deterministic engine. No DOM/Pixi/MathLive imports.
@@ -93,10 +98,15 @@ export interface Bounds { minX: number; minY: number; maxX: number; maxY: number
 
 ### Function shot (P0)
 
-`FunctionTrajectory(fn, origin, dir)` walks `x` outward from the soldier's origin,
-emitting `{ x: origin.x + dir*dx, y: origin.y + fn(dx) }`. Note **`fn` is evaluated in the
-soldier's local frame** (origin-relative), so a soldier always fires `y = f(x)` "from
-itself" regardless of where it stands — see §4.
+`FunctionTrajectory(fn, soldier, dir)` samples **world x** outward from the soldier toward
+the enemy, on a curve that is `fn` **vertically anchored** to pass through the soldier:
+`yOffset = soldier.y - fn(soldier.x)` (computed once); each sample is
+`{ x: soldier.x + dir*step, y: fn(x) + yOffset }`, where `dir ∈ {+1,-1}` is the facing
+(which way world x marches). **`fn` is evaluated at true world x** (no horizontal shift), so
+the curve's domain edges / asymptotes sit at fixed world positions and the shot simply ends
+where `fn` becomes undefined — see §4. If `fn(soldier.x)` is undefined the anchor can't be
+computed and the shot is a **dud**; choosing a function defined at one's position is on the
+player.
 
 ### Future kinds (P1, no collision changes)
 
@@ -182,11 +192,29 @@ inequality and lies within `bounds`. Same `Hit` output shape, so callers are unc
   screen).
 - **World bounds**: a fixed play-field, default `x ∈ [-12, 12]`, `y ∈ [-7, 7]` (tunable;
   comfortably fills the default camera). Shots leaving bounds are `kind:"bounds"` hits.
-- **Soldier-as-local-origin:** each soldier has a world `pos`. When it fires `y = f(x)`,
-  the curve is evaluated in the soldier's **local frame** and translated to world:
-  `worldPoint = pos + dir * (dx, f(dx))` where `dx ≥ 0` grows away from the soldier and
-  `dir ∈ {+1,-1}` is facing. This is the single transform; everything downstream is world
-  space. (Rotated firing frames are a deliberate P1+ extension and not modelled now.)
+- **World-anchored firing transform:** the function lives in **world coordinates**. A
+  soldier contributes only its position and facing — *not* a local origin for the function.
+  The curve is `f` evaluated at true world x, translated vertically so it passes through the
+  soldier:
+
+  ```
+  y(x) = f(x) + (soldier.y − f(soldier.x))
+  ```
+
+  The shot samples world x from `soldier.x` toward the enemy (`dir ∈ {+1,-1}`) and
+  terminates where `f` leaves its domain, exits bounds, or hits a target. There is **no
+  reflection** of the function per side — both soldiers see the same world-space curve shape,
+  each merely starting at its own position.
+
+  *Worked example:* soldier at `(4, 0)` firing `sqrt(x)` leftward. `yOffset = 0 − sqrt(4) =
+  −2`, so the drawn curve is `sqrt(x) − 2`. Marching left: `(4,0) → (1,−1) → (0,−2)`, then it
+  **stops at `(0,−2)`** because `sqrt` is undefined for `x < 0`.
+
+  **Consequence (decided):** a function undefined at `soldier.x` (or that ends before
+  reaching the enemy) is a **dud**; the player adapts by shifting it (e.g. `sqrt(x+4)`). This
+  deliberately replaces any auto-mirroring — the original "graph won't draw on one side"
+  concern is answered by the player composing functions in absolute world coordinates, not by
+  the engine flipping anything.
 
 ---
 
