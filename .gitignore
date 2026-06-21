@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+
+# Editor / OS
+.DS_Store
+*.local
+
+# Tooling scratch
+.playwright-mcp/
+
+# Debug / verification screenshots (scratch artifacts)
+gw-*.png
+scratch-*.mjs
