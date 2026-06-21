@@ -1,4 +1,4 @@
-import { MathfieldElement } from "mathlive";
+import { MathInput } from "./MathInput";
 import { evaluateAll, type RowKind } from "../math/Context";
 import type { PlotItem } from "../graph/GraphRenderer";
 
@@ -10,7 +10,7 @@ let nextId = 0;
 interface Row {
   id: string;
   el: HTMLElement;
-  field: MathfieldElement;
+  field: MathInput;
   numberEl: HTMLElement;
   swatchEl: HTMLButtonElement;
   badgeEl: HTMLSpanElement;
@@ -56,18 +56,17 @@ export class ExpressionPanel {
     badgeEl.className = "row-badge";
     badgeEl.hidden = true;
 
-    const field = new MathfieldElement();
-    field.className = "mf";
-    field.mathVirtualKeyboardPolicy = "manual";
-    field.value = initial;
+    const field = new MathInput(initial);
 
     const remove = document.createElement("button");
     remove.className = "remove";
     remove.textContent = "×";
     remove.title = "Remove";
 
-    rowEl.append(numberEl, swatchEl, badgeEl, field, remove);
+    rowEl.append(numberEl, swatchEl, badgeEl, field.el, remove);
     this.container.append(rowEl);
+    // MathQuill measures on init; reflow now that el is attached to the DOM.
+    field.reflow();
 
     const rowObj: Row = {
       id,
@@ -82,21 +81,10 @@ export class ExpressionPanel {
       fn: () => NaN,
     };
 
-    field.addEventListener("input", () => this.recomputeAll());
-
-    // Enter creates a new expression row (Desmos behaviour). Capture the
-    // keydown before MathLive consumes it.
-    field.addEventListener(
-      "keydown",
-      (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          e.stopPropagation();
-          this.addRow();
-        }
-      },
-      true,
-    );
+    field.onEdit(() => this.recomputeAll());
+    // Enter creates a new expression row (Desmos behaviour) via MathQuill's
+    // own enter handler — no keydown interception needed.
+    field.onEnter(() => this.addRow());
 
     swatchEl.addEventListener("click", () => {
       rowObj.visible = !rowObj.visible;
@@ -124,7 +112,7 @@ export class ExpressionPanel {
   }
 
   private recomputeAll() {
-    const input = this.rows.map((r) => ({ id: r.id, latex: r.field.value }));
+    const input = this.rows.map((r) => ({ id: r.id, latex: r.field.getLatex() }));
     const results = evaluateAll(input);
 
     for (const row of this.rows) {

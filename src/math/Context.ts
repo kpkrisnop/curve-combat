@@ -100,7 +100,17 @@ export function evaluateAll(
   return out;
 }
 
-function classifyLatex(latex: string): Cls {
+// MathQuill emits a few operator names that Compute Engine's LaTeX dictionary
+// doesn't recognise. Rewrite them to forms CE understands, at the single point
+// where user LaTeX enters classification (so every downstream parse inherits
+// it). Currently only `sign`: CE reads \operatorname{sign} as the symbol
+// "sign" times its argument, but recognises \operatorname{sgn} as signum.
+function normalizeLatex(latex: string): string {
+  return latex.replace(/\\operatorname\{sign\}/g, "\\operatorname{sgn}");
+}
+
+function classifyLatex(raw: string): Cls {
+  const latex = normalizeLatex(raw);
   if (!latex) return { t: "empty" };
 
   const eqIdx = latex.indexOf("=");
