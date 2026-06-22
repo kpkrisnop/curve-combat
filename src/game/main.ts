@@ -2,31 +2,40 @@ import { GameRenderer } from "./GameRenderer";
 import { GameUI } from "./GameUI";
 import { fire } from "../sim/engine";
 import { evaluateAll } from "../math/Context";
-import type { World } from "../sim/types";
+import type { Planet, Vec2, World } from "../sim/types";
 
-/** Fixed crater size carved into a planet on each hit (world units). */
 const CRATER_RADIUS = 0.8;
+const PLAYER_RADIUS = 0.7;
+const BOUNDS = { minX: -12, minY: -7, maxX: 12, maxY: 7 };
 
-/**
- * A fresh round: soldier on the left, targets on the right, and hand-placed
- * destructible planets in the way (kept clear of the muzzle and not overlapping
- * targets — see architecture-decisions.md §10).
- */
-function seedWorld(): World {
+const RED_POS: Vec2 = { x: -9, y: 0 };
+const BLUE_POS: Vec2 = { x: 9, y: 0 };
+
+const PLAYERS = {
+  red: { pos: RED_POS, dir: 1 as const },
+  blue: { pos: BLUE_POS, dir: -1 as const },
+};
+
+function seedPlanets(): Planet[] {
+  return [
+    { id: "p1", pos: { x: -5, y: 3 }, radius: 1.2, craters: [] },
+    { id: "p2", pos: { x: -3, y: -2 }, radius: 1.8, craters: [] },
+    { id: "p3", pos: { x: 0, y: 2 }, radius: 1.5, craters: [] },
+    { id: "p4", pos: { x: 0, y: -3 }, radius: 1.4, craters: [] },
+    { id: "p5", pos: { x: 3, y: 1 }, radius: 2.0, craters: [] },
+    { id: "p6", pos: { x: 5, y: -2 }, radius: 1.3, craters: [] },
+  ];
+}
+
+function buildWorld(activeTurn: "red" | "blue", planets: Planet[]): World {
+  const active = PLAYERS[activeTurn];
+  const inactiveKey = activeTurn === "red" ? "blue" : "red";
+  const inactive = PLAYERS[inactiveKey];
   return {
-    soldier: { pos: { x: -9, y: 0 }, dir: 1 },
-    bounds: { minX: -12, minY: -7, maxX: 12, maxY: 7 },
-    targets: [
-      { id: "t1", pos: { x: 0, y: 0 }, radius: 0.4 },
-      { id: "t2", pos: { x: 3, y: 2.5 }, radius: 0.4 },
-      { id: "t3", pos: { x: 6, y: -2 }, radius: 0.4 },
-      { id: "t4", pos: { x: 9, y: 3 }, radius: 0.4 },
-    ],
-    planets: [
-      { id: "p1", pos: { x: -2, y: -1.5 }, radius: 1.6, craters: [] },
-      { id: "p2", pos: { x: 4.5, y: 0 }, radius: 2, craters: [] },
-      { id: "p3", pos: { x: 8.5, y: -1 }, radius: 1.2, craters: [] },
-    ],
+    soldier: { pos: active.pos, dir: active.dir },
+    bounds: BOUNDS,
+    targets: [{ id: inactiveKey, pos: inactive.pos, radius: PLAYER_RADIUS }],
+    planets,
   };
 }
 
@@ -36,18 +45,22 @@ await renderer.init(stage);
 
 const ui = new GameUI();
 
-let world = seedWorld();
-let shots = 0;
+let activeTurn: "red" | "blue" = "red";
+let planets: Planet[] = seedPlanets();
 let busy = false;
+let gameOver = false;
 
 function refresh(note?: string) {
-  ui.setStatus(shots, world.targets.length, note);
+  ui.setStatus(note);
 }
 
 function start() {
-  world = seedWorld();
-  shots = 0;
-  renderer.setWorld(world);
+  planets = seedPlanets();
+  activeTurn = "red";
+  gameOver = false;
+  busy = false;
+  renderer.setWorld(buildWorld(activeTurn, planets), activeTurn, RED_POS, BLUE_POS);
+  ui.setTurn(activeTurn);
   ui.hideWin();
   ui.clearInput();
   refresh();
@@ -55,7 +68,7 @@ function start() {
 }
 
 async function onFire(latex: string) {
-  if (busy || world.targets.length === 0) return;
+  if (busy || gameOver) return;
 
   const result = evaluateAll([{ id: "shot", latex }]);
   const row = result.get("shot");
@@ -68,45 +81,43 @@ async function onFire(latex: string) {
   busy = true;
   ui.setBusy(true);
 
+  const shooter = activeTurn;
+  const world = buildWorld(shooter, planets);
   const shot = fire(world, fn);
-  if (shot.hit.kind !== "dud") shots++;
 
   await renderer.playShot(shot);
 
-  if (shot.hit.kind === "target" && shot.hit.targetId) {
-    world.targets = world.targets.filter((t) => t.id !== shot.hit.targetId);
-    renderer.setWorld(world);
-  } else if (shot.hit.kind === "planet" && shot.hit.planetId) {
-    // Carve a crater into the struck planet (the engine stays pure — the world
-    // update lives here, mirroring how a destroyed target is removed).
-    const planet = world.planets.find((p) => p.id === shot.hit.planetId);
+  if (shot.hit.kind === "planet" && shot.hit.planetId) {
+    const planet = planets.find((p) => p.id === shot.hit.planetId);
     if (planet) planet.craters.push({ pos: shot.hit.at, radius: CRATER_RADIUS });
-    renderer.setWorld(world);
   }
+
+  if (shot.hit.kind === "target") {
+    gameOver = true;
+    busy = false;
+    ui.setBusy(false);
+    renderer.setWorld(buildWorld(shooter, planets), shooter, RED_POS, BLUE_POS);
+    ui.showWin(shooter);
+    return;
+  }
+
+  // Every shot — including duds — passes the turn.
+  activeTurn = shooter === "red" ? "blue" : "red";
+  renderer.setWorld(buildWorld(activeTurn, planets), activeTurn, RED_POS, BLUE_POS);
+  ui.setTurn(activeTurn);
 
   busy = false;
   ui.setBusy(false);
-
-  if (world.targets.length === 0) {
-    ui.showWin(shots);
-  } else {
-    refresh(noteFor(shot.hit.kind));
-    ui.focus();
-  }
+  refresh(noteFor(shot.hit.kind));
+  ui.focus();
 }
 
 function noteFor(kind: string): string {
   switch (kind) {
-    case "target":
-      return "hit! keep going";
-    case "planet":
-      return "blocked by a planet — carve through or arc around";
-    case "bounds":
-      return "flew off the field — try again";
-    case "dud":
-      return "undefined at the soldier — shift your function";
-    default:
-      return "missed — adjust and fire again";
+    case "planet": return "blocked by a planet — carve through or arc around";
+    case "bounds": return "flew off the field — try again";
+    case "dud": return "undefined at your position — shift your function";
+    default: return "adjust and fire again";
   }
 }
 

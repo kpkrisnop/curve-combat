@@ -6,16 +6,20 @@ destructible terrain.
 
 ## Language
 
+**Player**:
+One of exactly two contestants — **RED** and **BLUE** — on opposite sides of the field, played hot-seat on one keyboard. A Player takes the **Soldier** role on its own turn and the **Target** role on the opponent's. A single direct **Shot** hit on the opposing Player wins the game.
+_Avoid_: user, team, unit
+
 **Soldier**:
-The shooter. Fires one **Shot** per turn from its world position toward the enemy side.
-_Avoid_: player, unit, cannon
+The *role* a Player occupies on its own turn: the shooter. Fires one **Shot** from its world position toward the opponent. (Also how the pure engine names the firing unit.)
+_Avoid_: cannon
 
 **Shot**:
 A single fired curve, evaluated in world coordinates and anchored vertically to pass through the **Soldier**. Travels until it hits something or leaves the field.
 _Avoid_: projectile (the projectile is the moving dot that renders a Shot), bullet
 
 **Target**:
-A destructible circle that is removed in one hit. Clearing every Target wins the round.
+The *role* a Player occupies on the opponent's turn: the thing that can be hit. A single direct hit eliminates it and the shooter wins. (Also how the engine names a hittable circle.)
 _Avoid_: enemy, dummy
 
 **Planet**:

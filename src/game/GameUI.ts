@@ -1,17 +1,19 @@
 import { MathInput } from "../ui/MathInput";
 
-/**
- * The shooter HUD: a single math field + Fire button, a status line, and the
- * win banner. Knows nothing about the engine — it just emits the typed LaTeX on
- * fire and renders state it is told about.
- */
+const PLAYER = {
+  red: { color: "#ff4444", dim: "rgba(255,68,68,0.18)", label: "RED" },
+  blue: { color: "#4488ff", dim: "rgba(68,136,255,0.18)", label: "BLUE" },
+} as const;
+
 export class GameUI {
   private input: MathInput;
   private fireBtn: HTMLButtonElement;
   private status: HTMLElement;
   private banner: HTMLElement;
+  private winTitle: HTMLElement;
   private winDetail: HTMLElement;
   private resetBtn: HTMLButtonElement;
+  private currentTurn: "red" | "blue" = "red";
 
   private fireCb: ((latex: string) => void) | null = null;
   private resetCb: (() => void) | null = null;
@@ -21,6 +23,7 @@ export class GameUI {
     this.fireBtn = root.querySelector<HTMLButtonElement>("#fire-btn")!;
     this.status = root.querySelector<HTMLElement>("#game-status")!;
     this.banner = root.querySelector<HTMLElement>("#win-banner")!;
+    this.winTitle = root.querySelector<HTMLElement>("#win-title")!;
     this.winDetail = root.querySelector<HTMLElement>("#win-detail")!;
     this.resetBtn = root.querySelector<HTMLButtonElement>("#reset-btn")!;
 
@@ -38,40 +41,38 @@ export class GameUI {
     if (latex) this.fireCb?.(latex);
   }
 
-  onFire(cb: (latex: string) => void) {
-    this.fireCb = cb;
-  }
+  onFire(cb: (latex: string) => void) { this.fireCb = cb; }
+  onReset(cb: () => void) { this.resetCb = cb; }
 
-  onReset(cb: () => void) {
-    this.resetCb = cb;
+  setTurn(turn: "red" | "blue") {
+    this.currentTurn = turn;
+    const p = PLAYER[turn];
+    document.documentElement.style.setProperty("--player-color", p.color);
+    document.documentElement.style.setProperty("--player-color-dim", p.dim);
   }
 
   setBusy(busy: boolean) {
     this.fireBtn.disabled = busy;
   }
 
-  focus() {
-    this.input.focus();
-  }
+  focus() { this.input.focus(); }
+  clearInput() { this.input.setLatex(""); }
 
-  clearInput() {
-    this.input.setLatex("");
-  }
-
-  setStatus(shots: number, targetsLeft: number, note?: string) {
-    const base = `Shots: <strong>${shots}</strong> &middot; Targets left: <strong>${targetsLeft}</strong>`;
+  setStatus(note?: string) {
+    const p = PLAYER[this.currentTurn];
+    const turn = `<strong style="color:${p.color}">${p.label}'s turn</strong>`;
     const tail = note
       ? ` &middot; <span class="hint">${note}</span>`
       : ` &middot; <span class="hint">type a function in <code>x</code></span>`;
-    this.status.innerHTML = base + tail;
+    this.status.innerHTML = turn + tail;
   }
 
-  showWin(shots: number) {
-    this.winDetail.textContent = `Cleared in ${shots} shot${shots === 1 ? "" : "s"}.`;
+  showWin(winner: "red" | "blue") {
+    const p = PLAYER[winner];
+    this.winTitle.innerHTML = `<span style="color:${p.color}">${p.label} WINS!</span>`;
+    this.winDetail.textContent = "Direct hit.";
     this.banner.hidden = false;
   }
 
-  hideWin() {
-    this.banner.hidden = true;
-  }
+  hideWin() { this.banner.hidden = true; }
 }

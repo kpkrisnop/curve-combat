@@ -7,27 +7,18 @@ const COLORS = {
   grid: 0x1d2935,
   axis: 0x3b4f60,
   label: 0x5b7185,
-  soldier: 0x6ee7a3,
-  target: 0xff7a6b,
-  targetCore: 0xffd2c8,
-  trail: 0x76c4ff,
+  red: 0xff4444,
+  blue: 0x4488ff,
   projectile: 0xffffff,
   boom: 0xffc24d,
   planet: 0x3a4250,
-  planetRim: 0x5a6678,
-  craterRim: 0x262d38,
   dust: 0xb59a78,
 };
 
 const SHOT_DURATION_MS = 1200;
+const PLAYER_RADIUS_WORLD = 0.7;
+const BARREL_PX = 18;
 
-/**
- * PixiJS view for the shooting prototype. Owns its own Application (kept separate
- * from the grapher's GraphRenderer) and uses the shared Camera for the
- * world<->screen mapping. Draws the field, soldier, targets, and animates a
- * projectile tracing the fired curve. Blind-fire: nothing curve-related is drawn
- * until playShot runs.
- */
 export class GameRenderer {
   readonly app = new Application();
   private camera!: Camera;
@@ -35,13 +26,17 @@ export class GameRenderer {
   private gridLayer = new Graphics();
   private axisLayer = new Graphics();
   private labelLayer = new Container();
-  private planetLayer = new Container(); // destructible terrain sprites (meat minus craters)
-  private planetTextures: RenderTexture[] = []; // owned textures, destroyed on each rebuild
-  private fieldLayer = new Graphics(); // soldier + targets
+  private boundaryLayer = new Graphics();
+  private planetLayer = new Container();
+  private planetTextures: RenderTexture[] = [];
+  private fieldLayer = new Graphics();
   private trailLayer = new Graphics();
   private fxLayer = new Graphics();
 
   private world!: World;
+  private activeTurn: "red" | "blue" = "red";
+  private redPos: Vec2 = { x: -9, y: 0 };
+  private bluePos: Vec2 = { x: 9, y: 0 };
 
   async init(container: HTMLElement) {
     await this.app.init({
@@ -58,6 +53,7 @@ export class GameRenderer {
       this.gridLayer,
       this.axisLayer,
       this.labelLayer,
+      this.boundaryLayer,
       this.planetLayer,
       this.fieldLayer,
       this.trailLayer,
@@ -73,8 +69,11 @@ export class GameRenderer {
     });
   }
 
-  setWorld(world: World) {
+  setWorld(world: World, activeTurn: "red" | "blue", redPos: Vec2, bluePos: Vec2) {
     this.world = world;
+    this.activeTurn = activeTurn;
+    this.redPos = redPos;
+    this.bluePos = bluePos;
     this.fitCamera();
     this.trailLayer.clear();
     this.fxLayer.clear();
@@ -83,7 +82,6 @@ export class GameRenderer {
     this.drawField();
   }
 
-  /** Frame the whole playfield into the viewport with a little padding. */
   private fitCamera() {
     const b = this.world.bounds;
     const bw = b.maxX - b.minX;
@@ -137,12 +135,6 @@ export class GameRenderer {
   }
 
   private drawPlanets() {
-    // Each planet is rendered to its own RenderTexture: a filled meat circle, then
-    // crater circles drawn with the "erase" blend mode (destination-out) which
-    // actually removes pixels. Overlapping craters merge into one clean cavity with
-    // no internal outlines, holes are truly transparent (the field shows through),
-    // and craters spilling past the rim erase nothing extra. Rebuilt from the full
-    // crater list at the current scale each time the world changes.
     this.planetLayer.removeChildren();
     for (const rt of this.planetTextures) rt.destroy(true);
     this.planetTextures = [];
@@ -159,15 +151,11 @@ export class GameRenderer {
 
       const rt = RenderTexture.create({ width: size, height: size, resolution: dpr });
 
-      // Base meat: filled circle. No rim — carved cavities can't get a matching
-      // border with the erase approach, so we keep the planet borderless too for
-      // a consistent look (the slate fill reads against the dark field on its own).
       const base = new Graphics();
       base.circle(center, center, rPx).fill({ color: COLORS.planet });
       this.app.renderer.render({ container: base, target: rt, clear: true });
       base.destroy();
 
-      // Carve craters by erasing pixels from the meat.
       if (planet.craters.length > 0) {
         const erasers = new Container();
         for (const cr of planet.craters) {
@@ -189,32 +177,54 @@ export class GameRenderer {
     }
   }
 
-  private drawField() {
-    const g = this.fieldLayer;
-    const cam = this.camera;
-    g.clear();
-
-    // Targets.
-    for (const t of this.world.targets) {
-      const c = this.toScreen(t.pos);
-      const r = t.radius * cam.scale;
-      g.circle(c.x, c.y, r).fill({ color: COLORS.target, alpha: 0.85 });
-      g.circle(c.x, c.y, r).stroke({ width: 2, color: COLORS.targetCore, alpha: 0.9 });
-      g.circle(c.x, c.y, Math.max(2, r * 0.28)).fill({ color: COLORS.targetCore });
-    }
-
-    // Soldier marker.
-    const s = this.toScreen(this.world.soldier.pos);
-    g.circle(s.x, s.y, 9).fill({ color: COLORS.soldier });
-    g.circle(s.x, s.y, 9).stroke({ width: 2, color: 0x0c1116 });
-    const barbX = s.x + this.world.soldier.dir * 16;
-    g.moveTo(s.x, s.y).lineTo(barbX, s.y).stroke({ width: 3, color: COLORS.soldier });
+  private activeColor(): number {
+    return this.activeTurn === "red" ? COLORS.red : COLORS.blue;
   }
 
-  /** Animate a fired shot. Resolves when the projectile + impact FX finish. */
+  private drawField() {
+    const g = this.fieldLayer;
+    const b = this.boundaryLayer;
+    const cam = this.camera;
+    g.clear();
+    b.clear();
+
+    // Boundary rectangle — color tracks the active player's turn.
+    const { minX, minY, maxX, maxY } = this.world.bounds;
+    const bx1 = cam.worldToScreenX(minX);
+    const bx2 = cam.worldToScreenX(maxX);
+    const by1 = cam.worldToScreenY(maxY); // screen Y is inverted
+    const by2 = cam.worldToScreenY(minY);
+    b.rect(bx1, by1, bx2 - bx1, by2 - by1).stroke({ width: 2.5, color: this.activeColor(), alpha: 0.7 });
+
+    const rPx = PLAYER_RADIUS_WORLD * cam.scale;
+
+    // RED — full brightness when active, dimmed when waiting.
+    const rs = this.toScreen(this.redPos);
+    const isRedActive = this.activeTurn === "red";
+    if (isRedActive) {
+      g.circle(rs.x, rs.y, rPx + 6).stroke({ width: 2.5, color: COLORS.red, alpha: 0.35 });
+    }
+    g.circle(rs.x, rs.y, rPx).fill({ color: COLORS.red, alpha: isRedActive ? 1.0 : 0.4 });
+    if (isRedActive) {
+      g.moveTo(rs.x, rs.y).lineTo(rs.x + BARREL_PX, rs.y).stroke({ width: 3, color: COLORS.red });
+    }
+
+    // BLUE — full brightness when active, dimmed when waiting.
+    const bs = this.toScreen(this.bluePos);
+    const isBlueActive = this.activeTurn === "blue";
+    if (isBlueActive) {
+      g.circle(bs.x, bs.y, rPx + 6).stroke({ width: 2.5, color: COLORS.blue, alpha: 0.35 });
+    }
+    g.circle(bs.x, bs.y, rPx).fill({ color: COLORS.blue, alpha: isBlueActive ? 1.0 : 0.4 });
+    if (isBlueActive) {
+      g.moveTo(bs.x, bs.y).lineTo(bs.x - BARREL_PX, bs.y).stroke({ width: 3, color: COLORS.blue });
+    }
+  }
+
   playShot(result: ShotResult): Promise<void> {
     this.trailLayer.clear();
     this.fxLayer.clear();
+    const trailColor = this.activeColor();
 
     return new Promise((resolve) => {
       if (result.hit.kind === "dud" || result.samples.length < 2) {
@@ -231,7 +241,6 @@ export class GameRenderer {
         const headIdx = Math.floor(headF);
         const frac = headF - headIdx;
 
-        // Trail up to the head, breaking across gaps.
         const g = this.trailLayer;
         g.clear();
         let pen = false;
@@ -252,7 +261,7 @@ export class GameRenderer {
           const hp = this.toScreen(head);
           if (pen) g.lineTo(hp.x, hp.y);
         }
-        g.stroke({ width: 2.5, color: COLORS.trail, cap: "round", join: "round" });
+        g.stroke({ width: 2.5, color: trailColor, cap: "round", join: "round" });
 
         const hp = this.toScreen(head);
         g.circle(hp.x, hp.y, 4).fill({ color: COLORS.projectile });
@@ -278,7 +287,6 @@ export class GameRenderer {
     }
   }
 
-  /** A small brown burst where a shot bites into a planet — distinct from a target explosion. */
   private dustPuff(at: Vec2, done: () => void) {
     const center = this.toScreen(at);
     const start = performance.now();
