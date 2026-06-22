@@ -29,9 +29,28 @@ export interface Soldier {
   dir: 1 | -1;
 }
 
+/** A circular bite of empty space carved out of a Planet at an impact point. */
+export interface Crater {
+  pos: Vec2;
+  radius: number;
+}
+
+/**
+ * Destructible circular terrain. Its solid "meat" is the area inside the circle
+ * but outside every crater (purely geometric — no connectivity rule, so detached
+ * chunks stay solid). A shot is blocked by meat; impacts carve craters.
+ */
+export interface Planet {
+  id: string;
+  pos: Vec2;
+  radius: number;
+  craters: Crater[];
+}
+
 export interface World {
   soldier: Soldier;
   targets: Target[];
+  planets: Planet[];
   bounds: Bounds;
 }
 
@@ -44,7 +63,7 @@ export interface TrajectorySample {
   gap: boolean;
 }
 
-export type HitKind = "target" | "bounds" | "expired" | "dud";
+export type HitKind = "target" | "planet" | "bounds" | "expired" | "dud";
 
 export interface Hit {
   kind: HitKind;
@@ -52,6 +71,8 @@ export interface Hit {
   at: Vec2;
   /** Present when kind === "target". */
   targetId?: string;
+  /** Present when kind === "planet". */
+  planetId?: string;
   /** Index into the (truncated) sample stream where impact occurred. */
   sampleIndex: number;
 }

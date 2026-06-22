@@ -1,4 +1,4 @@
-import { Application, Container, Graphics, Text } from "pixi.js";
+import { Application, Container, Graphics, RenderTexture, Sprite, Text } from "pixi.js";
 import { Camera } from "../graph/Camera";
 import type { ShotResult, Vec2, World } from "../sim/types";
 
@@ -13,6 +13,10 @@ const COLORS = {
   trail: 0x76c4ff,
   projectile: 0xffffff,
   boom: 0xffc24d,
+  planet: 0x3a4250,
+  planetRim: 0x5a6678,
+  craterRim: 0x262d38,
+  dust: 0xb59a78,
 };
 
 const SHOT_DURATION_MS = 1200;
@@ -31,6 +35,8 @@ export class GameRenderer {
   private gridLayer = new Graphics();
   private axisLayer = new Graphics();
   private labelLayer = new Container();
+  private planetLayer = new Container(); // destructible terrain sprites (meat minus craters)
+  private planetTextures: RenderTexture[] = []; // owned textures, destroyed on each rebuild
   private fieldLayer = new Graphics(); // soldier + targets
   private trailLayer = new Graphics();
   private fxLayer = new Graphics();
@@ -52,6 +58,7 @@ export class GameRenderer {
       this.gridLayer,
       this.axisLayer,
       this.labelLayer,
+      this.planetLayer,
       this.fieldLayer,
       this.trailLayer,
       this.fxLayer,
@@ -61,6 +68,7 @@ export class GameRenderer {
       this.camera.resize(this.app.screen.width, this.app.screen.height);
       this.fitCamera();
       this.drawStatic();
+      this.drawPlanets();
       this.drawField();
     });
   }
@@ -71,6 +79,7 @@ export class GameRenderer {
     this.trailLayer.clear();
     this.fxLayer.clear();
     this.drawStatic();
+    this.drawPlanets();
     this.drawField();
   }
 
@@ -125,6 +134,58 @@ export class GameRenderer {
     const t = new Text({ text, style: { fill: COLORS.label, fontSize: 11, fontFamily: "monospace" } });
     t.position.set(x, y);
     this.labelLayer.addChild(t);
+  }
+
+  private drawPlanets() {
+    // Each planet is rendered to its own RenderTexture: a filled meat circle, then
+    // crater circles drawn with the "erase" blend mode (destination-out) which
+    // actually removes pixels. Overlapping craters merge into one clean cavity with
+    // no internal outlines, holes are truly transparent (the field shows through),
+    // and craters spilling past the rim erase nothing extra. Rebuilt from the full
+    // crater list at the current scale each time the world changes.
+    this.planetLayer.removeChildren();
+    for (const rt of this.planetTextures) rt.destroy(true);
+    this.planetTextures = [];
+
+    const cam = this.camera;
+    const dpr = window.devicePixelRatio || 1;
+
+    for (const planet of this.world.planets) {
+      const rPx = planet.radius * cam.scale;
+      const pad = 3;
+      const size = Math.ceil(rPx * 2 + pad * 2);
+      const center = size / 2;
+      const ps = this.toScreen(planet.pos);
+
+      const rt = RenderTexture.create({ width: size, height: size, resolution: dpr });
+
+      // Base meat: filled circle + outer rim.
+      const base = new Graphics();
+      base.circle(center, center, rPx).fill({ color: COLORS.planet });
+      base.circle(center, center, rPx).stroke({ width: 2, color: COLORS.planetRim });
+      this.app.renderer.render({ container: base, target: rt, clear: true });
+      base.destroy();
+
+      // Carve craters by erasing pixels from the meat.
+      if (planet.craters.length > 0) {
+        const erasers = new Container();
+        for (const cr of planet.craters) {
+          const cs = this.toScreen(cr.pos);
+          const e = new Graphics()
+            .circle(center + (cs.x - ps.x), center + (cs.y - ps.y), cr.radius * cam.scale)
+            .fill({ color: 0xffffff });
+          e.blendMode = "erase";
+          erasers.addChild(e);
+        }
+        this.app.renderer.render({ container: erasers, target: rt, clear: false });
+        erasers.destroy({ children: true });
+      }
+
+      const sprite = new Sprite(rt);
+      sprite.position.set(ps.x - center, ps.y - center);
+      this.planetLayer.addChild(sprite);
+      this.planetTextures.push(rt);
+    }
   }
 
   private drawField() {
@@ -208,10 +269,32 @@ export class GameRenderer {
     const at = result.hit.at;
     if (result.hit.kind === "target") {
       this.explode(at, () => done());
+    } else if (result.hit.kind === "planet") {
+      this.dustPuff(at, () => done());
     } else {
       this.flashDud(at);
       window.setTimeout(done, 250);
     }
+  }
+
+  /** A small brown burst where a shot bites into a planet — distinct from a target explosion. */
+  private dustPuff(at: Vec2, done: () => void) {
+    const center = this.toScreen(at);
+    const start = performance.now();
+    const dur = 320;
+    const tick = () => {
+      const p = Math.min(1, (performance.now() - start) / dur);
+      this.fxLayer.clear();
+      const r = 4 + p * 24;
+      this.fxLayer.circle(center.x, center.y, r).fill({ color: COLORS.dust, alpha: (1 - p) * 0.5 });
+      this.fxLayer.circle(center.x, center.y, r).stroke({ width: 2 * (1 - p), color: COLORS.dust, alpha: 1 - p });
+      if (p >= 1) {
+        this.app.ticker.remove(tick);
+        this.fxLayer.clear();
+        done();
+      }
+    };
+    this.app.ticker.add(tick);
   }
 
   private explode(at: Vec2, done: () => void) {

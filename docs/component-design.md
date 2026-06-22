@@ -183,6 +183,36 @@ First hit wins; the projectile stops there. If the stream ends with no hit, retu
 For `kind:"region"` the collision switches to: a unit is hit iff `unit.pos` satisfies the
 inequality and lies within `bounds`. Same `Hit` output shape, so callers are unchanged.
 
+### 3.5 Destructible terrain — Planets
+
+A **Planet** is destructible circular terrain (glossary: `CONTEXT.md`; decision:
+architecture-decisions.md §10). Unlike Targets, a Planet is not destroyed in one hit — each
+impact carves a **crater** (empty space), and the Shot stops at the Planet's solid *meat*.
+
+```ts
+interface Crater { pos: Vec2; radius: number; }            // carved empty space
+interface Planet { id: string; pos: Vec2; radius: number; craters: Crater[]; }
+// World gains: planets: Planet[]
+```
+
+**Solidity is purely geometric — no connectivity rule.** A world point `p` is solid iff some
+Planet `P` has `|p − P.pos| ≤ P.radius` AND `p` lies outside *every* crater of `P`
+(`|p − c.pos| > c.radius` for all `c`). Detached islands of meat therefore stay solid; a
+Planet is only "gone" once craters cover all of it.
+
+**Collision integration.** Planet meat is tested by **point-in-meat sampling** of the
+trajectory (not segment–circle, because a Planet circle contains empty crater regions). The
+first sample inside meat is the impact; bisect between the previous empty point and that
+sample to land the contact on the surface. This slots into the same first-contact walk as
+Targets — earliest hit along the stream wins — adding `kind:"planet"` to `Hit`. Because
+craters are empty, a Shot passes through existing craters and strikes meat behind them.
+
+**Crater carving stays out of the pure engine.** `fire()` only *reports* the impact point;
+the game layer carves the crater (`planet.craters.push({ pos: hit.at, radius: CRATER_RADIUS })`)
+exactly as it removes a destroyed Target — keeping the engine pure and deterministic (§3 of
+the architecture doc). Crater radius is a **fixed `0.8`** world units. Crater impacts do
+**not** splash-damage Targets; a Planet hit is a miss that still consumes a shot.
+
 ---
 
 ## 4. Coordinate system & soldier-as-origin transform (§9 resolved)

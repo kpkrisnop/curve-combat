@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { detectCollision } from "./collision";
-import type { Bounds, Target, TrajectorySample, World } from "./types";
+import { detectCollision, isSolid } from "./collision";
+import type { Bounds, Planet, Target, TrajectorySample, World } from "./types";
 
 const BOUNDS: Bounds = { minX: -12, minY: -7, maxX: 12, maxY: 7 };
 
@@ -8,10 +8,11 @@ function line(points: [number, number][], gaps: boolean[] = []): TrajectorySampl
   return points.map(([x, y], i) => ({ p: { x, y }, x, gap: gaps[i] ?? false }));
 }
 
-function world(targets: Target[], muzzle: [number, number] = [0, 0]): World {
+function world(targets: Target[], planets: Planet[] = [], muzzle: [number, number] = [0, 0]): World {
   return {
     soldier: { pos: { x: muzzle[0], y: muzzle[1] }, dir: 1 },
     targets,
+    planets,
     bounds: BOUNDS,
   };
 }
@@ -70,5 +71,66 @@ describe("detectCollision — first hit over the sample stream", () => {
       world([{ id: "behindGap", pos: { x: 1.5, y: 0 }, radius: 0.2 }]),
     );
     expect(hit.kind).toBe("expired");
+  });
+});
+
+describe("isSolid — geometric meat test (no connectivity)", () => {
+  it("is solid inside the circle and outside all craters", () => {
+    const planets: Planet[] = [{ id: "p", pos: { x: 0, y: 0 }, radius: 2, craters: [] }];
+    expect(isSolid({ x: 1, y: 0 }, planets)).toBe(true);
+    expect(isSolid({ x: 3, y: 0 }, planets)).toBe(false); // outside the circle
+  });
+
+  it("a point inside a crater is empty even though it is inside the circle", () => {
+    const planets: Planet[] = [
+      { id: "p", pos: { x: 0, y: 0 }, radius: 2, craters: [{ pos: { x: 0, y: 0 }, radius: 1 }] },
+    ];
+    expect(isSolid({ x: 0, y: 0 }, planets)).toBe(false); // carved out
+    expect(isSolid({ x: 1.5, y: 0 }, planets)).toBe(true); // still solid ring (a detached island stays solid)
+  });
+});
+
+describe("detectCollision — Planets (destructible terrain)", () => {
+  it("stops a shot at the planet's solid surface", () => {
+    const samples = line([[0, 0], [2, 0], [4, 0], [6, 0], [8, 0], [10, 0]]);
+    const planet: Planet = { id: "p1", pos: { x: 5, y: 0 }, radius: 1, craters: [] };
+    const hit = detectCollision(samples, world([], [planet]));
+    expect(hit.kind).toBe("planet");
+    expect(hit.planetId).toBe("p1");
+    expect(hit.at.x).toBeCloseTo(4, 1); // surface = center - radius
+  });
+
+  it("flies through a crater and strikes the meat behind it", () => {
+    const samples = line([[0, 0], [2, 0], [4, 0], [6, 0], [8, 0], [10, 0]]);
+    const planet: Planet = {
+      id: "p1",
+      pos: { x: 5, y: 0 },
+      radius: 1,
+      craters: [{ pos: { x: 4, y: 0 }, radius: 0.6 }], // eats the near rim [3.4, 4.6]
+    };
+    const hit = detectCollision(samples, world([], [planet]));
+    expect(hit.kind).toBe("planet");
+    expect(hit.at.x).toBeCloseTo(4.6, 1); // first meat past the crater
+  });
+
+  it("is not blocked when a tunnel is carved clean through", () => {
+    const samples = line([[0, 0], [2, 0], [4, 0], [6, 0], [8, 0], [10, 0]]);
+    const planet: Planet = {
+      id: "p1",
+      pos: { x: 5, y: 0 },
+      radius: 1,
+      craters: [{ pos: { x: 5, y: 0 }, radius: 1.2 }], // covers the whole y=0 corridor
+    };
+    const hit = detectCollision(samples, world([], [planet]));
+    expect(hit.kind).toBe("expired");
+  });
+
+  it("hits a planet before a target sitting behind it", () => {
+    const samples = line([[0, 0], [2, 0], [4, 0], [6, 0], [8, 0], [10, 0]]);
+    const planet: Planet = { id: "p1", pos: { x: 4, y: 0 }, radius: 0.5, craters: [] };
+    const target: Target = { id: "t1", pos: { x: 7, y: 0 }, radius: 0.4 };
+    const hit = detectCollision(samples, world([target], [planet]));
+    expect(hit.kind).toBe("planet");
+    expect(hit.at.x).toBeCloseTo(3.5, 1);
   });
 });

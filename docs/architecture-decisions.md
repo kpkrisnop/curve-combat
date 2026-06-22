@@ -153,3 +153,28 @@ These are deferred to the detailed component design (next step):
 - Turn system and win-state representation for Stage B.
 - Project/folder structure and module boundaries.
 - Damage model (instant-hit vs. explosion radius).
+
+---
+
+## 10. Destructible Terrain — Planets
+
+**Decision:** Add **Planets** — destructible circular terrain — to the shooting prototype. A
+shot is blocked by a Planet's solid *meat*; each impact carves a fixed-radius **crater**
+(empty space) centered on the contact point, so terrain is whittled away hit-by-hit. Solidity
+is purely geometric (inside the circle, outside every crater) with **no connectivity rule** —
+detached chunks of meat remain solid. Planets are terrain only; they never count toward the
+win condition, and crater impacts do **not** splash-damage targets. (Glossary: `CONTEXT.md`;
+mechanics detail: `component-design.md`.)
+
+**Decision — layout is hand-authored for now.** The default round uses a **hand-placed**
+set of Planets (varied radii, kept clear of the soldier's muzzle and not overlapping
+targets). This is deterministic with zero RNG and easy to tune.
+
+**Deferred:** **seeded-random Planet layouts** (procedural scatter via a seeded RNG). This is
+an intended later option — the world model already treats Planets as plain data, so swapping
+hand-authored for seeded-random is a localized change with no engine/collision impact.
+
+**Rationale:** Hand-authoring gives a tuned, good-looking, guaranteed-playable first cut
+without building the seeded-RNG path yet. Because terrain is destructible, no layout is truly
+unwinnable (a player can always tunnel through), so the random path can wait until variety is
+actually wanted.

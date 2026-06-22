@@ -4,7 +4,14 @@ import { fire } from "../sim/engine";
 import { evaluateAll } from "../math/Context";
 import type { World } from "../sim/types";
 
-/** A fresh round: soldier on the left, a handful of targets on the right. */
+/** Fixed crater size carved into a planet on each hit (world units). */
+const CRATER_RADIUS = 0.8;
+
+/**
+ * A fresh round: soldier on the left, targets on the right, and hand-placed
+ * destructible planets in the way (kept clear of the muzzle and not overlapping
+ * targets — see architecture-decisions.md §10).
+ */
 function seedWorld(): World {
   return {
     soldier: { pos: { x: -9, y: 0 }, dir: 1 },
@@ -14,6 +21,11 @@ function seedWorld(): World {
       { id: "t2", pos: { x: 3, y: 2.5 }, radius: 0.4 },
       { id: "t3", pos: { x: 6, y: -2 }, radius: 0.4 },
       { id: "t4", pos: { x: 9, y: 3 }, radius: 0.4 },
+    ],
+    planets: [
+      { id: "p1", pos: { x: -2, y: -1.5 }, radius: 1.6, craters: [] },
+      { id: "p2", pos: { x: 4.5, y: 0 }, radius: 2, craters: [] },
+      { id: "p3", pos: { x: 8.5, y: -1 }, radius: 1.2, craters: [] },
     ],
   };
 }
@@ -64,6 +76,12 @@ async function onFire(latex: string) {
   if (shot.hit.kind === "target" && shot.hit.targetId) {
     world.targets = world.targets.filter((t) => t.id !== shot.hit.targetId);
     renderer.setWorld(world);
+  } else if (shot.hit.kind === "planet" && shot.hit.planetId) {
+    // Carve a crater into the struck planet (the engine stays pure — the world
+    // update lives here, mirroring how a destroyed target is removed).
+    const planet = world.planets.find((p) => p.id === shot.hit.planetId);
+    if (planet) planet.craters.push({ pos: shot.hit.at, radius: CRATER_RADIUS });
+    renderer.setWorld(world);
   }
 
   busy = false;
@@ -81,6 +99,8 @@ function noteFor(kind: string): string {
   switch (kind) {
     case "target":
       return "hit! keep going";
+    case "planet":
+      return "blocked by a planet — carve through or arc around";
     case "bounds":
       return "flew off the field — try again";
     case "dud":

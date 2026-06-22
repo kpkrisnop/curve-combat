@@ -8,6 +8,7 @@ function world(partial: Partial<World> = {}): World {
   return {
     soldier: { pos: { x: -8, y: 0 }, dir: 1 },
     targets: [{ id: "t1", pos: { x: 0, y: 0 }, radius: 0.4 }],
+    planets: [],
     bounds: BOUNDS,
     ...partial,
   };
@@ -32,6 +33,16 @@ describe("fire — the shot pipeline", () => {
     const last = result.samples[result.samples.length - 1];
     expect(last.p.x).toBeCloseTo(result.hit.at.x, 6);
     expect(last.p.y).toBeCloseTo(result.hit.at.y, 6);
+  });
+
+  it("is blocked by a planet standing between the soldier and the target", () => {
+    const w = world({
+      planets: [{ id: "p1", pos: { x: -4, y: 0 }, radius: 1, craters: [] }],
+    });
+    const result = fire(w, () => 0); // flat line would reach the target, but the planet blocks it
+    expect(result.hit.kind).toBe("planet");
+    expect(result.hit.planetId).toBe("p1");
+    expect(result.hit.at.x).toBeCloseTo(-5, 1); // near surface = center - radius
   });
 
   it("reports a bounds miss when the curve flies off the field", () => {

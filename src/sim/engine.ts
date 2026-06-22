@@ -27,7 +27,7 @@ export function fire(
   // Truncate the path at the impact: keep samples up to the hit segment's start,
   // then end exactly on the impact point (for target / bounds hits).
   const truncated = samples.slice(0, hit.sampleIndex + 1);
-  if (hit.kind === "target" || hit.kind === "bounds") {
+  if (hit.kind === "target" || hit.kind === "planet" || hit.kind === "bounds") {
     truncated.push({ p: hit.at, x: hit.at.x, gap: false });
   }
 

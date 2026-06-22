@@ -11,6 +11,7 @@ function seed(): World {
     soldier: { pos: { x: -9, y: 0 }, dir: 1 },
     bounds: { minX: -12, minY: -7, maxX: 12, maxY: 7 },
     targets: [{ id: "t1", pos: { x: 0, y: 0 }, radius: 0.4 }],
+    planets: [],
   };
 }
 

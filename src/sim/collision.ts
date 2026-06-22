@@ -1,4 +1,4 @@
-import type { Bounds, Hit, TrajectorySample, Vec2, World } from "./types";
+import type { Bounds, Hit, Planet, TrajectorySample, Vec2, World } from "./types";
 
 export interface CollisionOptions {
   /** World units off the muzzle that are immune to target hits (no self-detonation). */
@@ -21,6 +21,7 @@ export function detectCollision(
 ): Hit {
   const selfClear = opts.selfClearDist ?? DEFAULT_SELF_CLEAR;
   const muzzle = samples.length ? samples[0].p : world.soldier.pos;
+  const planets = world.planets ?? [];
 
   if (samples.length < 2) {
     return { kind: "expired", at: muzzle, sampleIndex: Math.max(0, samples.length - 1) };
@@ -31,11 +32,12 @@ export function detectCollision(
     const b = samples[i + 1].p;
     if (samples[i + 1].gap) continue; // never connect across a discontinuity
 
-    let best: { t: number; at: Vec2; targetId?: string; bounds?: boolean } | null = null;
+    type Cand = { t: number; at: Vec2; kind: "bounds" | "target" | "planet"; id?: string };
+    const cands: Cand[] = [];
 
     // Bounds: the segment exits the playfield.
     const boundsT = segmentExitT(a, b, world.bounds);
-    if (boundsT !== null) best = { t: boundsT, at: lerp(a, b, boundsT), bounds: true };
+    if (boundsT !== null) cands.push({ t: boundsT, at: lerp(a, b, boundsT), kind: "bounds" });
 
     // Targets: earliest entry along the segment, respecting self-immunity.
     for (const target of world.targets) {
@@ -43,18 +45,62 @@ export function detectCollision(
       if (t === null) continue;
       const at = lerp(a, b, t);
       if (dist(at, muzzle) < selfClear) continue;
-      if (!best || t < best.t) best = { t, at, targetId: target.id };
+      cands.push({ t, at, kind: "target", id: target.id });
     }
 
-    if (best) {
-      return best.bounds
-        ? { kind: "bounds", at: best.at, sampleIndex: i }
-        : { kind: "target", at: best.at, targetId: best.targetId, sampleIndex: i };
+    // Planets: the segment crosses from empty space into solid meat. Tested by
+    // point sampling (the planet circle contains empty crater regions), so shots
+    // pass through craters and stop at the meat behind them.
+    if (isSolid(b, planets)) {
+      const t = solidEntryT(a, b, planets);
+      const at = lerp(a, b, t);
+      cands.push({ t, at, kind: "planet", id: solidPlanetAt(at, planets)?.id });
+    }
+
+    if (cands.length > 0) {
+      let h = cands[0];
+      for (const c of cands) if (c.t < h.t) h = c;
+      if (h.kind === "bounds") return { kind: "bounds", at: h.at, sampleIndex: i };
+      if (h.kind === "planet") return { kind: "planet", at: h.at, planetId: h.id, sampleIndex: i };
+      return { kind: "target", at: h.at, targetId: h.id, sampleIndex: i };
     }
   }
 
   const last = samples[samples.length - 1];
   return { kind: "expired", at: last.p, sampleIndex: samples.length - 1 };
+}
+
+/** True when `p` lies in some planet's solid meat: inside its circle, outside all its craters. */
+export function isSolid(p: Vec2, planets: Planet[]): boolean {
+  return solidPlanetAt(p, planets) !== null;
+}
+
+/** The planet whose meat contains `p`, or null. */
+function solidPlanetAt(p: Vec2, planets: Planet[]): Planet | null {
+  for (const planet of planets) {
+    if (dist(p, planet.pos) > planet.radius) continue;
+    let carved = false;
+    for (const c of planet.craters) {
+      if (dist(p, c.pos) <= c.radius) {
+        carved = true;
+        break;
+      }
+    }
+    if (!carved) return planet;
+  }
+  return null;
+}
+
+/** Fraction t along a (empty) → b (solid) where the segment first enters meat. */
+function solidEntryT(a: Vec2, b: Vec2, planets: Planet[]): number {
+  let lo = 0; // empty side (a is empty by invariant)
+  let hi = 1; // solid side (b is solid)
+  for (let i = 0; i < 24; i++) {
+    const mid = (lo + hi) / 2;
+    if (isSolid(lerp(a, b, mid), planets)) hi = mid;
+    else lo = mid;
+  }
+  return hi;
 }
 
 /** Smallest t in (0,1] at which a→b crosses out of the bounds rectangle, or null. */
