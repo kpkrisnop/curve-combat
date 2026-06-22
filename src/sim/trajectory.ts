@@ -12,10 +12,10 @@ export interface SampleOptions {
 }
 
 const DEFAULTS = {
-  maxStepWorld: 0.04,
-  maxSamplesFactor: 60, // asymptote threshold = factor * maxStepWorld
-  maxSamples: 20_000,
-  maxBisect: 6,
+  maxStepWorld: 0.02, // finer step → smoother rendered curve
+  asymptoteJump: 2.5, // absolute world-unit jump treated as a discontinuity (decoupled from step)
+  maxSamples: 40_000,
+  maxBisect: 7,
 };
 
 /**
@@ -37,8 +37,7 @@ export function sampleTrajectory(
   opts: SampleOptions = {},
 ): TrajectorySample[] {
   const step = opts.maxStepWorld ?? DEFAULTS.maxStepWorld;
-  const asymptoteJump =
-    opts.asymptoteJump ?? DEFAULTS.maxSamplesFactor * step;
+  const asymptoteJump = opts.asymptoteJump ?? DEFAULTS.asymptoteJump;
   const maxSamples = opts.maxSamples ?? DEFAULTS.maxSamples;
   const maxBisect = opts.maxBisect ?? DEFAULTS.maxBisect;
   const dir = soldier.dir;

@@ -159,10 +159,11 @@ export class GameRenderer {
 
       const rt = RenderTexture.create({ width: size, height: size, resolution: dpr });
 
-      // Base meat: filled circle + outer rim.
+      // Base meat: filled circle. No rim — carved cavities can't get a matching
+      // border with the erase approach, so we keep the planet borderless too for
+      // a consistent look (the slate fill reads against the dark field on its own).
       const base = new Graphics();
       base.circle(center, center, rPx).fill({ color: COLORS.planet });
-      base.circle(center, center, rPx).stroke({ width: 2, color: COLORS.planetRim });
       this.app.renderer.render({ container: base, target: rt, clear: true });
       base.destroy();
 
