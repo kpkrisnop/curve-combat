@@ -81,4 +81,10 @@ export interface ShotResult {
   /** Samples in firing order, truncated at the point of impact. */
   samples: TrajectorySample[];
   hit: Hit;
+  /**
+   * |dy/dx| at the impact point, computed from the two samples bracketing the
+   * hit. Zero for non-target hits (planet, bounds, dud). Used by HP Mode to
+   * compute damage: steeper angle = faster bullet = more damage.
+   */
+  impactSlope: number;
 }

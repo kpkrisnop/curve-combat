@@ -1,6 +1,6 @@
 import { detectCollision, type CollisionOptions } from "./collision";
 import { sampleTrajectory, type SampleOptions } from "./trajectory";
-import type { ShotResult, World } from "./types";
+import type { ShotResult, TrajectorySample, Hit, World } from "./types";
 
 export interface FireOptions extends SampleOptions, CollisionOptions {}
 
@@ -19,7 +19,11 @@ export function fire(
   const samples = sampleTrajectory(fn, world.soldier, world.bounds, opts);
 
   if (samples.length === 0) {
-    return { samples: [], hit: { kind: "dud", at: world.soldier.pos, sampleIndex: 0 } };
+    return {
+      samples: [],
+      hit: { kind: "dud", at: world.soldier.pos, sampleIndex: 0 },
+      impactSlope: 0,
+    };
   }
 
   const hit = detectCollision(samples, world, opts);
@@ -31,5 +35,21 @@ export function fire(
     truncated.push({ p: hit.at, x: hit.at.x, gap: false });
   }
 
-  return { samples: truncated, hit };
+  return { samples: truncated, hit, impactSlope: computeImpactSlope(samples, hit) };
+}
+
+/**
+ * Compute |dy/dx| at the impact point using the two samples that bracket the
+ * hit segment (samples[sampleIndex] → samples[sampleIndex+1]). Only meaningful
+ * for target hits; returns 0 for all other hit kinds.
+ */
+function computeImpactSlope(samples: TrajectorySample[], hit: Hit): number {
+  if (hit.kind !== "target" || hit.sampleIndex < 0 || hit.sampleIndex + 1 >= samples.length) {
+    return 0;
+  }
+  const a = samples[hit.sampleIndex];
+  const b = samples[hit.sampleIndex + 1];
+  const dx = b.x - a.x;
+  if (Math.abs(dx) < 1e-10) return 50; // near-vertical: cap at 50
+  return Math.abs((b.p.y - a.p.y) / dx);
 }

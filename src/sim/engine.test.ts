@@ -65,3 +65,33 @@ describe("fire — the shot pipeline", () => {
     expect(a.hit).toEqual(b.hit);
   });
 });
+
+describe("fire — impactSlope", () => {
+  it("is 0 for a flat horizontal hit (slope = 0)", () => {
+    // fn = () => 0 → the anchored curve is y=0 everywhere
+    // soldier at (-8, 0), target at (0, 0, r=0.4) → direct hit
+    const result = fire(world(), () => 0);
+    expect(result.hit.kind).toBe("target");
+    expect(result.impactSlope).toBeCloseTo(0, 2);
+  });
+
+  it("is ~1 for a 45-degree diagonal hit (slope = 1)", () => {
+    // fn = (x) => x → yOffset = 0 - (-8) = 8 → anchored curve: y = x + 8
+    // at x=-2, y=6 → place target at (-2, 6) — within bounds
+    const w = world({
+      targets: [{ id: "diag", pos: { x: -2, y: 6 }, radius: 0.4 }],
+    });
+    const result = fire(w, (x) => x);
+    expect(result.hit.kind).toBe("target");
+    expect(result.impactSlope).toBeCloseTo(1, 1);
+  });
+
+  it("is 0 for a non-target hit (planet block)", () => {
+    const w = world({
+      planets: [{ id: "p1", pos: { x: -4, y: 0 }, radius: 1, craters: [] }],
+    });
+    const result = fire(w, () => 0);
+    expect(result.hit.kind).toBe("planet");
+    expect(result.impactSlope).toBe(0);
+  });
+});
