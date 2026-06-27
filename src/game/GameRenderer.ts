@@ -15,7 +15,10 @@ const COLORS = {
   dust: 0xb59a78,
 };
 
-const SHOT_DURATION_MS = 1200;
+/** World-units per second the bullet travels along the x-axis. */
+const X_VELOCITY_WORLD = 6;
+/** Minimum animation duration in ms — prevents instant flicker on zero-length shots. */
+const MIN_SHOT_MS = 200;
 const PLAYER_RADIUS_WORLD = 0.2;
 const BARREL_PX = 18;
 /** Fixed vertical half-range of the game world (±7 y). */
@@ -243,9 +246,19 @@ export class GameRenderer {
       }
 
       const samples = result.samples;
+
+      // Compute total x-distance of the shot path (skip gap segments).
+      let xLength = 0;
+      for (let i = 0; i < samples.length - 1; i++) {
+        if (!samples[i + 1].gap) {
+          xLength += Math.abs(samples[i + 1].x - samples[i].x);
+        }
+      }
+      const shotDurationMs = Math.max(MIN_SHOT_MS, (xLength / X_VELOCITY_WORLD) * 1000);
+
       const start = performance.now();
       const tick = () => {
-        const progress = Math.min(1, (performance.now() - start) / SHOT_DURATION_MS);
+        const progress = Math.min(1, (performance.now() - start) / shotDurationMs);
         const headF = progress * (samples.length - 1);
         const headIdx = Math.floor(headF);
         const frac = headF - headIdx;
