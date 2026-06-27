@@ -1,6 +1,6 @@
 import { Application, Container, Graphics, RenderTexture, Sprite, Text } from "pixi.js";
 import { Camera } from "../graph/Camera";
-import type { ShotResult, Vec2, World } from "../sim/types";
+import type { Bounds, ShotResult, Vec2, World } from "../sim/types";
 
 const COLORS = {
   bg: 0x0f141a,
@@ -16,8 +16,10 @@ const COLORS = {
 };
 
 const SHOT_DURATION_MS = 1200;
-const PLAYER_RADIUS_WORLD = 0.7;
+const PLAYER_RADIUS_WORLD = 0.2;
 const BARREL_PX = 18;
+/** Fixed vertical half-range of the game world (±7 y). */
+const HALF_Y = 7;
 
 export class GameRenderer {
   readonly app = new Application();
@@ -26,7 +28,6 @@ export class GameRenderer {
   private gridLayer = new Graphics();
   private axisLayer = new Graphics();
   private labelLayer = new Container();
-  private boundaryLayer = new Graphics();
   private planetLayer = new Container();
   private planetTextures: RenderTexture[] = [];
   private fieldLayer = new Graphics();
@@ -37,6 +38,12 @@ export class GameRenderer {
   private activeTurn: "red" | "blue" = "red";
   private redPos: Vec2 = { x: -9, y: 0 };
   private bluePos: Vec2 = { x: 9, y: 0 };
+
+  /**
+   * World bounds that exactly match the canvas edges. Computed from the canvas
+   * size: Y is always ±HALF_Y; X is derived so that the canvas fills edge-to-edge.
+   */
+  private effectiveBounds: Bounds = { minX: -12, maxX: 12, minY: -HALF_Y, maxY: HALF_Y };
 
   async init(container: HTMLElement) {
     await this.app.init({
@@ -53,20 +60,32 @@ export class GameRenderer {
       this.gridLayer,
       this.axisLayer,
       this.labelLayer,
-      this.boundaryLayer,
       this.planetLayer,
       this.fieldLayer,
       this.trailLayer,
       this.fxLayer,
     );
 
+    // Pre-compute before setWorld is called so main.ts can read bounds immediately.
+    this.recomputeEffectiveBounds();
+
     this.app.renderer.on("resize", () => {
       this.camera.resize(this.app.screen.width, this.app.screen.height);
-      this.fitCamera();
-      this.drawStatic();
-      this.drawPlanets();
-      this.drawField();
+      this.recomputeEffectiveBounds();
+      if (this.world) {
+        this.drawStatic();
+        this.drawPlanets();
+        this.drawField();
+      }
     });
+  }
+
+  /**
+   * Current world bounds that exactly match the visible canvas area.
+   * Call this after init() to get the collision bounds for buildWorld().
+   */
+  getEffectiveBounds(): Bounds {
+    return { ...this.effectiveBounds };
   }
 
   setWorld(world: World, activeTurn: "red" | "blue", redPos: Vec2, bluePos: Vec2) {
@@ -74,7 +93,7 @@ export class GameRenderer {
     this.activeTurn = activeTurn;
     this.redPos = redPos;
     this.bluePos = bluePos;
-    this.fitCamera();
+    this.recomputeEffectiveBounds();
     this.trailLayer.clear();
     this.fxLayer.clear();
     this.drawStatic();
@@ -82,15 +101,18 @@ export class GameRenderer {
     this.drawField();
   }
 
-  private fitCamera() {
-    const b = this.world.bounds;
-    const bw = b.maxX - b.minX;
-    const bh = b.maxY - b.minY;
-    const pad = 0.9;
-    const scale = Math.min(this.camera.width / bw, this.camera.height / bh) * pad;
-    this.camera.scale = scale;
-    this.camera.centerX = (b.minX + b.maxX) / 2;
-    this.camera.centerY = (b.minY + b.maxY) / 2;
+  /**
+   * Fit the camera so the world Y range (±HALF_Y) fills the canvas exactly,
+   * then derive the X bounds from the canvas width.
+   */
+  private recomputeEffectiveBounds() {
+    const cam = this.camera;
+    const scale = cam.height / (2 * HALF_Y);
+    cam.scale = scale;
+    cam.centerX = 0;
+    cam.centerY = 0;
+    const halfBW = cam.width / (2 * scale);
+    this.effectiveBounds = { minX: -halfBW, maxX: halfBW, minY: -HALF_Y, maxY: HALF_Y };
   }
 
   private drawStatic() {
@@ -103,20 +125,17 @@ export class GameRenderer {
     a.clear();
     this.labelLayer.removeChildren();
 
-    const step = niceStep(90 / cam.scale);
-    const left = cam.screenToWorldX(0);
-    const right = cam.screenToWorldX(w);
-    const top = cam.screenToWorldY(0);
-    const bottom = cam.screenToWorldY(h);
+    const eb = this.effectiveBounds;
+    const step = niceStep(45 / cam.scale);
     const axisX = clamp(cam.worldToScreenX(0), 0, w);
     const axisY = clamp(cam.worldToScreenY(0), 0, h);
 
-    for (let x = Math.ceil(left / step) * step; x <= right; x += step) {
+    for (let x = Math.ceil(eb.minX / step) * step; x <= eb.maxX; x += step) {
       const sx = cam.worldToScreenX(x);
       g.moveTo(sx, 0).lineTo(sx, h);
       if (Math.abs(x) > 1e-9) this.addLabel(fmt(x), sx + 3, clamp(axisY, 2, h - 14));
     }
-    for (let y = Math.ceil(bottom / step) * step; y <= top; y += step) {
+    for (let y = Math.ceil(eb.minY / step) * step; y <= eb.maxY; y += step) {
       const sy = cam.worldToScreenY(y);
       g.moveTo(0, sy).lineTo(w, sy);
       if (Math.abs(y) > 1e-9) this.addLabel(fmt(y), clamp(axisX + 3, 2, w - 30), sy + 2);
@@ -183,18 +202,8 @@ export class GameRenderer {
 
   private drawField() {
     const g = this.fieldLayer;
-    const b = this.boundaryLayer;
     const cam = this.camera;
     g.clear();
-    b.clear();
-
-    // Boundary rectangle — color tracks the active player's turn.
-    const { minX, minY, maxX, maxY } = this.world.bounds;
-    const bx1 = cam.worldToScreenX(minX);
-    const bx2 = cam.worldToScreenX(maxX);
-    const by1 = cam.worldToScreenY(maxY); // screen Y is inverted
-    const by2 = cam.worldToScreenY(minY);
-    b.rect(bx1, by1, bx2 - bx1, by2 - by1).stroke({ width: 2.5, color: this.activeColor(), alpha: 0.7 });
 
     const rPx = PLAYER_RADIUS_WORLD * cam.scale;
 

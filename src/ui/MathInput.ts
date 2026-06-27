@@ -63,6 +63,19 @@ export class MathInput {
     this.mq.focus();
   }
 
+  setEnabled(enabled: boolean): void {
+    const ta = this.el.querySelector<HTMLTextAreaElement>("textarea");
+    if (!ta) return;
+    if (enabled) {
+      ta.disabled = false;
+      ta.removeAttribute("tabindex");
+    } else {
+      ta.blur();
+      ta.disabled = true;
+      ta.tabIndex = -1;
+    }
+  }
+
   /** Recompute layout — call once after el is attached to the DOM. */
   reflow(): void {
     this.mq.reflow?.();
