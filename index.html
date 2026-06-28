@@ -289,10 +289,207 @@
         cursor: pointer;
       }
       #tutorial-next:hover { background: #3d5f7d; }
+
+      /* ── Lobby screen ────────────────────────────────────────────────── */
+      #lobby-screen {
+        position: fixed;
+        inset: 0;
+        background: #0f141a;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 32px;
+        z-index: 10;
+      }
+      #lobby-screen[hidden] { display: none; }
+
+      #lobby-title {
+        font-size: 48px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        margin: 0;
+      }
+      #lobby-title .t-red { color: #ff4444; }
+      #lobby-title .t-blue { color: #4488ff; }
+
+      #lobby-tagline {
+        font-size: 14px;
+        color: #5e7081;
+        margin: -24px 0 0;
+        letter-spacing: 0.05em;
+      }
+
+      #lobby-config {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        background: rgba(18, 26, 34, 0.92);
+        border: 1px solid #2b3a49;
+        border-radius: 16px;
+        padding: 28px 36px;
+        min-width: 340px;
+      }
+
+      .lobby-label {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        color: #5e7081;
+        text-transform: uppercase;
+        margin: 0 0 8px;
+      }
+
+      .lobby-btn-group {
+        display: flex;
+        gap: 8px;
+      }
+
+      .lobby-mode-btn,
+      .lobby-rounds-btn {
+        flex: 1;
+        border: 1px solid #2b3a49;
+        background: #0c1116;
+        color: #8499ab;
+        border-radius: 10px;
+        padding: 10px 16px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: border-color 0.15s, color 0.15s, background 0.15s;
+        text-align: center;
+        position: relative;
+      }
+      .lobby-mode-btn:hover:not(:disabled),
+      .lobby-rounds-btn:hover:not(:disabled) {
+        border-color: #4488ff;
+        color: #cdd9e5;
+      }
+      .lobby-mode-btn.active,
+      .lobby-rounds-btn.active {
+        border-color: #4488ff;
+        background: rgba(68, 136, 255, 0.12);
+        color: #cdd9e5;
+      }
+      .lobby-mode-btn:disabled,
+      .lobby-rounds-btn:disabled {
+        opacity: 0.35;
+        cursor: default;
+      }
+
+      .coming-soon-badge {
+        position: absolute;
+        top: -8px;
+        right: -4px;
+        background: #2b3a49;
+        color: #5e7081;
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        padding: 2px 5px;
+        border-radius: 4px;
+        text-transform: uppercase;
+        pointer-events: none;
+      }
+
+      .lobby-noturn-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        opacity: 0.35;
+      }
+      .lobby-noturn-row input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        cursor: not-allowed;
+      }
+      .lobby-noturn-label {
+        font-size: 13px;
+        color: #8499ab;
+        cursor: default;
+      }
+      .lobby-noturn-row .coming-soon-badge {
+        position: static;
+        display: inline-block;
+      }
+
+      #lobby-start-local {
+        border: none;
+        background: #4488ff;
+        color: #fff;
+        border-radius: 10px;
+        padding: 13px 24px;
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+        letter-spacing: 0.03em;
+        transition: background 0.15s;
+      }
+      #lobby-start-local:hover {
+        background: #2266dd;
+      }
+
+      #lobby-online {
+        border: 1px solid #2b3a49;
+        background: transparent;
+        color: #5e7081;
+        border-radius: 10px;
+        padding: 10px 24px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: not-allowed;
+        opacity: 0.5;
+        letter-spacing: 0.03em;
+      }
     </style>
   </head>
   <body>
-    <div id="game">
+    <div id="lobby-screen">
+      <h1 id="lobby-title">
+        <span class="t-red">GRAPH</span><span class="t-blue"> WAR</span>
+      </h1>
+      <p id="lobby-tagline">Fire mathematical functions. Hit your opponent.</p>
+
+      <div id="lobby-config">
+        <!-- Mode -->
+        <div>
+          <p class="lobby-label">Game Mode</p>
+          <div class="lobby-btn-group">
+            <button id="lobby-mode-classic" class="lobby-mode-btn active">
+              Classic VS
+              <small style="display:block;font-size:11px;font-weight:400;color:#5e7081;margin-top:2px">One hit per round</small>
+            </button>
+            <button id="lobby-mode-hp" class="lobby-mode-btn" disabled>
+              HP Mode
+              <small style="display:block;font-size:11px;font-weight:400;color:#5e7081;margin-top:2px">Slope = damage</small>
+              <span class="coming-soon-badge">Soon</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Rounds -->
+        <div>
+          <p class="lobby-label">Rounds</p>
+          <div class="lobby-btn-group">
+            <button id="lobby-rounds-3" class="lobby-rounds-btn active">Best of 3</button>
+            <button id="lobby-rounds-5" class="lobby-rounds-btn">Best of 5</button>
+          </div>
+        </div>
+
+        <!-- No-Turn modifier -->
+        <div class="lobby-noturn-row">
+          <input type="checkbox" id="lobby-noturn" disabled />
+          <label for="lobby-noturn" class="lobby-noturn-label">No-Turn Mode (simultaneous fire)</label>
+          <span class="coming-soon-badge">Soon</span>
+        </div>
+
+        <!-- Actions -->
+        <button id="lobby-start-local">▶ Play Locally</button>
+        <button id="lobby-online" disabled>Play Online — Coming Soon</button>
+      </div>
+    </div>
+
+    <div id="game" hidden>
       <main id="game-stage"></main>
 
       <div id="hud-bar">
@@ -322,7 +519,7 @@
       <div id="win-banner" hidden>
         <h2 id="win-title"></h2>
         <p id="win-detail"></p>
-        <button id="reset-btn">Play again</button>
+        <button id="reset-btn">Back to Lobby</button>
       </div>
 
       <div id="round-splash" hidden>
