@@ -28,6 +28,11 @@ describe("parseConfigFromHash", () => {
     );
   });
 
+  it("parses mode=hp correctly", () => {
+    const hash = "#game?mode=hp&rounds=3&noTurn=false";
+    expect(parseConfigFromHash(hash).mode).toBe("hp");
+  });
+
   it("returns default config for empty hash", () => {
     expect(parseConfigFromHash("")).toEqual(DEFAULT);
     expect(parseConfigFromHash("#")).toEqual(DEFAULT);

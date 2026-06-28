@@ -219,14 +219,22 @@ async function startGame(config: MatchConfig) {
 
   // Initialise renderer + UI only once
   if (!renderer) {
-    const stage = document.getElementById("game-stage")!;
-    renderer = new GameRenderer();
-    await renderer.init(stage);
+    try {
+      const stage = document.getElementById("game-stage")!;
+      renderer = new GameRenderer();
+      await renderer.init(stage);
 
-    ui = new GameUI();
-    ui.onFire(onFire);
-    // "Back to Lobby" button replaces old "Play again"
-    ui.onReset(goToLobby);
+      ui = new GameUI();
+      ui.onFire(onFire);
+      // "Back to Lobby" button replaces old "Play again"
+      ui.onReset(goToLobby);
+    } catch (err) {
+      console.error("Failed to start game:", err);
+      renderer = null;
+      ui = null;
+      goToLobby();
+      return;
+    }
   }
 
   bootWithTutorial();
@@ -257,7 +265,11 @@ function route() {
 }
 
 window.addEventListener("popstate", () => {
-  if (!location.hash.startsWith("#game")) goToLobby();
+  if (location.hash.startsWith("#game")) {
+    startGame(parseConfigFromHash(location.hash));
+  } else {
+    goToLobby();
+  }
 });
 
 route();
