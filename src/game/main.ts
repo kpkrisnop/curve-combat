@@ -1,17 +1,39 @@
 import { GameRenderer } from "./GameRenderer";
 import { GameUI } from "./GameUI";
+import { LobbyScreen } from "../ui/LobbyScreen";
 import { fire } from "../sim/engine";
 import { evaluateAll } from "../math/Context";
-import type { Bounds, Planet, Vec2, World } from "../sim/types";
 import { matchWinner, firstShooterNextRound, type MatchConfig } from "./matchLogic";
+import { configToHash, parseConfigFromHash } from "./configRouter";
+import type { Bounds, Planet, Vec2, World } from "../sim/types";
+
+// ── Constants ─────────────────────────────────────────────────────────────────
 
 const CRATER_RADIUS = 0.8;
 const PLAYER_RADIUS = 0.1;
 
-const MATCH_CONFIG: MatchConfig = { mode: "classic", rounds: 3, noTurn: false, role: "local" };
+// ── DOM refs ──────────────────────────────────────────────────────────────────
+
+const lobbyEl = document.getElementById("lobby-screen")!;
+const gameEl = document.getElementById("game")!;
+
+// ── Game state (initialised lazily in startGame) ──────────────────────────────
+
+let renderer: GameRenderer | null = null;
+let ui: GameUI | null = null;
+let matchConfig: MatchConfig = { mode: "classic", rounds: 3, noTurn: false, role: "local" };
 
 let redPlayerPos: Vec2 = { x: -9, y: 0 };
 let bluePlayerPos: Vec2 = { x: 9, y: 0 };
+let planets: Planet[] = [];
+let activeTurn: "red" | "blue" = "red";
+let busy = false;
+let gameOver = false;
+let redScore = 0;
+let blueScore = 0;
+let currentRound = 1;
+
+// ── Planet seed ───────────────────────────────────────────────────────────────
 
 function seedPlanets(): Planet[] {
   return [
@@ -24,61 +46,24 @@ function seedPlanets(): Planet[] {
   ];
 }
 
-function buildWorld(activeTurn: "red" | "blue", planets: Planet[]): World {
-  if (activeTurn === "red") {
-    return {
-      soldier: { pos: redPlayerPos, dir: 1 },
-      bounds: renderer.getEffectiveBounds(),
-      targets: [{ id: "blue", pos: bluePlayerPos, radius: PLAYER_RADIUS }],
-      planets,
-    };
-  } else {
-    return {
-      soldier: { pos: bluePlayerPos, dir: -1 },
-      bounds: renderer.getEffectiveBounds(),
-      targets: [{ id: "red", pos: redPlayerPos, radius: PLAYER_RADIUS }],
-      planets,
-    };
-  }
+// ── World helpers ─────────────────────────────────────────────────────────────
+
+function buildWorld(turn: "red" | "blue", ps: Planet[]): World {
+  return turn === "red"
+    ? { soldier: { pos: redPlayerPos, dir: 1 }, bounds: renderer!.getEffectiveBounds(), targets: [{ id: "blue", pos: bluePlayerPos, radius: PLAYER_RADIUS }], planets: ps }
+    : { soldier: { pos: bluePlayerPos, dir: -1 }, bounds: renderer!.getEffectiveBounds(), targets: [{ id: "red", pos: redPlayerPos, radius: PLAYER_RADIUS }], planets: ps };
 }
 
-// Place RED in the left outer strip (x < -11) and BLUE in the right (x > 11),
-// both with random y. Falls back gracefully if canvas is narrower than ±11.
 function placePlayersRandomly(b: Bounds) {
-  const yLo = b.minY + 1;
-  const yHi = b.maxY - 1;
+  const yLo = b.minY + 1, yHi = b.maxY - 1;
   const xEdge = Math.abs(b.minX) - 0.3;
   const xInner = Math.min(11, xEdge);
   const xRange = Math.max(0, xEdge - xInner);
-
-  redPlayerPos = {
-    x: -(xInner + Math.random() * xRange),
-    y: yLo + Math.random() * (yHi - yLo),
-  };
-  bluePlayerPos = {
-    x: xInner + Math.random() * xRange,
-    y: yLo + Math.random() * (yHi - yLo),
-  };
+  redPlayerPos = { x: -(xInner + Math.random() * xRange), y: yLo + Math.random() * (yHi - yLo) };
+  bluePlayerPos = { x: xInner + Math.random() * xRange, y: yLo + Math.random() * (yHi - yLo) };
 }
 
-const stage = document.getElementById("game-stage")!;
-const renderer = new GameRenderer();
-await renderer.init(stage);
-
-const ui = new GameUI();
-
-let activeTurn: "red" | "blue" = "red";
-let planets: Planet[] = seedPlanets();
-let busy = false;
-let gameOver = false;
-
-let redScore = 0;
-let blueScore = 0;
-let currentRound = 1;
-
-function refresh(note?: string) {
-  ui.setStatus(note);
-}
+// ── Game lifecycle ────────────────────────────────────────────────────────────
 
 function start() {
   planets = seedPlanets();
@@ -88,56 +73,53 @@ function start() {
   redScore = 0;
   blueScore = 0;
   currentRound = 1;
-  placePlayersRandomly(renderer.getEffectiveBounds());
-  renderer.setWorld(buildWorld(activeTurn, planets), activeTurn, redPlayerPos, bluePlayerPos);
-  ui.resetInputs();
-  ui.setTurn(activeTurn, "");
-  ui.hideWin();
-  ui.hideSplash();
-  ui.updateScoreboard(redScore, blueScore, currentRound, MATCH_CONFIG.rounds);
-  refresh();
-  ui.focus();
+  placePlayersRandomly(renderer!.getEffectiveBounds());
+  renderer!.setWorld(buildWorld(activeTurn, planets), activeTurn, redPlayerPos, bluePlayerPos);
+  ui!.resetInputs();
+  ui!.setTurn(activeTurn, "");
+  ui!.hideWin();
+  ui!.hideSplash();
+  ui!.updateScoreboard(redScore, blueScore, currentRound, matchConfig.rounds);
+  ui!.setStatus();
+  ui!.focus();
 }
 
 function nextRound(roundLoser: "red" | "blue") {
-  // Award the round to the survivor
   if (roundLoser === "red") blueScore++;
   else redScore++;
 
-  // Check if the match is over
-  const winner = matchWinner(redScore, blueScore, MATCH_CONFIG.rounds);
+  const winner = matchWinner(redScore, blueScore, matchConfig.rounds);
   if (winner) {
     gameOver = true;
     busy = false;
-    ui.setBusy(false);
-    ui.showWin(winner);
+    ui!.setBusy(false);
+    ui!.showWin(winner);
     return;
   }
 
-  // Start the next round after a 2-second splash
   currentRound++;
   const loserLabel = roundLoser === "red" ? "RED" : "BLUE";
   const winnerLabel = roundLoser === "red" ? "BLUE" : "RED";
   const splashHtml =
-    `Round ${currentRound} of ${MATCH_CONFIG.rounds}<br>` +
+    `Round ${currentRound} of ${matchConfig.rounds}<br>` +
     `<span style="color:${roundLoser === "red" ? "#4488ff" : "#ff4444"}">${winnerLabel} wins the round!</span><br>` +
     `<small style="color:#5e7081">${loserLabel} shoots first</small>`;
 
-  ui.showSplash(splashHtml);
+  ui!.showSplash(splashHtml);
 
   window.setTimeout(() => {
-    ui.hideSplash();
+    ui!.hideSplash();
     planets = seedPlanets();
     activeTurn = firstShooterNextRound(roundLoser);
     gameOver = false;
     busy = false;
-    placePlayersRandomly(renderer.getEffectiveBounds());
-    renderer.setWorld(buildWorld(activeTurn, planets), activeTurn, redPlayerPos, bluePlayerPos);
-    ui.resetInputs();
-    ui.setTurn(activeTurn, "");
-    ui.updateScoreboard(redScore, blueScore, currentRound, MATCH_CONFIG.rounds);
-    refresh();
-    ui.focus();
+    placePlayersRandomly(renderer!.getEffectiveBounds());
+    renderer!.setWorld(buildWorld(activeTurn, planets), activeTurn, redPlayerPos, bluePlayerPos);
+    ui!.resetInputs();
+    ui!.setTurn(activeTurn, "");
+    ui!.updateScoreboard(redScore, blueScore, currentRound, matchConfig.rounds);
+    ui!.setStatus();
+    ui!.focus();
   }, 2000);
 }
 
@@ -148,18 +130,18 @@ async function onFire(latex: string) {
   const row = result.get("shot");
   const fn = row?.kind === "curve" ? row.fn : undefined;
   if (!fn) {
-    refresh("that isn't a plottable function of x");
+    ui!.setStatus("that isn't a plottable function of x");
     return;
   }
 
   busy = true;
-  ui.setBusy(true);
+  ui!.setBusy(true);
 
   const shooter = activeTurn;
   const world = buildWorld(shooter, planets);
   const shot = fire(world, fn);
 
-  await renderer.playShot(shot);
+  await renderer!.playShot(shot);
 
   if (shot.hit.kind === "planet" && shot.hit.planetId) {
     const planet = planets.find((p) => p.id === shot.hit.planetId);
@@ -167,22 +149,19 @@ async function onFire(latex: string) {
   }
 
   if (shot.hit.kind === "target") {
-    // The target that was hit is the opponent — so the shooter wins the round,
-    // and the hit player (the loser) shoots first next round.
     const roundLoser = shooter === "red" ? "blue" : "red";
-    renderer.setWorld(buildWorld(shooter, planets), shooter, redPlayerPos, bluePlayerPos);
+    renderer!.setWorld(buildWorld(shooter, planets), shooter, redPlayerPos, bluePlayerPos);
     nextRound(roundLoser);
     return;
   }
 
   activeTurn = shooter === "red" ? "blue" : "red";
-  renderer.setWorld(buildWorld(activeTurn, planets), activeTurn, redPlayerPos, bluePlayerPos);
-  ui.setTurn(activeTurn, latex);
-
+  renderer!.setWorld(buildWorld(activeTurn, planets), activeTurn, redPlayerPos, bluePlayerPos);
+  ui!.setTurn(activeTurn, latex);
   busy = false;
-  ui.setBusy(false);
-  refresh(noteFor(shot.hit.kind));
-  ui.focus();
+  ui!.setBusy(false);
+  ui!.setStatus(noteFor(shot.hit.kind));
+  ui!.focus();
 }
 
 function noteFor(kind: string): string {
@@ -194,8 +173,7 @@ function noteFor(kind: string): string {
   }
 }
 
-ui.onFire(onFire);
-ui.onReset(start);
+// ── Tutorial ──────────────────────────────────────────────────────────────────
 
 function bootWithTutorial() {
   if (localStorage.getItem("graphwar.tutorialDone")) {
@@ -203,8 +181,7 @@ function bootWithTutorial() {
     return;
   }
 
-  // Run tutorial before first match
-  start(); // set up the field so it's visible behind the tutorial
+  start();
 
   const steps = [
     "Welcome to Graph War! You are the RED dot on the left. BLUE is on the right.",
@@ -215,23 +192,72 @@ function bootWithTutorial() {
   let stepIndex = 0;
 
   function showStep() {
-    if (stepIndex >= steps.length) {
-      finishTutorial();
-      return;
-    }
-    ui.showTutorialStep(steps[stepIndex], () => {
-      stepIndex++;
-      showStep();
-    }, finishTutorial);
+    if (stepIndex >= steps.length) { finishTutorial(); return; }
+    ui!.showTutorialStep(steps[stepIndex], () => { stepIndex++; showStep(); }, finishTutorial);
   }
 
   function finishTutorial() {
-    ui.hideTutorial();
+    ui!.hideTutorial();
     localStorage.setItem("graphwar.tutorialDone", "1");
-    ui.focus();
+    ui!.focus();
   }
 
   showStep();
 }
 
-bootWithTutorial();
+// ── Game screen init (lazy — only runs when lobby starts a match) ─────────────
+
+async function startGame(config: MatchConfig) {
+  matchConfig = config;
+
+  // Push hash so back-navigation works
+  history.pushState(null, "", configToHash(config));
+
+  // Show game, hide lobby
+  lobbyEl.hidden = true;
+  gameEl.hidden = false;
+
+  // Initialise renderer + UI only once
+  if (!renderer) {
+    const stage = document.getElementById("game-stage")!;
+    renderer = new GameRenderer();
+    await renderer.init(stage);
+
+    ui = new GameUI();
+    ui.onFire(onFire);
+    // "Back to Lobby" button replaces old "Play again"
+    ui.onReset(goToLobby);
+  }
+
+  bootWithTutorial();
+}
+
+// ── Lobby ─────────────────────────────────────────────────────────────────────
+
+function goToLobby() {
+  gameEl.hidden = true;
+  lobbyEl.hidden = false;
+  history.pushState(null, "", "/");
+}
+
+// ── Router entry point ────────────────────────────────────────────────────────
+
+function route() {
+  const hash = location.hash;
+  if (hash.startsWith("#game")) {
+    const config = parseConfigFromHash(hash);
+    startGame(config);
+  } else {
+    // Default: show lobby
+    lobbyEl.hidden = false;
+    gameEl.hidden = true;
+    const lobby = new LobbyScreen();
+    lobby.onStart((config) => startGame(config));
+  }
+}
+
+window.addEventListener("popstate", () => {
+  if (!location.hash.startsWith("#game")) goToLobby();
+});
+
+route();
