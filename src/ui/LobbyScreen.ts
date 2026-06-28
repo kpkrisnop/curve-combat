@@ -1,0 +1,64 @@
+import type { MatchConfig } from "../game/matchLogic";
+
+export class LobbyScreen {
+  private el: HTMLElement;
+  private modeClassicBtn: HTMLButtonElement;
+  private modeHpBtn: HTMLButtonElement;
+  private rounds3Btn: HTMLButtonElement;
+  private rounds5Btn: HTMLButtonElement;
+  private startLocalBtn: HTMLButtonElement;
+
+  private selectedMode: MatchConfig["mode"] = "classic";
+  private selectedRounds: 3 | 5 = 3;
+
+  private startCb: ((config: MatchConfig) => void) | null = null;
+
+  constructor(root: ParentNode = document) {
+    this.el = root.querySelector<HTMLElement>("#lobby-screen")!;
+    this.modeClassicBtn = root.querySelector<HTMLButtonElement>("#lobby-mode-classic")!;
+    this.modeHpBtn = root.querySelector<HTMLButtonElement>("#lobby-mode-hp")!;
+    this.rounds3Btn = root.querySelector<HTMLButtonElement>("#lobby-rounds-3")!;
+    this.rounds5Btn = root.querySelector<HTMLButtonElement>("#lobby-rounds-5")!;
+    this.startLocalBtn = root.querySelector<HTMLButtonElement>("#lobby-start-local")!;
+
+    this.modeClassicBtn.addEventListener("click", () => this.selectMode("classic"));
+    this.modeHpBtn.addEventListener("click", () => this.selectMode("hp"));
+    this.rounds3Btn.addEventListener("click", () => this.selectRounds(3));
+    this.rounds5Btn.addEventListener("click", () => this.selectRounds(5));
+    this.startLocalBtn.addEventListener("click", () => this.handleStart());
+  }
+
+  onStart(cb: (config: MatchConfig) => void): void {
+    this.startCb = cb;
+  }
+
+  show(): void {
+    this.el.hidden = false;
+  }
+
+  hide(): void {
+    this.el.hidden = true;
+  }
+
+  private selectMode(mode: MatchConfig["mode"]): void {
+    this.selectedMode = mode;
+    this.modeClassicBtn.classList.toggle("active", mode === "classic");
+    this.modeHpBtn.classList.toggle("active", mode === "hp");
+  }
+
+  private selectRounds(rounds: 3 | 5): void {
+    this.selectedRounds = rounds;
+    this.rounds3Btn.classList.toggle("active", rounds === 3);
+    this.rounds5Btn.classList.toggle("active", rounds === 5);
+  }
+
+  private handleStart(): void {
+    const config: MatchConfig = {
+      mode: this.selectedMode,
+      rounds: this.selectedRounds,
+      noTurn: false,
+      role: "local",
+    };
+    this.startCb?.(config);
+  }
+}
