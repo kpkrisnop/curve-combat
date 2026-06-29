@@ -18,8 +18,9 @@ export class GameUI {
   private resetBtn: HTMLButtonElement;
   private currentTurn: "red" | "blue" = "red";
 
-  private fireCb: ((latex: string) => void) | null = null;
+  private fireCb: ((player: "red" | "blue", latex: string) => void) | null = null;
   private resetCb: (() => void) | null = null;
+  private noTurnMode = false;
 
   private scoreboardText: HTMLElement;
   private roundSplash: HTMLElement;
@@ -81,13 +82,13 @@ export class GameUI {
   }
 
   private emitFire(player: "red" | "blue") {
-    if (player !== this.currentTurn) return;
+    if (!this.noTurnMode && player !== this.currentTurn) return;
     const input = player === "red" ? this.redInput : this.blueInput;
     const latex = input.getLatex().trim();
-    if (latex) this.fireCb?.(latex);
+    if (latex) this.fireCb?.(player, latex);
   }
 
-  onFire(cb: (latex: string) => void) { this.fireCb = cb; }
+  onFire(cb: (player: "red" | "blue", latex: string) => void): void { this.fireCb = cb; }
   onReset(cb: () => void) { this.resetCb = cb; }
 
   setTurn(turn: "red" | "blue", lastEquation = "") {
@@ -120,11 +121,23 @@ export class GameUI {
     }
   }
 
-  setBusy(busy: boolean) {
-    if (this.currentTurn === "red") {
+  setBusy(player: "red" | "blue", busy: boolean): void {
+    if (player === "red") {
       this.redFireBtn.disabled = busy;
     } else {
       this.blueFireBtn.disabled = busy;
+    }
+  }
+
+  setNoTurnMode(enabled: boolean): void {
+    this.noTurnMode = enabled;
+    if (enabled) {
+      document.getElementById("red-hud")!.classList.remove("inactive");
+      document.getElementById("blue-hud")!.classList.remove("inactive");
+      this.redFireBtn.disabled = false;
+      this.blueFireBtn.disabled = false;
+      this.redInput.setEnabled(true);
+      this.blueInput.setEnabled(true);
     }
   }
 
