@@ -5,6 +5,7 @@ import { fire } from "../sim/engine";
 import { evaluateAll } from "../math/Context";
 import { matchWinner, firstShooterNextRound, type MatchConfig } from "./matchLogic";
 import { configToHash, parseConfigFromHash } from "./configRouter";
+import { HP_MAX, computeDamage } from "./hpLogic";
 import type { Bounds, Planet, Vec2, World } from "../sim/types";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -32,6 +33,8 @@ let gameOver = false;
 let redScore = 0;
 let blueScore = 0;
 let currentRound = 1;
+let redHp = HP_MAX;
+let blueHp = HP_MAX;
 
 // ── Planet seed ───────────────────────────────────────────────────────────────
 
@@ -73,6 +76,8 @@ function start() {
   redScore = 0;
   blueScore = 0;
   currentRound = 1;
+  redHp = HP_MAX;
+  blueHp = HP_MAX;
   placePlayersRandomly(renderer!.getEffectiveBounds());
   renderer!.setWorld(buildWorld(activeTurn, planets), activeTurn, redPlayerPos, bluePlayerPos);
   ui!.resetInputs();
@@ -80,6 +85,8 @@ function start() {
   ui!.hideWin();
   ui!.hideSplash();
   ui!.updateScoreboard(redScore, blueScore, currentRound, matchConfig.rounds);
+  ui!.showHpBars(matchConfig.mode === "hp");
+  ui!.updateHp(redHp, blueHp);
   ui!.setStatus();
   ui!.focus();
 }
@@ -93,7 +100,7 @@ function nextRound(roundLoser: "red" | "blue") {
     gameOver = true;
     busy = false;
     ui!.setBusy(false);
-    ui!.showWin(winner);
+    ui!.showWin(winner, matchConfig.mode === "hp" ? "Health depleted." : "Direct hit.");
     return;
   }
 
@@ -118,6 +125,11 @@ function nextRound(roundLoser: "red" | "blue") {
     ui!.resetInputs();
     ui!.setTurn(activeTurn, "");
     ui!.updateScoreboard(redScore, blueScore, currentRound, matchConfig.rounds);
+    if (matchConfig.mode === "hp") {
+      redHp = HP_MAX;
+      blueHp = HP_MAX;
+      ui!.updateHp(redHp, blueHp);
+    }
     ui!.setStatus();
     ui!.focus();
   }, 2000);
@@ -149,6 +161,43 @@ async function onFire(latex: string) {
   }
 
   if (shot.hit.kind === "target") {
+    if (matchConfig.mode === "hp") {
+      // HP mode: apply damage, end round only when HP hits 0
+      const defender = shooter === "red" ? "blue" : "red";
+      const dmg = computeDamage(shot.impactSlope);
+
+      if (defender === "red") {
+        redHp = Math.max(0, redHp - dmg);
+        ui!.updateHp(redHp, blueHp);
+        renderer!.showFloatingDamage(shot.hit.at, dmg, "red");
+        if (redHp <= 0) {
+          renderer!.setWorld(buildWorld(shooter, planets), shooter, redPlayerPos, bluePlayerPos);
+          nextRound("red");
+          return;
+        }
+      } else {
+        blueHp = Math.max(0, blueHp - dmg);
+        ui!.updateHp(redHp, blueHp);
+        renderer!.showFloatingDamage(shot.hit.at, dmg, "blue");
+        if (blueHp <= 0) {
+          renderer!.setWorld(buildWorld(shooter, planets), shooter, redPlayerPos, bluePlayerPos);
+          nextRound("blue");
+          return;
+        }
+      }
+
+      // Hit but defender still alive — switch turns and continue
+      activeTurn = shooter === "red" ? "blue" : "red";
+      renderer!.setWorld(buildWorld(activeTurn, planets), activeTurn, redPlayerPos, bluePlayerPos);
+      ui!.setTurn(activeTurn, latex);
+      busy = false;
+      ui!.setBusy(false);
+      ui!.setStatus(`Hit! -${dmg} HP`);
+      ui!.focus();
+      return;
+    }
+
+    // Classic mode: direct hit = round end
     const roundLoser = shooter === "red" ? "blue" : "red";
     renderer!.setWorld(buildWorld(shooter, planets), shooter, redPlayerPos, bluePlayerPos);
     nextRound(roundLoser);
