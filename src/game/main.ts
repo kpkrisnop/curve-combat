@@ -138,6 +138,8 @@ function nextRound(roundLoser: "red" | "blue") {
     if (matchConfig.noTurn) {
       renderer!.setNoTurnMode(true);
       ui!.setNoTurnMode(true);
+    } else {
+      ui!.setNoTurnMode(false);
     }
     ui!.updateScoreboard(redScore, blueScore, currentRound, matchConfig.rounds);
     if (matchConfig.mode === "hp") {
