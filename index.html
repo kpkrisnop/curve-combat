@@ -396,17 +396,16 @@
         display: flex;
         align-items: center;
         gap: 10px;
-        opacity: 0.35;
       }
       .lobby-noturn-row input[type="checkbox"] {
         width: 16px;
         height: 16px;
-        cursor: not-allowed;
+        cursor: pointer;
       }
       .lobby-noturn-label {
         font-size: 13px;
         color: #8499ab;
-        cursor: default;
+        cursor: pointer;
       }
       .lobby-noturn-row .coming-soon-badge {
         position: static;
@@ -507,9 +506,8 @@
 
         <!-- No-Turn modifier -->
         <div class="lobby-noturn-row">
-          <input type="checkbox" id="lobby-noturn" disabled />
+          <input type="checkbox" id="lobby-noturn" />
           <label for="lobby-noturn" class="lobby-noturn-label">No-Turn Mode (simultaneous fire)</label>
-          <span class="coming-soon-badge">Soon</span>
         </div>
 
         <!-- Actions -->

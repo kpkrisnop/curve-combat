@@ -7,6 +7,7 @@ export class LobbyScreen {
   private rounds3Btn: HTMLButtonElement;
   private rounds5Btn: HTMLButtonElement;
   private startLocalBtn: HTMLButtonElement;
+  private noTurnCheckbox: HTMLInputElement;
 
   private selectedMode: MatchConfig["mode"] = "classic";
   private selectedRounds: 3 | 5 = 3;
@@ -20,6 +21,7 @@ export class LobbyScreen {
     this.rounds3Btn = root.querySelector<HTMLButtonElement>("#lobby-rounds-3")!;
     this.rounds5Btn = root.querySelector<HTMLButtonElement>("#lobby-rounds-5")!;
     this.startLocalBtn = root.querySelector<HTMLButtonElement>("#lobby-start-local")!;
+    this.noTurnCheckbox = root.querySelector<HTMLInputElement>("#lobby-noturn")!;
 
     this.modeClassicBtn.addEventListener("click", () => this.selectMode("classic"));
     this.modeHpBtn.addEventListener("click", () => this.selectMode("hp"));
@@ -56,7 +58,7 @@ export class LobbyScreen {
     const config: MatchConfig = {
       mode: this.selectedMode,
       rounds: this.selectedRounds,
-      noTurn: false,
+      noTurn: this.noTurnCheckbox.checked,
       role: "local",
     };
     this.startCb?.(config);
