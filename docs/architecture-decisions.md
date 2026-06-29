@@ -178,3 +178,35 @@ hand-authored for seeded-random is a localized change with no engine/collision i
 without building the seeded-RNG path yet. Because terrain is destructible, no layout is truly
 unwinnable (a player can always tunnel through), so the random path can wait until variety is
 actually wanted.
+
+---
+
+## 11. Curvature-Based Trajectory Sampling
+
+**Decision:** The trajectory sampler (`src/sim/trajectory.ts`) marches a **coarse** world-x
+step (`maxStepWorld = 0.05`) and inserts interior points by **adaptive subdivision keyed to
+chord deviation** (`flatTolWorld ≈ 0.01` world units), not to the raw step size. Density now
+follows **curvature**: flat regions stay sparse, tightly curved or oscillating regions get
+more points. The coarse march **always advances to the far horizontal bound**; refinement is
+best-effort and self-limits (`refineCap = maxSamples − 1000`) so the remaining march always
+fits under the hard `maxSamples` cap.
+
+**Problem it fixes:** the previous sampler used a tiny fixed step (`0.001`) and refined any
+segment whose vertical delta exceeded that step, bisecting up to 7 levels (~128×). A
+high-frequency function (even `sin(50x)`) inflated the sample count ~128× and hit the
+40 000-sample cap after ~0.3 world units, so the loop exited and the shot "expired"
+mid-air — the bullet visibly stopped just past the muzzle without hitting anything.
+
+**Discontinuity handling:** a coarse step no longer implies "big vertical jump ⇒ asymptote"
+(a steep but continuous line also jumps over a 0.05 step). Instead, a segment is flagged a
+gap only if a jump larger than `asymptoteJump` (2.5) **survives full subdivision** — a real
+pole keeps blowing up as you bisect toward it, while a steep line's per-sub-segment jump
+shrinks and is emitted connected.
+
+**Trade-off:** rendered-curve smoothness vs. guaranteed full-field traversal vs. tiny-target
+accuracy. Curvature-based density preserves smoothness (sub-pixel deviation tolerance) and
+keeps small-target hits accurate (collision is segment-based; flat regions are linear so the
+chord equals the curve, curvy regions get dense), while the always-complete coarse march
+guarantees a wild function flies the whole field and resolves a real hit-or-edge instead of
+stalling. The cost is that a pathological function (e.g. `sin(1e6 x)`) past the sample budget
+renders faceted — acceptable, because correctness (it still crosses the field) is preserved.

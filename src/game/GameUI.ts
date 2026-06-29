@@ -66,11 +66,11 @@ export class GameUI {
     this.blueHpBar = root.querySelector<HTMLElement>("#blue-hp-bar")!;
     this.blueHpLabel = root.querySelector<HTMLElement>("#blue-hp-label")!;
 
-    this.redInput = new MathInput();
+    this.redInput = new MathInput("", "type a function in x");
     redInputHost.appendChild(this.redInput.el);
     this.redInput.reflow();
 
-    this.blueInput = new MathInput();
+    this.blueInput = new MathInput("", "type a function in x");
     blueInputHost.appendChild(this.blueInput.el);
     this.blueInput.reflow();
 
@@ -94,8 +94,12 @@ export class GameUI {
   setTurn(turn: "red" | "blue", lastEquation = "") {
     this.currentTurn = turn;
     const p = PLAYER[turn];
-    document.documentElement.style.setProperty("--player-color", p.color);
-    document.documentElement.style.setProperty("--player-color-dim", p.dim);
+    // In No-Turn mode the frame stays neutral (no single active player), so we
+    // don't tint it with a player color here — setNoTurnMode owns the frame.
+    if (!this.noTurnMode) {
+      document.documentElement.style.setProperty("--player-color", p.color);
+      document.documentElement.style.setProperty("--player-color-dim", p.dim);
+    }
 
     const redHud = document.getElementById("red-hud")!;
     const blueHud = document.getElementById("blue-hud")!;
@@ -132,12 +136,19 @@ export class GameUI {
   setNoTurnMode(enabled: boolean): void {
     this.noTurnMode = enabled;
     if (enabled) {
+      // Neutral frame: simultaneous fire has no single active player to color by.
+      document.documentElement.style.setProperty("--player-color", "#0f141a");
+      document.documentElement.style.setProperty("--player-color-dim", "rgba(255,255,255,0.05)");
       document.getElementById("red-hud")!.classList.remove("inactive");
       document.getElementById("blue-hud")!.classList.remove("inactive");
       this.redFireBtn.disabled = false;
       this.blueFireBtn.disabled = false;
       this.redInput.setEnabled(true);
       this.blueInput.setEnabled(true);
+    } else {
+      const p = PLAYER[this.currentTurn];
+      document.documentElement.style.setProperty("--player-color", p.color);
+      document.documentElement.style.setProperty("--player-color-dim", p.dim);
     }
   }
 
@@ -150,13 +161,15 @@ export class GameUI {
   }
 
   setStatus(note?: string) {
-    const p = PLAYER[this.currentTurn];
-    const statusEl = this.currentTurn === "red" ? this.redStatus : this.blueStatus;
-    const turn = `<strong style="color:${p.color}">${p.label}'s turn</strong>`;
-    const tail = note
-      ? ` &middot; <span class="hint">${note}</span>`
-      : ` &middot; <span class="hint">type a function in <code>x</code></span>`;
-    statusEl.innerHTML = turn + tail;
+    // Feedback messages only — no "X's turn" label and no "type a function"
+    // prompt (the prompt now lives in the input placeholder). Empty when idle.
+    // Clear both sides so a switched turn never leaves stale text behind.
+    this.redStatus.innerHTML = "";
+    this.blueStatus.innerHTML = "";
+    if (note) {
+      const statusEl = this.currentTurn === "red" ? this.redStatus : this.blueStatus;
+      statusEl.innerHTML = `<span class="hint">${note}</span>`;
+    }
   }
 
   showWin(winner: "red" | "blue", detail = "Direct hit."): void {

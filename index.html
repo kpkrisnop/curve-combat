@@ -127,6 +127,24 @@
       .hud-input .mq-cursor {
         border-left-color: #fff !important;
       }
+      .hud-input .mq-input {
+        position: relative;
+      }
+      .mq-placeholder {
+        position: absolute;
+        left: 2px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #5e7081;
+        font-size: 16px;
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+        pointer-events: none;
+        white-space: nowrap;
+      }
       .hud-fire-btn {
         border: none;
         border-radius: 8px;
@@ -441,35 +459,62 @@
         letter-spacing: 0.03em;
       }
 
-      /* ── HP bars (HP Mode only) ──────────────────────────────────────── */
-      .hp-bar-wrap {
+      /* ── HP bars (HP Mode only) — overlaid on the top of the map ─────────
+         Inset 8px inside the map (which is itself inset 16px with a 16px
+         radius), so each bar's OUTER top corner uses radius 16-8 = 8px to sit
+         concentric with the map's rounded corner. */
+      #hp-overlay {
+        position: absolute;
+        top: calc(var(--border-width) + 8px);
+        left: calc(var(--border-width) + 8px);
+        right: calc(var(--border-width) + 8px);
         display: flex;
-        align-items: center;
-        gap: 8px;
+        justify-content: space-between;
+        gap: 16px;
+        z-index: 5;
+        pointer-events: none;
+      }
+      .hp-bar-wrap {
+        position: relative;
+        width: 40%;
+        height: 26px;
+        border-radius: 5px;
+        background: rgba(10, 15, 20, 0.78);
+        box-shadow:
+          inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+          0 4px 14px rgba(0, 0, 0, 0.45);
       }
       .hp-bar-wrap[hidden] { display: none; }
+      #red-hp-bar-wrap { --hp-fill: #ff4444; border-top-left-radius: 8px; }
+      #blue-hp-bar-wrap { --hp-fill: #4488ff; border-top-right-radius: 8px; }
       .hp-bar-track {
-        flex: 1;
-        height: 6px;
-        background: rgba(255, 255, 255, 0.06);
-        border-radius: 3px;
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
         overflow: hidden;
+        display: flex;
       }
+      .hp-left .hp-bar-track { justify-content: flex-start; }
+      .hp-right .hp-bar-track { justify-content: flex-end; }
       .hp-bar {
         height: 100%;
         width: 100%;
-        border-radius: 3px;
-        background: var(--hud-color);
+        background: var(--hp-fill);
         transition: width 0.25s ease;
       }
       .hp-label {
-        font-size: 11px;
-        font-weight: 700;
-        color: var(--hud-color);
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        color: #fff;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
         white-space: nowrap;
-        min-width: 38px;
-        text-align: right;
       }
+      .hp-left .hp-label { right: 9px; }
+      .hp-right .hp-label { left: 9px; }
     </style>
   </head>
   <body>
@@ -519,14 +564,20 @@
     <div id="game" hidden>
       <main id="game-stage"></main>
 
+      <!-- HP bars overlaid on the top of the map (HP Mode only). -->
+      <div id="hp-overlay">
+        <div id="red-hp-bar-wrap" class="hp-bar-wrap hp-left" hidden>
+          <div class="hp-bar-track"><div id="red-hp-bar" class="hp-bar"></div></div>
+          <span id="red-hp-label" class="hp-label">100 HP</span>
+        </div>
+        <div id="blue-hp-bar-wrap" class="hp-bar-wrap hp-right" hidden>
+          <div class="hp-bar-track"><div id="blue-hp-bar" class="hp-bar"></div></div>
+          <span id="blue-hp-label" class="hp-label">100 HP</span>
+        </div>
+      </div>
+
       <div id="hud-bar">
         <div id="red-hud" class="player-hud">
-          <div id="red-hp-bar-wrap" class="hp-bar-wrap" hidden>
-            <div class="hp-bar-track">
-              <div id="red-hp-bar" class="hp-bar"></div>
-            </div>
-            <span id="red-hp-label" class="hp-label">100 HP</span>
-          </div>
           <div class="hud-fire-row">
             <span class="hud-prompt">y =</span>
             <span id="red-input" class="hud-input"></span>
@@ -540,12 +591,6 @@
         </div>
 
         <div id="blue-hud" class="player-hud inactive">
-          <div id="blue-hp-bar-wrap" class="hp-bar-wrap" hidden>
-            <div class="hp-bar-track">
-              <div id="blue-hp-bar" class="hp-bar"></div>
-            </div>
-            <span id="blue-hp-label" class="hp-label">100 HP</span>
-          </div>
           <div class="hud-fire-row">
             <span class="hud-prompt">y =</span>
             <span id="blue-input" class="hud-input"></span>

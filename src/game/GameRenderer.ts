@@ -167,18 +167,24 @@ export class GameRenderer {
 
     const cam = this.camera;
     const dpr = window.devicePixelRatio || 1;
+    // Render planets into a supersampled (2x) + antialiased texture, then draw
+    // the sprite at 1/SS scale — smooths both the planet rim and the carved
+    // crater edges far better than relying on the canvas antialias alone.
+    const SS = 2;
 
     for (const planet of this.world.planets) {
       const rPx = planet.radius * cam.scale;
       const pad = 3;
-      const size = Math.ceil(rPx * 2 + pad * 2);
+      const size = Math.ceil(rPx * 2 + pad * 2); // logical (on-screen) size
       const center = size / 2;
+      const texSize = size * SS; // texture is rendered at SS× resolution
+      const texCenter = center * SS;
       const ps = this.toScreen(planet.pos);
 
-      const rt = RenderTexture.create({ width: size, height: size, resolution: dpr });
+      const rt = RenderTexture.create({ width: texSize, height: texSize, resolution: dpr, antialias: true });
 
       const base = new Graphics();
-      base.circle(center, center, rPx).fill({ color: COLORS.planet });
+      base.circle(texCenter, texCenter, rPx * SS).fill({ color: COLORS.planet });
       this.app.renderer.render({ container: base, target: rt, clear: true });
       base.destroy();
 
@@ -187,7 +193,7 @@ export class GameRenderer {
         for (const cr of planet.craters) {
           const cs = this.toScreen(cr.pos);
           const e = new Graphics()
-            .circle(center + (cs.x - ps.x), center + (cs.y - ps.y), cr.radius * cam.scale)
+            .circle(texCenter + (cs.x - ps.x) * SS, texCenter + (cs.y - ps.y) * SS, cr.radius * cam.scale * SS)
             .fill({ color: 0xffffff });
           e.blendMode = "erase";
           erasers.addChild(e);
@@ -197,6 +203,7 @@ export class GameRenderer {
       }
 
       const sprite = new Sprite(rt);
+      sprite.scale.set(1 / SS);
       sprite.position.set(ps.x - center, ps.y - center);
       this.planetLayer.addChild(sprite);
       this.planetTextures.push(rt);

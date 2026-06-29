@@ -33,8 +33,9 @@ export class MathInput {
   private mq: MQMathField;
   private editCb: (() => void) | null = null;
   private enterCb: (() => void) | null = null;
+  private placeholderEl: HTMLSpanElement | null = null;
 
-  constructor(initialLatex = "") {
+  constructor(initialLatex = "", placeholder = "") {
     this.el = document.createElement("span");
     this.el.className = "mq-input";
 
@@ -43,12 +44,31 @@ export class MathInput {
       handlers: {
         // editCb is still null during the initial latex() set below, so seeding
         // a value doesn't trigger a premature recompute.
-        edit: () => this.editCb?.(),
+        edit: () => {
+          this.editCb?.();
+          this.syncPlaceholder();
+        },
         enter: () => this.enterCb?.(),
       },
     });
 
+    // A faux placeholder overlay (MathQuill has no native placeholder): shown
+    // only while the field is empty, hidden the moment any content is typed.
+    if (placeholder) {
+      this.placeholderEl = document.createElement("span");
+      this.placeholderEl.className = "mq-placeholder";
+      this.placeholderEl.textContent = placeholder;
+      this.el.appendChild(this.placeholderEl);
+    }
+
     if (initialLatex) this.mq.latex(initialLatex);
+    this.syncPlaceholder();
+  }
+
+  /** Show the placeholder only when the field is empty. */
+  private syncPlaceholder(): void {
+    if (!this.placeholderEl) return;
+    this.placeholderEl.style.display = this.mq.latex().trim() === "" ? "" : "none";
   }
 
   getLatex(): string {
@@ -57,6 +77,7 @@ export class MathInput {
 
   setLatex(value: string): void {
     this.mq.latex(value);
+    this.syncPlaceholder();
   }
 
   focus(): void {

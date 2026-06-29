@@ -55,4 +55,41 @@ describe("sampleTrajectory — world-anchored firing", () => {
     const samples = sampleTrajectory((x) => 1 / x, soldier, BOUNDS);
     expect(samples.some((s) => s.gap)).toBe(true);
   });
+
+  it("flies a high-frequency sin all the way to the far bound (no mid-air stall)", () => {
+    const soldier: Soldier = { pos: { x: -9, y: 0 }, dir: 1 };
+    const samples = sampleTrajectory((x) => Math.sin(50 * x), soldier, BOUNDS);
+
+    // The path must reach the right edge, not expire near the muzzle.
+    const last = samples[samples.length - 1];
+    expect(last.p.x).toBeGreaterThan(BOUNDS.maxX - 0.1);
+    // And it must stay within the sample budget.
+    expect(samples.length).toBeLessThanOrEqual(40_000);
+  });
+
+  it("traverses an extreme-frequency sin within budget (sin(200x))", () => {
+    const soldier: Soldier = { pos: { x: -9, y: 0 }, dir: 1 };
+    const samples = sampleTrajectory((x) => Math.sin(200 * x), soldier, BOUNDS);
+
+    const last = samples[samples.length - 1];
+    expect(last.p.x).toBeGreaterThan(BOUNDS.maxX - 0.2);
+    expect(samples.length).toBeLessThanOrEqual(40_000);
+  });
+
+  it("keeps a steep-but-continuous line connected (no false gap on y = 50x)", () => {
+    const soldier: Soldier = { pos: { x: -0.1, y: 0 }, dir: 1 };
+    // Narrow bounds so the steep line stays on-screen briefly.
+    const tall: Bounds = { minX: -1, minY: -200, maxX: 1, maxY: 200 };
+    const samples = sampleTrajectory((x) => 50 * x, soldier, tall);
+    // A steep straight line is continuous: no segment should be flagged a gap.
+    expect(samples.every((s) => !s.gap)).toBe(true);
+  });
+
+  it("samples a flat line sparsely (curvature-driven density)", () => {
+    const samples = sampleTrajectory(() => 0, { pos: { x: -9, y: 0 }, dir: 1 }, BOUNDS);
+    // y = 0 has zero curvature, so refinement adds nothing beyond the coarse march.
+    expect(samples.length).toBeLessThan(2000);
+    const last = samples[samples.length - 1];
+    expect(last.p.x).toBeGreaterThan(BOUNDS.maxX - 0.1);
+  });
 });
