@@ -353,6 +353,38 @@ export class GameRenderer {
     window.setTimeout(() => this.fxLayer.clear(), 300);
   }
 
+  showFloatingDamage(at: Vec2, dmg: number, player: "red" | "blue"): void {
+    const color = player === "red" ? COLORS.red : COLORS.blue;
+    const pos = this.toScreen(at);
+    const text = new Text({
+      text: `-${dmg}`,
+      style: {
+        fill: color,
+        fontSize: 22,
+        fontWeight: "bold",
+        fontFamily: "system-ui, -apple-system, sans-serif",
+      },
+    });
+    text.anchor.set(0.5, 1);
+    text.position.set(pos.x, pos.y);
+    text.alpha = 1;
+    this.fxLayer.addChild(text);
+
+    const startMs = performance.now();
+    const dur = 700;
+    const startY = pos.y;
+    const tick = () => {
+      const p = Math.min(1, (performance.now() - startMs) / dur);
+      text.y = startY - p * 40;
+      text.alpha = 1 - p;
+      if (p >= 1) {
+        this.app.ticker.remove(tick);
+        if (!text.destroyed) text.destroy();
+      }
+    };
+    this.app.ticker.add(tick);
+  }
+
   private toScreen(p: Vec2): Vec2 {
     return { x: this.camera.worldToScreenX(p.x), y: this.camera.worldToScreenY(p.y) };
   }
