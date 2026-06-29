@@ -29,6 +29,13 @@ export class GameUI {
   private tutorialNext: HTMLButtonElement;
   private tutorialSkip: HTMLButtonElement;
 
+  private redHpBarWrap: HTMLElement;
+  private redHpBar: HTMLElement;
+  private redHpLabel: HTMLElement;
+  private blueHpBarWrap: HTMLElement;
+  private blueHpBar: HTMLElement;
+  private blueHpLabel: HTMLElement;
+
   constructor(root: ParentNode = document) {
     const redInputHost = root.querySelector<HTMLElement>("#red-input")!;
     this.redFireBtn = root.querySelector<HTMLButtonElement>("#red-fire-btn")!;
@@ -50,6 +57,13 @@ export class GameUI {
     this.tutorialText = root.querySelector<HTMLElement>("#tutorial-text")!;
     this.tutorialNext = root.querySelector<HTMLButtonElement>("#tutorial-next")!;
     this.tutorialSkip = root.querySelector<HTMLButtonElement>("#tutorial-skip")!;
+
+    this.redHpBarWrap = root.querySelector<HTMLElement>("#red-hp-bar-wrap")!;
+    this.redHpBar = root.querySelector<HTMLElement>("#red-hp-bar")!;
+    this.redHpLabel = root.querySelector<HTMLElement>("#red-hp-label")!;
+    this.blueHpBarWrap = root.querySelector<HTMLElement>("#blue-hp-bar-wrap")!;
+    this.blueHpBar = root.querySelector<HTMLElement>("#blue-hp-bar")!;
+    this.blueHpLabel = root.querySelector<HTMLElement>("#blue-hp-label")!;
 
     this.redInput = new MathInput();
     redInputHost.appendChild(this.redInput.el);
@@ -132,10 +146,10 @@ export class GameUI {
     statusEl.innerHTML = turn + tail;
   }
 
-  showWin(winner: "red" | "blue") {
+  showWin(winner: "red" | "blue", detail = "Direct hit."): void {
     const p = PLAYER[winner];
     this.winTitle.innerHTML = `<span style="color:${p.color}">${p.label} WINS!</span>`;
-    this.winDetail.textContent = "Direct hit.";
+    this.winDetail.textContent = detail;
     this.banner.hidden = false;
   }
 
@@ -181,5 +195,19 @@ export class GameUI {
 
   hideTutorial(): void {
     this.tutorialOverlay.hidden = true;
+  }
+
+  showHpBars(visible: boolean): void {
+    this.redHpBarWrap.hidden = !visible;
+    this.blueHpBarWrap.hidden = !visible;
+  }
+
+  updateHp(redHp: number, blueHp: number): void {
+    const rPct = Math.max(0, Math.min(100, redHp));
+    const bPct = Math.max(0, Math.min(100, blueHp));
+    this.redHpBar.style.width = `${rPct}%`;
+    this.blueHpBar.style.width = `${bPct}%`;
+    this.redHpLabel.textContent = `${redHp} HP`;
+    this.blueHpLabel.textContent = `${blueHp} HP`;
   }
 }
