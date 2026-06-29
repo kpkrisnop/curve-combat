@@ -34,11 +34,13 @@ export class GameRenderer {
   private planetLayer = new Container();
   private planetTextures: RenderTexture[] = [];
   private fieldLayer = new Graphics();
-  private trailLayer = new Graphics();
+  private trailLayerRed = new Graphics();
+  private trailLayerBlue = new Graphics();
   private fxLayer = new Graphics();
 
   private world!: World;
   private activeTurn: "red" | "blue" = "red";
+  private noTurnMode = false;
   private redPos: Vec2 = { x: -9, y: 0 };
   private bluePos: Vec2 = { x: 9, y: 0 };
 
@@ -65,7 +67,8 @@ export class GameRenderer {
       this.labelLayer,
       this.planetLayer,
       this.fieldLayer,
-      this.trailLayer,
+      this.trailLayerRed,
+      this.trailLayerBlue,
       this.fxLayer,
     );
 
@@ -97,7 +100,8 @@ export class GameRenderer {
     this.redPos = redPos;
     this.bluePos = bluePos;
     this.recomputeEffectiveBounds();
-    this.trailLayer.clear();
+    this.trailLayerRed.clear();
+    this.trailLayerBlue.clear();
     this.fxLayer.clear();
     this.drawStatic();
     this.drawPlanets();
@@ -199,8 +203,8 @@ export class GameRenderer {
     }
   }
 
-  private activeColor(): number {
-    return this.activeTurn === "red" ? COLORS.red : COLORS.blue;
+  setNoTurnMode(enabled: boolean): void {
+    this.noTurnMode = enabled;
   }
 
   private drawField() {
@@ -212,7 +216,7 @@ export class GameRenderer {
 
     // RED — full brightness when active, dimmed when waiting.
     const rs = this.toScreen(this.redPos);
-    const isRedActive = this.activeTurn === "red";
+    const isRedActive = this.noTurnMode || this.activeTurn === "red";
     if (isRedActive) {
       g.circle(rs.x, rs.y, rPx + 6).stroke({ width: 2.5, color: COLORS.red, alpha: 0.35 });
     }
@@ -221,9 +225,8 @@ export class GameRenderer {
       g.moveTo(rs.x, rs.y).lineTo(rs.x + BARREL_PX, rs.y).stroke({ width: 3, color: COLORS.red });
     }
 
-    // BLUE — full brightness when active, dimmed when waiting.
     const bs = this.toScreen(this.bluePos);
-    const isBlueActive = this.activeTurn === "blue";
+    const isBlueActive = this.noTurnMode || this.activeTurn === "blue";
     if (isBlueActive) {
       g.circle(bs.x, bs.y, rPx + 6).stroke({ width: 2.5, color: COLORS.blue, alpha: 0.35 });
     }
@@ -233,10 +236,12 @@ export class GameRenderer {
     }
   }
 
-  playShot(result: ShotResult): Promise<void> {
-    this.trailLayer.clear();
-    this.fxLayer.clear();
-    const trailColor = this.activeColor();
+  playShot(result: ShotResult, player?: "red" | "blue"): Promise<void> {
+    const effectivePlayer = player ?? this.activeTurn;
+    const trailLayer = effectivePlayer === "red" ? this.trailLayerRed : this.trailLayerBlue;
+    trailLayer.clear();
+    if (!player) this.fxLayer.clear(); // Only clear fx in turn-based mode
+    const trailColor = effectivePlayer === "red" ? COLORS.red : COLORS.blue;
 
     return new Promise((resolve) => {
       if (result.hit.kind === "dud" || result.samples.length < 2) {
@@ -263,7 +268,7 @@ export class GameRenderer {
         const headIdx = Math.floor(headF);
         const frac = headF - headIdx;
 
-        const g = this.trailLayer;
+        const g = trailLayer;
         g.clear();
         let pen = false;
         for (let i = 0; i <= headIdx; i++) {
