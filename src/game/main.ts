@@ -28,7 +28,8 @@ let redPlayerPos: Vec2 = { x: -9, y: 0 };
 let bluePlayerPos: Vec2 = { x: 9, y: 0 };
 let planets: Planet[] = [];
 let activeTurn: "red" | "blue" = "red";
-let busy = false;
+let redBusy = false;
+let blueBusy = false;
 let gameOver = false;
 let redScore = 0;
 let blueScore = 0;
@@ -72,7 +73,8 @@ function start() {
   planets = seedPlanets();
   activeTurn = "red";
   gameOver = false;
-  busy = false;
+  redBusy = false;
+  blueBusy = false;
   redScore = 0;
   blueScore = 0;
   currentRound = 1;
@@ -82,6 +84,12 @@ function start() {
   renderer!.setWorld(buildWorld(activeTurn, planets), activeTurn, redPlayerPos, bluePlayerPos);
   ui!.resetInputs();
   ui!.setTurn(activeTurn, "");
+  if (matchConfig.noTurn) {
+    renderer!.setNoTurnMode(true);
+    ui!.setNoTurnMode(true);
+  } else {
+    renderer!.setNoTurnMode(false);
+  }
   ui!.hideWin();
   ui!.hideSplash();
   ui!.updateScoreboard(redScore, blueScore, currentRound, matchConfig.rounds);
@@ -98,8 +106,10 @@ function nextRound(roundLoser: "red" | "blue") {
   const winner = matchWinner(redScore, blueScore, matchConfig.rounds);
   if (winner) {
     gameOver = true;
-    busy = false;
-    ui!.setBusy(false);
+    redBusy = false;
+    blueBusy = false;
+    ui!.setBusy("red", false);
+    ui!.setBusy("blue", false);
     ui!.showWin(winner, matchConfig.mode === "hp" ? "Health depleted." : "Direct hit.");
     return;
   }
@@ -119,11 +129,16 @@ function nextRound(roundLoser: "red" | "blue") {
     planets = seedPlanets();
     activeTurn = firstShooterNextRound(roundLoser);
     gameOver = false;
-    busy = false;
+    redBusy = false;
+    blueBusy = false;
     placePlayersRandomly(renderer!.getEffectiveBounds());
     renderer!.setWorld(buildWorld(activeTurn, planets), activeTurn, redPlayerPos, bluePlayerPos);
     ui!.resetInputs();
     ui!.setTurn(activeTurn, "");
+    if (matchConfig.noTurn) {
+      renderer!.setNoTurnMode(true);
+      ui!.setNoTurnMode(true);
+    }
     ui!.updateScoreboard(redScore, blueScore, currentRound, matchConfig.rounds);
     if (matchConfig.mode === "hp") {
       redHp = HP_MAX;
@@ -135,25 +150,38 @@ function nextRound(roundLoser: "red" | "blue") {
   }, 2000);
 }
 
-async function onFire(latex: string) {
-  if (busy || gameOver) return;
+async function onFire(player: "red" | "blue", latex: string) {
+  if (gameOver) return;
+
+  // Gate: turn-based uses activeTurn + single busy; no-turn uses per-player busy
+  if (matchConfig.noTurn) {
+    if (player === "red" && redBusy) return;
+    if (player === "blue" && blueBusy) return;
+  } else {
+    if (player !== activeTurn) return;
+    if (redBusy || blueBusy) return;
+  }
 
   const result = evaluateAll([{ id: "shot", latex }]);
   const row = result.get("shot");
   const fn = row?.kind === "curve" ? row.fn : undefined;
   if (!fn) {
-    ui!.setStatus("that isn't a plottable function of x");
+    if (!matchConfig.noTurn || player === activeTurn) {
+      ui!.setStatus("that isn't a plottable function of x");
+    }
     return;
   }
 
-  busy = true;
-  ui!.setBusy(true);
+  // Set player busy
+  if (player === "red") redBusy = true;
+  else blueBusy = true;
+  ui!.setBusy(player, true);
 
-  const shooter = activeTurn;
+  const shooter = player;
   const world = buildWorld(shooter, planets);
   const shot = fire(world, fn);
 
-  await renderer!.playShot(shot);
+  await renderer!.playShot(shot, player);
 
   if (shot.hit.kind === "planet" && shot.hit.planetId) {
     const planet = planets.find((p) => p.id === shot.hit.planetId);
@@ -162,7 +190,6 @@ async function onFire(latex: string) {
 
   if (shot.hit.kind === "target") {
     if (matchConfig.mode === "hp") {
-      // HP mode: apply damage, end round only when HP hits 0
       const defender = shooter === "red" ? "blue" : "red";
       const dmg = computeDamage(shot.impactSlope);
 
@@ -186,29 +213,41 @@ async function onFire(latex: string) {
         }
       }
 
-      // Hit but defender still alive — switch turns and continue
-      activeTurn = shooter === "red" ? "blue" : "red";
-      renderer!.setWorld(buildWorld(activeTurn, planets), activeTurn, redPlayerPos, bluePlayerPos);
-      ui!.setTurn(activeTurn, latex);
-      busy = false;
-      ui!.setBusy(false);
+      if (player === "red") redBusy = false;
+      else blueBusy = false;
+      ui!.setBusy(player, false);
+
+      if (!matchConfig.noTurn) {
+        activeTurn = shooter === "red" ? "blue" : "red";
+        renderer!.setWorld(buildWorld(activeTurn, planets), activeTurn, redPlayerPos, bluePlayerPos);
+        ui!.setTurn(activeTurn, latex);
+      } else {
+        renderer!.setWorld(buildWorld(activeTurn, planets), activeTurn, redPlayerPos, bluePlayerPos);
+      }
       ui!.setStatus(`Hit! -${dmg} HP`);
       ui!.focus();
       return;
     }
 
-    // Classic mode: direct hit = round end
+    // Classic mode: hit = round end
     const roundLoser = shooter === "red" ? "blue" : "red";
     renderer!.setWorld(buildWorld(shooter, planets), shooter, redPlayerPos, bluePlayerPos);
     nextRound(roundLoser);
     return;
   }
 
-  activeTurn = shooter === "red" ? "blue" : "red";
-  renderer!.setWorld(buildWorld(activeTurn, planets), activeTurn, redPlayerPos, bluePlayerPos);
-  ui!.setTurn(activeTurn, latex);
-  busy = false;
-  ui!.setBusy(false);
+  // Miss — re-enable this player's button; switch turns only in turn-based mode
+  if (player === "red") redBusy = false;
+  else blueBusy = false;
+  ui!.setBusy(player, false);
+
+  if (!matchConfig.noTurn) {
+    activeTurn = shooter === "red" ? "blue" : "red";
+    renderer!.setWorld(buildWorld(activeTurn, planets), activeTurn, redPlayerPos, bluePlayerPos);
+    ui!.setTurn(activeTurn, latex);
+  } else {
+    renderer!.setWorld(buildWorld(activeTurn, planets), activeTurn, redPlayerPos, bluePlayerPos);
+  }
   ui!.setStatus(noteFor(shot.hit.kind));
   ui!.focus();
 }
