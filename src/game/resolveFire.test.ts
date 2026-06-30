@@ -33,6 +33,7 @@ describe("resolveFire guards", () => {
     const m = createMatch(CLASSIC, duel(), BOUNDS, "red");
     const res = resolveFire(m, { playerId: "r1", latex: "\\sin(" });
     expect(res.rejected).toBe("bad-function");
+    expect(res.next).toBe(m); // rejected → input state returned by reference
     expect(res.next.activePlayerId).toBe("r1"); // still red's turn
   });
 });
