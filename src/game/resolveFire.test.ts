@@ -56,3 +56,27 @@ describe("resolveFire — miss and planet", () => {
     expect(res.next.activePlayerId).toBe("b1");
   });
 });
+
+describe("resolveFire — Classic elimination", () => {
+  it("a flat shot through the enemy eliminates them and ends the round", () => {
+    const m = createMatch(CLASSIC, duel(), BOUNDS, "red");
+    const res = resolveFire(m, { playerId: "r1", latex: "0" });
+    expect(res.shot!.hit.kind).toBe("target");
+    expect(res.eliminatedId).toBe("b1");
+    expect(res.roundEnded).toBe(true);
+    expect(res.roundLoser).toBe("blue");
+    expect(res.next.scores).toEqual({ red: 1, blue: 0 });
+    expect(res.next.phase).toBe("between"); // not yet match point in best-of-3
+    expect(res.matchEnded).toBe(false);
+  });
+
+  it("reaching the round majority ends the match with a winner", () => {
+    let m = createMatch(CLASSIC, duel(), BOUNDS, "red");
+    m = { ...m, scores: { red: 1, blue: 0 } }; // red one round from winning bo3
+    const res = resolveFire(m, { playerId: "r1", latex: "0" });
+    expect(res.matchEnded).toBe(true);
+    expect(res.next.phase).toBe("over");
+    expect(res.next.winner).toBe("red");
+    expect(res.next.scores).toEqual({ red: 2, blue: 0 });
+  });
+});

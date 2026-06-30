@@ -83,13 +83,50 @@ export function resolveFire(state: MatchState, intent: FireIntent): ShotResoluti
     );
   }
 
-  // Target scoring is added in Tasks 4–5. For now, target/miss/planet all
-  // fall through to "round continues".
-  void computeDamage; // referenced fully in Task 5
-  void matchWinner; //  referenced fully in Task 4
+  let damage: number | undefined;
+  let eliminatedId: string | undefined;
+
+  // Target impact → apply damage / elimination (immutably).
+  if (shot.hit.kind === "target" && shot.hit.targetId) {
+    const targetId = shot.hit.targetId;
+    if (state.config.mode === "hp") {
+      damage = computeDamage(shot.impactSlope);
+      players = players.map((p) => {
+        if (p.id !== targetId) return p;
+        const hp = Math.max(0, p.hp - damage!);
+        return { ...p, hp, alive: hp > 0 };
+      });
+      if (!players.find((p) => p.id === targetId)!.alive) eliminatedId = targetId;
+    } else {
+      // Classic: a single direct hit eliminates the target.
+      players = players.map((p) => (p.id === targetId ? { ...p, alive: false } : p));
+      eliminatedId = targetId;
+    }
+  }
+
+  const enemyTeam: Team = shooter.team === "red" ? "blue" : "red";
+  const enemyWiped = players
+    .filter((p) => p.team === enemyTeam)
+    .every((p) => !p.alive);
 
   let next: MatchState = { ...state, players, planets };
 
+  if (enemyWiped) {
+    const scores = { ...state.scores, [shooter.team]: state.scores[shooter.team] + 1 };
+    const winner = matchWinner(scores.red, scores.blue, state.config.rounds);
+    next = { ...next, scores, phase: winner ? "over" : "between", winner };
+    return {
+      next,
+      shot,
+      damage,
+      eliminatedId,
+      roundLoser: enemyTeam,
+      roundEnded: true,
+      matchEnded: winner !== null,
+    };
+  }
+
+  // Round continues — advance the turn (turn-based only).
   if (!state.config.noTurn) {
     next = {
       ...next,
@@ -100,5 +137,5 @@ export function resolveFire(state: MatchState, intent: FireIntent): ShotResoluti
     };
   }
 
-  return { next, shot, roundEnded: false, matchEnded: false };
+  return { next, shot, damage, eliminatedId, roundEnded: false, matchEnded: false };
 }
