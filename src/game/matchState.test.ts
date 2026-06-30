@@ -1,8 +1,9 @@
 // src/game/matchState.test.ts
 import { describe, it, expect } from "vitest";
-import { createMatch, livingEnemies, worldFor, teamDir, PLAYER_RADIUS } from "./matchState";
+import { createMatch, livingEnemies, worldFor, teamDir, PLAYER_RADIUS, playerById } from "./matchState";
 import type { RoundLayout, PlayerState } from "./matchState";
 import type { MatchConfig } from "./matchLogic";
+import { HP_MAX } from "./hpLogic";
 
 const BOUNDS = { minX: -12, minY: -7, maxX: 12, maxY: 7 };
 const CONFIG: MatchConfig = { mode: "classic", rounds: 3, noTurn: false, role: "local" };
@@ -18,7 +19,7 @@ function layout(): RoundLayout {
 describe("createMatch", () => {
   it("starts all players alive at full HP, scores 0, phase play, round 1", () => {
     const m = createMatch(CONFIG, layout(), BOUNDS, "red");
-    expect(m.players.every((p) => p.alive && p.hp === 100)).toBe(true);
+    expect(m.players.every((p) => p.alive && p.hp === HP_MAX)).toBe(true);
     expect(m.scores).toEqual({ red: 0, blue: 0 });
     expect(m.round).toBe(1);
     expect(m.phase).toBe("play");
@@ -51,5 +52,11 @@ describe("selectors", () => {
     expect(w.soldier.dir).toBe(1);
     expect(w.targets).toEqual([{ id: "b1", pos: { x: 9, y: 0 }, radius: PLAYER_RADIUS }]);
     expect(w.planets).toHaveLength(1);
+  });
+
+  it("playerById finds a player by id and returns undefined for an unknown id", () => {
+    const m = createMatch(CONFIG, layout(), BOUNDS, "red");
+    expect(playerById(m, "r1")?.id).toBe("r1");
+    expect(playerById(m, "nope")).toBeUndefined();
   });
 });

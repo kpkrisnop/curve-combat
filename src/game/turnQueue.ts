@@ -29,7 +29,7 @@ export function nextActive(
   isAlive: (id: string) => boolean,
 ): string | null {
   if (queue.length === 0) return null;
-  const start = currentId ? queue.indexOf(currentId) : -1;
+  const start = currentId != null ? queue.indexOf(currentId) : -1;
   for (let step = 1; step <= queue.length; step++) {
     const id = queue[(start + step + queue.length) % queue.length];
     if (isAlive(id)) return id;

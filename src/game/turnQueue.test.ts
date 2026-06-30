@@ -22,6 +22,11 @@ describe("buildTurnQueue", () => {
     const players = [p("r1", "red"), p("r2", "red"), p("r3", "red"), p("b1", "blue")];
     expect(buildTurnQueue(players, "red")).toEqual(["r1", "b1", "r2", "r3"]);
   });
+
+  it("appends the larger team's trailing players when blue goes first (1 red vs 3 blue)", () => {
+    const players = [p("r1", "red"), p("b1", "blue"), p("b2", "blue"), p("b3", "blue")];
+    expect(buildTurnQueue(players, "blue")).toEqual(["b1", "r1", "b2", "b3"]);
+  });
 });
 
 describe("nextActive", () => {
