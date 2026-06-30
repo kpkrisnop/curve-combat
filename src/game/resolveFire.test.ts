@@ -4,6 +4,7 @@ import { resolveFire } from "./resolveFire";
 import { createMatch } from "./matchState";
 import type { RoundLayout, PlayerState } from "./matchState";
 import type { MatchConfig } from "./matchLogic";
+import { HP_MAX } from "./hpLogic";
 
 const BOUNDS = { minX: -12, minY: -7, maxX: 12, maxY: 7 };
 const CLASSIC: MatchConfig = { mode: "classic", rounds: 3, noTurn: false, role: "local" };
@@ -98,5 +99,34 @@ describe("resolveFire — Classic elimination", () => {
     expect(res.next.players.find((p) => p.id === "b1")!.alive).toBe(false);
     expect(res.next.players.find((p) => p.id === "b2")!.alive).toBe(true);
     expect(res.next.scores).toEqual({ red: 0, blue: 0 });
+  });
+});
+
+const HP: MatchConfig = { mode: "hp", rounds: 3, noTurn: false, role: "local" };
+
+describe("resolveFire — HP mode", () => {
+  it("a non-fatal hit subtracts damage and keeps the round going", () => {
+    const m = createMatch(HP, duel(), BOUNDS, "red");
+    const res = resolveFire(m, { playerId: "r1", latex: "0" });
+    expect(res.shot!.hit.kind).toBe("target");
+    expect(res.damage).toBeGreaterThanOrEqual(5);
+    const blue = res.next.players.find((p) => p.id === "b1")!;
+    expect(blue.hp).toBe(HP_MAX - res.damage!);
+    expect(blue.alive).toBe(true);
+    expect(res.roundEnded).toBe(false);
+    expect(res.next.activePlayerId).toBe("b1"); // turn passes
+  });
+
+  it("a hit that empties HP eliminates the target and ends the round", () => {
+    let m = createMatch(HP, duel(), BOUNDS, "red");
+    // pre-damage blue to 1 HP so any hit finishes them.
+    m = {
+      ...m,
+      players: m.players.map((p) => (p.id === "b1" ? { ...p, hp: 1 } : p)),
+    };
+    const res = resolveFire(m, { playerId: "r1", latex: "0" });
+    expect(res.eliminatedId).toBe("b1");
+    expect(res.roundEnded).toBe(true);
+    expect(res.next.scores).toEqual({ red: 1, blue: 0 });
   });
 });
