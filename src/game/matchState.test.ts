@@ -1,0 +1,55 @@
+// src/game/matchState.test.ts
+import { describe, it, expect } from "vitest";
+import { createMatch, livingEnemies, worldFor, teamDir, PLAYER_RADIUS } from "./matchState";
+import type { RoundLayout, PlayerState } from "./matchState";
+import type { MatchConfig } from "./matchLogic";
+
+const BOUNDS = { minX: -12, minY: -7, maxX: 12, maxY: 7 };
+const CONFIG: MatchConfig = { mode: "classic", rounds: 3, noTurn: false, role: "local" };
+
+function layout(): RoundLayout {
+  const players: PlayerState[] = [
+    { id: "r1", name: "R1", team: "red", pos: { x: -9, y: 0 }, hp: 0, alive: false },
+    { id: "b1", name: "B1", team: "blue", pos: { x: 9, y: 0 }, hp: 0, alive: false },
+  ];
+  return { players, planets: [{ id: "p1", pos: { x: 0, y: 0 }, radius: 1, craters: [] }] };
+}
+
+describe("createMatch", () => {
+  it("starts all players alive at full HP, scores 0, phase play, round 1", () => {
+    const m = createMatch(CONFIG, layout(), BOUNDS, "red");
+    expect(m.players.every((p) => p.alive && p.hp === 100)).toBe(true);
+    expect(m.scores).toEqual({ red: 0, blue: 0 });
+    expect(m.round).toBe(1);
+    expect(m.phase).toBe("play");
+    expect(m.winner).toBeNull();
+  });
+
+  it("turn-based active player is the first of firstTeam; no-turn is null", () => {
+    expect(createMatch(CONFIG, layout(), BOUNDS, "red").activePlayerId).toBe("r1");
+    const noTurn = createMatch({ ...CONFIG, noTurn: true }, layout(), BOUNDS, "red");
+    expect(noTurn.activePlayerId).toBeNull();
+  });
+});
+
+describe("selectors", () => {
+  it("teamDir: red fires +x, blue fires -x", () => {
+    expect(teamDir("red")).toBe(1);
+    expect(teamDir("blue")).toBe(-1);
+  });
+
+  it("livingEnemies excludes own team and the dead", () => {
+    const m = createMatch(CONFIG, layout(), BOUNDS, "red");
+    m.players[1].alive = false; // kill b1
+    expect(livingEnemies(m, "red")).toHaveLength(0);
+  });
+
+  it("worldFor builds soldier from shooter and targets from living enemies", () => {
+    const m = createMatch(CONFIG, layout(), BOUNDS, "red");
+    const w = worldFor(m, m.players[0]);
+    expect(w.soldier.pos).toEqual({ x: -9, y: 0 });
+    expect(w.soldier.dir).toBe(1);
+    expect(w.targets).toEqual([{ id: "b1", pos: { x: 9, y: 0 }, radius: PLAYER_RADIUS }]);
+    expect(w.planets).toHaveLength(1);
+  });
+});
