@@ -91,3 +91,23 @@ export function createMatch(
     winner: null,
   };
 }
+
+/** Set up the next round: respawn everyone, install the new layout, keep scores. */
+export function beginRound(
+  prev: MatchState,
+  layout: RoundLayout,
+  firstTeam: Team,
+): MatchState {
+  const players = layout.players.map((p) => ({ ...p, hp: HP_MAX, alive: true }));
+  const turnQueue = buildTurnQueue(players, firstTeam);
+  return {
+    ...prev,
+    players,
+    planets: layout.planets,
+    turnQueue,
+    activePlayerId: prev.config.noTurn ? null : (turnQueue[0] ?? null),
+    round: prev.round + 1,
+    phase: "play",
+    winner: null,
+  };
+}

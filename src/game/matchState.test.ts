@@ -1,6 +1,6 @@
 // src/game/matchState.test.ts
 import { describe, it, expect } from "vitest";
-import { createMatch, livingEnemies, worldFor, teamDir, PLAYER_RADIUS, playerById } from "./matchState";
+import { createMatch, livingEnemies, worldFor, teamDir, PLAYER_RADIUS, playerById, beginRound } from "./matchState";
 import type { RoundLayout, PlayerState } from "./matchState";
 import type { MatchConfig } from "./matchLogic";
 import { HP_MAX } from "./hpLogic";
@@ -58,5 +58,20 @@ describe("selectors", () => {
     const m = createMatch(CONFIG, layout(), BOUNDS, "red");
     expect(playerById(m, "r1")?.id).toBe("r1");
     expect(playerById(m, "nope")).toBeUndefined();
+  });
+});
+
+describe("beginRound", () => {
+  it("respawns players, keeps scores, bumps the round, and sets first shooter", () => {
+    let m = createMatch(CONFIG, layout(), BOUNDS, "red");
+    m = { ...m, scores: { red: 1, blue: 0 }, round: 1, players: m.players.map((p) => ({ ...p, hp: 0, alive: false })) };
+
+    const next = beginRound(m, layout(), "blue"); // blue (round loser) shoots first
+    expect(next.round).toBe(2);
+    expect(next.phase).toBe("play");
+    expect(next.winner).toBeNull();
+    expect(next.scores).toEqual({ red: 1, blue: 0 });
+    expect(next.players.every((p) => p.alive && p.hp === 100)).toBe(true);
+    expect(next.activePlayerId).toBe("b1"); // firstTeam = blue
   });
 });
