@@ -20,6 +20,16 @@ function duel(planetAtCentre = false): RoundLayout {
   return { players, planets };
 }
 
+// red vs a blue team of two; b1 sits on the x-axis, b2 well off it.
+function oneVsTwo(): RoundLayout {
+  const players: PlayerState[] = [
+    { id: "r1", name: "R1", team: "red", pos: { x: -9, y: 0 }, hp: 100, alive: true },
+    { id: "b1", name: "B1", team: "blue", pos: { x: 9, y: 0 }, hp: 100, alive: true },
+    { id: "b2", name: "B2", team: "blue", pos: { x: 9, y: 3 }, hp: 100, alive: true },
+  ];
+  return { players, planets: [] };
+}
+
 describe("resolveFire guards", () => {
   it("rejects firing when it isn't your turn", () => {
     const m = createMatch(CLASSIC, duel(), BOUNDS, "red");
@@ -78,5 +88,15 @@ describe("resolveFire — Classic elimination", () => {
     expect(res.next.phase).toBe("over");
     expect(res.next.winner).toBe("red");
     expect(res.next.scores).toEqual({ red: 2, blue: 0 });
+  });
+
+  it("eliminating one of two enemies does NOT end the round (team-generic)", () => {
+    const m = createMatch(CLASSIC, oneVsTwo(), BOUNDS, "red");
+    const res = resolveFire(m, { playerId: "r1", latex: "0" }); // flat shot hits b1 on the axis
+    expect(res.eliminatedId).toBe("b1");
+    expect(res.roundEnded).toBe(false);
+    expect(res.next.players.find((p) => p.id === "b1")!.alive).toBe(false);
+    expect(res.next.players.find((p) => p.id === "b2")!.alive).toBe(true);
+    expect(res.next.scores).toEqual({ red: 0, blue: 0 });
   });
 });

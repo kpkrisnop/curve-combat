@@ -105,9 +105,10 @@ export function resolveFire(state: MatchState, intent: FireIntent): ShotResoluti
   }
 
   const enemyTeam: Team = shooter.team === "red" ? "blue" : "red";
-  const enemyWiped = players
-    .filter((p) => p.team === enemyTeam)
-    .every((p) => !p.alive);
+  // A team can only newly become wiped if THIS shot eliminated someone.
+  const enemyWiped = eliminatedId
+    ? players.filter((p) => p.team === enemyTeam).every((p) => !p.alive)
+    : false;
 
   let next: MatchState = { ...state, players, planets };
 
