@@ -1,256 +1,153 @@
 import { GameRenderer } from "./GameRenderer";
 import { GameUI } from "./GameUI";
 import { LobbyScreen } from "../ui/LobbyScreen";
-import { fire } from "../sim/engine";
-import { evaluateAll } from "../math/Context";
-import { matchWinner, firstShooterNextRound, type MatchConfig } from "./matchLogic";
+import { firstShooterNextRound, type MatchConfig } from "./matchLogic";
 import { configToHash, parseConfigFromHash } from "./configRouter";
-import { HP_MAX, computeDamage } from "./hpLogic";
-import type { Bounds, Planet, Vec2, World } from "../sim/types";
-
-// ── Constants ─────────────────────────────────────────────────────────────────
-
-const CRATER_RADIUS = 0.8;
-const PLAYER_RADIUS = 0.1;
+import {
+  createMatch,
+  beginRound,
+  worldFor,
+  playerById,
+  type MatchState,
+  type Team,
+  type PlayerState,
+} from "./matchState";
+import { resolveFire } from "./resolveFire";
+import { buildLocalLayout } from "./localLayout";
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 
 const lobbyEl = document.getElementById("lobby-screen")!;
 const gameEl = document.getElementById("game")!;
 
-// ── Game state (initialised lazily in startGame) ──────────────────────────────
+// ── Game state ────────────────────────────────────────────────────────────────
 
 let renderer: GameRenderer | null = null;
 let ui: GameUI | null = null;
 let matchConfig: MatchConfig = { mode: "classic", rounds: 3, noTurn: false, role: "local" };
+let match: MatchState | null = null;
 
-let redPlayerPos: Vec2 = { x: -9, y: 0 };
-let bluePlayerPos: Vec2 = { x: 9, y: 0 };
-let planets: Planet[] = [];
-let activeTurn: "red" | "blue" = "red";
-let redBusy = false;
-let blueBusy = false;
-let gameOver = false;
-let redScore = 0;
-let blueScore = 0;
-let currentRound = 1;
-let redHp = HP_MAX;
-let blueHp = HP_MAX;
+// ── View adapters (1 player per team → existing 2-panel renderer/UI) ───────────
 
-// ── Planet seed ───────────────────────────────────────────────────────────────
-
-function seedPlanets(): Planet[] {
-  return [
-    { id: "p1", pos: { x: -5, y: 3 }, radius: 1.2, craters: [] },
-    { id: "p2", pos: { x: -3, y: -2 }, radius: 1.8, craters: [] },
-    { id: "p3", pos: { x: 0, y: 2 }, radius: 1.5, craters: [] },
-    { id: "p4", pos: { x: 0, y: -3 }, radius: 1.4, craters: [] },
-    { id: "p5", pos: { x: 3, y: 1 }, radius: 2.0, craters: [] },
-    { id: "p6", pos: { x: 5, y: -2 }, radius: 1.3, craters: [] },
-  ];
+function redOf(m: MatchState): PlayerState {
+  return m.players.find((p) => p.team === "red")!;
+}
+function blueOf(m: MatchState): PlayerState {
+  return m.players.find((p) => p.team === "blue")!;
 }
 
-// ── World helpers ─────────────────────────────────────────────────────────────
-
-function buildWorld(turn: "red" | "blue", ps: Planet[]): World {
-  return turn === "red"
-    ? { soldier: { pos: redPlayerPos, dir: 1 }, bounds: renderer!.getEffectiveBounds(), targets: [{ id: "blue", pos: bluePlayerPos, radius: PLAYER_RADIUS }], planets: ps }
-    : { soldier: { pos: bluePlayerPos, dir: -1 }, bounds: renderer!.getEffectiveBounds(), targets: [{ id: "red", pos: redPlayerPos, radius: PLAYER_RADIUS }], planets: ps };
-}
-
-function placePlayersRandomly(b: Bounds) {
-  const yLo = b.minY + 1, yHi = b.maxY - 1;
-  const xEdge = Math.abs(b.minX) - 0.3;
-  const xInner = Math.min(11, xEdge);
-  const xRange = Math.max(0, xEdge - xInner);
-  redPlayerPos = { x: -(xInner + Math.random() * xRange), y: yLo + Math.random() * (yHi - yLo) };
-  bluePlayerPos = { x: xInner + Math.random() * xRange, y: yLo + Math.random() * (yHi - yLo) };
+/** Push the current match into the renderer from a given team's perspective. */
+function renderFrom(m: MatchState, viewTeam: Team): void {
+  const viewer = m.players.find((p) => p.team === viewTeam && p.alive) ?? redOf(m);
+  renderer!.setWorld(worldFor(m, viewer), viewTeam, redOf(m).pos, blueOf(m).pos);
 }
 
 // ── Game lifecycle ────────────────────────────────────────────────────────────
 
-function start() {
-  planets = seedPlanets();
-  activeTurn = "red";
-  gameOver = false;
-  redBusy = false;
-  blueBusy = false;
-  redScore = 0;
-  blueScore = 0;
-  currentRound = 1;
-  redHp = HP_MAX;
-  blueHp = HP_MAX;
-  placePlayersRandomly(renderer!.getEffectiveBounds());
-  renderer!.setWorld(buildWorld(activeTurn, planets), activeTurn, redPlayerPos, bluePlayerPos);
+function start(): void {
+  const bounds = renderer!.getEffectiveBounds();
+  match = createMatch(matchConfig, buildLocalLayout(bounds), bounds, "red");
+
+  const viewTeam: Team = match.activePlayerId
+    ? playerById(match, match.activePlayerId)!.team
+    : "red";
+  renderFrom(match, viewTeam);
+
   ui!.resetInputs();
-  ui!.setTurn(activeTurn, "");
-  if (matchConfig.noTurn) {
-    renderer!.setNoTurnMode(true);
-    ui!.setNoTurnMode(true);
-  } else {
-    renderer!.setNoTurnMode(false);
-  }
+  ui!.setTurn(viewTeam, "");
+  renderer!.setNoTurnMode(matchConfig.noTurn);
+  if (matchConfig.noTurn) ui!.setNoTurnMode(true);
   ui!.hideWin();
   ui!.hideSplash();
-  ui!.updateScoreboard(redScore, blueScore, currentRound, matchConfig.rounds);
+  ui!.updateScoreboard(match.scores.red, match.scores.blue, match.round, matchConfig.rounds);
   ui!.showHpBars(matchConfig.mode === "hp");
-  ui!.updateHp(redHp, blueHp);
+  ui!.updateHp(redOf(match).hp, blueOf(match).hp);
   ui!.setStatus();
   ui!.focus();
 }
 
-function nextRound(roundLoser: "red" | "blue") {
-  if (roundLoser === "red") blueScore++;
-  else redScore++;
-
-  const winner = matchWinner(redScore, blueScore, matchConfig.rounds);
-  if (winner) {
-    gameOver = true;
-    redBusy = false;
-    blueBusy = false;
+function handleRoundEnd(roundLoser: Team): void {
+  const m = match!;
+  if (m.phase === "over") {
     ui!.setBusy("red", false);
     ui!.setBusy("blue", false);
-    ui!.showWin(winner, matchConfig.mode === "hp" ? "Health depleted." : "Direct hit.");
+    ui!.showWin(m.winner!, matchConfig.mode === "hp" ? "Health depleted." : "Direct hit.");
     return;
   }
 
-  currentRound++;
   const loserLabel = roundLoser === "red" ? "RED" : "BLUE";
   const winnerLabel = roundLoser === "red" ? "BLUE" : "RED";
   const splashHtml =
-    `Round ${currentRound} of ${matchConfig.rounds}<br>` +
+    `Round ${m.round + 1} of ${matchConfig.rounds}<br>` +
     `<span style="color:${roundLoser === "red" ? "#4488ff" : "#ff4444"}">${winnerLabel} wins the round!</span><br>` +
     `<small style="color:#5e7081">${loserLabel} shoots first</small>`;
-
   ui!.showSplash(splashHtml);
 
   window.setTimeout(() => {
     ui!.hideSplash();
-    planets = seedPlanets();
-    activeTurn = firstShooterNextRound(roundLoser);
-    gameOver = false;
-    redBusy = false;
-    blueBusy = false;
-    placePlayersRandomly(renderer!.getEffectiveBounds());
-    renderer!.setWorld(buildWorld(activeTurn, planets), activeTurn, redPlayerPos, bluePlayerPos);
+    const bounds = renderer!.getEffectiveBounds();
+    const firstTeam = firstShooterNextRound(roundLoser);
+    match = beginRound(m, buildLocalLayout(bounds), firstTeam);
+
+    const viewTeam: Team = match.activePlayerId
+      ? playerById(match, match.activePlayerId)!.team
+      : "red";
+    renderFrom(match, viewTeam);
     ui!.resetInputs();
-    ui!.setTurn(activeTurn, "");
-    if (matchConfig.noTurn) {
-      renderer!.setNoTurnMode(true);
-      ui!.setNoTurnMode(true);
-    } else {
-      ui!.setNoTurnMode(false);
-    }
-    ui!.updateScoreboard(redScore, blueScore, currentRound, matchConfig.rounds);
-    if (matchConfig.mode === "hp") {
-      redHp = HP_MAX;
-      blueHp = HP_MAX;
-      ui!.updateHp(redHp, blueHp);
-    }
+    ui!.setTurn(viewTeam, "");
+    if (matchConfig.noTurn) ui!.setNoTurnMode(true);
+    ui!.updateScoreboard(match.scores.red, match.scores.blue, match.round, matchConfig.rounds);
+    if (matchConfig.mode === "hp") ui!.updateHp(redOf(match).hp, blueOf(match).hp);
     ui!.setStatus();
     ui!.focus();
   }, 2000);
 }
 
-async function onFire(player: "red" | "blue", latex: string) {
-  if (gameOver) return;
+async function onFire(player: Team, latex: string): Promise<void> {
+  const m = match;
+  if (!m || m.phase !== "play") return;
 
-  // Gate: turn-based uses activeTurn + single busy; no-turn uses per-player busy
-  if (matchConfig.noTurn) {
-    if (player === "red" && redBusy) return;
-    if (player === "blue" && blueBusy) return;
-  } else {
-    if (player !== activeTurn) return;
-    if (redBusy || blueBusy) return;
-  }
+  const shooter = m.players.find((p) => p.team === player && p.alive);
+  if (!shooter) return;
 
-  const result = evaluateAll([{ id: "shot", latex }]);
-  const row = result.get("shot");
-  const fn = row?.kind === "curve" ? row.fn : undefined;
-  if (!fn) {
-    if (!matchConfig.noTurn || player === activeTurn) {
+  const res = resolveFire(m, { playerId: shooter.id, latex });
+
+  if (res.rejected) {
+    if (res.rejected === "bad-function") {
       ui!.setStatus("that isn't a plottable function of x");
     }
     return;
   }
 
-  // Set player busy
-  if (player === "red") redBusy = true;
-  else blueBusy = true;
   ui!.setBusy(player, true);
+  await renderer!.playShot(res.shot!, player);
 
-  const shooter = player;
-  const world = buildWorld(shooter, planets);
-  const shot = fire(world, fn);
+  // Commit the resolved state.
+  match = res.next;
+  ui!.setBusy(player, false);
 
-  await renderer!.playShot(shot, player);
-
-  if (shot.hit.kind === "planet" && shot.hit.planetId) {
-    const planet = planets.find((p) => p.id === shot.hit.planetId);
-    if (planet) planet.craters.push({ pos: shot.hit.at, radius: CRATER_RADIUS });
+  // Crater / HP visuals.
+  if (res.shot!.hit.kind === "target" && matchConfig.mode === "hp" && res.damage) {
+    const defender: Team = player === "red" ? "blue" : "red";
+    renderer!.showFloatingDamage(res.shot!.hit.at, res.damage, defender);
   }
 
-  if (shot.hit.kind === "target") {
-    if (matchConfig.mode === "hp") {
-      const defender = shooter === "red" ? "blue" : "red";
-      const dmg = computeDamage(shot.impactSlope);
-
-      if (defender === "red") {
-        redHp = Math.max(0, redHp - dmg);
-        ui!.updateHp(redHp, blueHp);
-        renderer!.showFloatingDamage(shot.hit.at, dmg, "red");
-        if (redHp <= 0) {
-          renderer!.setWorld(buildWorld(shooter, planets), shooter, redPlayerPos, bluePlayerPos);
-          nextRound("red");
-          return;
-        }
-      } else {
-        blueHp = Math.max(0, blueHp - dmg);
-        ui!.updateHp(redHp, blueHp);
-        renderer!.showFloatingDamage(shot.hit.at, dmg, "blue");
-        if (blueHp <= 0) {
-          renderer!.setWorld(buildWorld(shooter, planets), shooter, redPlayerPos, bluePlayerPos);
-          nextRound("blue");
-          return;
-        }
-      }
-
-      if (player === "red") redBusy = false;
-      else blueBusy = false;
-      ui!.setBusy(player, false);
-
-      if (!matchConfig.noTurn) {
-        activeTurn = shooter === "red" ? "blue" : "red";
-        renderer!.setWorld(buildWorld(activeTurn, planets), activeTurn, redPlayerPos, bluePlayerPos);
-        ui!.setTurn(activeTurn, latex);
-      } else {
-        renderer!.setWorld(buildWorld(activeTurn, planets), activeTurn, redPlayerPos, bluePlayerPos);
-      }
-      ui!.setStatus(`Hit! -${dmg} HP`);
-      ui!.focus();
-      return;
-    }
-
-    // Classic mode: hit = round end
-    const roundLoser = shooter === "red" ? "blue" : "red";
-    renderer!.setWorld(buildWorld(shooter, planets), shooter, redPlayerPos, bluePlayerPos);
-    nextRound(roundLoser);
+  if (res.roundEnded) {
+    const viewTeam: Team = player; // shooter's view for the final frame
+    renderFrom(match, viewTeam);
+    if (matchConfig.mode === "hp") ui!.updateHp(redOf(match).hp, blueOf(match).hp);
+    handleRoundEnd(res.roundLoser!);
     return;
   }
 
-  // Miss — re-enable this player's button; switch turns only in turn-based mode
-  if (player === "red") redBusy = false;
-  else blueBusy = false;
-  ui!.setBusy(player, false);
-
-  if (!matchConfig.noTurn) {
-    activeTurn = shooter === "red" ? "blue" : "red";
-    renderer!.setWorld(buildWorld(activeTurn, planets), activeTurn, redPlayerPos, bluePlayerPos);
-    ui!.setTurn(activeTurn, latex);
-  } else {
-    renderer!.setWorld(buildWorld(activeTurn, planets), activeTurn, redPlayerPos, bluePlayerPos);
-  }
-  ui!.setStatus(noteFor(shot.hit.kind));
+  // Round continues: re-render from the new active team's perspective.
+  const viewTeam: Team = match.activePlayerId
+    ? playerById(match, match.activePlayerId)!.team
+    : player;
+  renderFrom(match, viewTeam);
+  if (matchConfig.mode === "hp") ui!.updateHp(redOf(match).hp, blueOf(match).hp);
+  if (!matchConfig.noTurn) ui!.setTurn(viewTeam, latex);
+  ui!.setStatus(res.shot!.hit.kind === "target" ? `Hit! -${res.damage ?? 0} HP` : noteFor(res.shot!.hit.kind));
   ui!.focus();
 }
 
