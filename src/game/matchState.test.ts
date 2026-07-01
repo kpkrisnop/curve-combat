@@ -3,10 +3,11 @@ import { describe, it, expect } from "vitest";
 import { createMatch, livingEnemies, worldFor, teamDir, PLAYER_RADIUS, playerById, beginRound } from "./matchState";
 import type { RoundLayout, PlayerState } from "./matchState";
 import type { MatchConfig } from "./matchLogic";
+import { arenaDefaults } from "./arenaDefaults";
 import { HP_MAX } from "./hpLogic";
 
 const BOUNDS = { minX: -12, minY: -7, maxX: 12, maxY: 7 };
-const CONFIG: MatchConfig = { mode: "classic", rounds: 3, noTurn: false, role: "local" };
+const CONFIG: MatchConfig = { mode: "classic", rounds: 3, noTurn: false, role: "local", ...arenaDefaults() };
 
 function layout(): RoundLayout {
   const players: PlayerState[] = [

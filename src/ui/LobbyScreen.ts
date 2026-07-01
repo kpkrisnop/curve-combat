@@ -1,4 +1,5 @@
 import type { MatchConfig } from "../game/matchLogic";
+import { arenaDefaults } from "../game/arenaDefaults";
 
 export class LobbyScreen {
   private el: HTMLElement;
@@ -60,6 +61,7 @@ export class LobbyScreen {
       rounds: this.selectedRounds,
       noTurn: this.noTurnCheckbox.checked,
       role: "local",
+      ...arenaDefaults(),
     };
     this.startCb?.(config);
   }

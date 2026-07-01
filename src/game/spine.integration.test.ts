@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import { createMatch, beginRound } from "./matchState";
 import { resolveFire } from "./resolveFire";
 import { buildLocalLayout } from "./localLayout";
+import { arenaDefaults } from "./arenaDefaults";
 
 const BOUNDS = { minX: -12, minY: -7, maxX: 12, maxY: 7 };
 
@@ -26,7 +27,7 @@ describe("full Classic round through the spine", () => {
       ],
       planets: [],
     };
-    const m = createMatch({ mode: "classic", rounds: 3, noTurn: false, role: "local" }, layout, BOUNDS, "red");
+    const m = createMatch({ mode: "classic", rounds: 3, noTurn: false, role: "local", ...arenaDefaults() }, layout, BOUNDS, "red");
     const res = resolveFire(m, { playerId: "r1", latex: "0" });
     expect(res.roundEnded).toBe(true);
     expect(res.next.scores).toEqual({ red: 1, blue: 0 });

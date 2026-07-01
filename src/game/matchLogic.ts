@@ -1,9 +1,29 @@
+/** Logical playfield rectangle in world units. Identical for everyone in a room. */
+export interface MapConfig {
+  width: number;
+  height: number;
+}
+
+/** Planet rejection-sampling parameters. */
+export interface ScatterConfig {
+  rMin: number;
+  rMax: number;
+  gapMin: number;
+  gapMax: number;
+  spawnClearance: number;
+  fieldMargin: number;
+  maxPlanets: number;
+}
+
 export interface MatchConfig {
   mode: "classic" | "hp";
   noTurn: boolean;
   rounds: 3 | 5;
   roomCode?: string;
   role?: "host" | "guest" | "local";
+  map: MapConfig;
+  scatter: ScatterConfig;
+  teamSize: 1 | 2 | 3 | 4 | 5;
 }
 
 /** Rounds a player must win to take the match. */

@@ -4,10 +4,11 @@ import { resolveFire } from "./resolveFire";
 import { createMatch } from "./matchState";
 import type { RoundLayout, PlayerState } from "./matchState";
 import type { MatchConfig } from "./matchLogic";
+import { arenaDefaults } from "./arenaDefaults";
 import { HP_MAX } from "./hpLogic";
 
 const BOUNDS = { minX: -12, minY: -7, maxX: 12, maxY: 7 };
-const CLASSIC: MatchConfig = { mode: "classic", rounds: 3, noTurn: false, role: "local" };
+const CLASSIC: MatchConfig = { mode: "classic", rounds: 3, noTurn: false, role: "local", ...arenaDefaults() };
 
 // red at x=-9, blue at x=9; a planet dead-centre blocks a flat shot.
 function duel(planetAtCentre = false): RoundLayout {
@@ -109,7 +110,7 @@ describe("resolveFire — Classic elimination", () => {
   });
 });
 
-const HP: MatchConfig = { mode: "hp", rounds: 3, noTurn: false, role: "local" };
+const HP: MatchConfig = { mode: "hp", rounds: 3, noTurn: false, role: "local", ...arenaDefaults() };
 
 describe("resolveFire — HP mode", () => {
   it("a non-fatal hit subtracts damage and keeps the round going", () => {

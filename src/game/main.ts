@@ -4,6 +4,7 @@ import { GameUI } from "./GameUI";
 import { LobbyScreen } from "../ui/LobbyScreen";
 import { firstShooterNextRound, type MatchConfig } from "./matchLogic";
 import { configToHash, parseConfigFromHash } from "./configRouter";
+import { arenaDefaults } from "./arenaDefaults";
 import {
   createMatch,
   beginRound,
@@ -25,7 +26,7 @@ const gameEl = document.getElementById("game")!;
 
 let renderer: GameRenderer | null = null;
 let ui: GameUI | null = null;
-let matchConfig: MatchConfig = { mode: "classic", rounds: 3, noTurn: false, role: "local" };
+let matchConfig: MatchConfig = { mode: "classic", rounds: 3, noTurn: false, role: "local", ...arenaDefaults() };
 let match: MatchState | null = null;
 
 // ── View adapters (1 player per team → existing 2-panel renderer/UI) ───────────
