@@ -32,8 +32,8 @@ The system is split into three independent layers communicating through narrow i
 
 ```
 ┌─────────────────────────────────────────────────┐
-│  INPUT LAYER     MathLive field → expression str │
-│                  → math.js parse → Trajectory    │
+│  INPUT LAYER     MathQuill field → LaTeX string  │
+│                  → Compute Engine → Trajectory   │
 ├─────────────────────────────────────────────────┤
 │  SIMULATION      Pure, deterministic game logic. │
 │  (the "engine")  Knows: world, units, turns,     │
@@ -93,13 +93,13 @@ needs one collision pathway.
 | Language | **TypeScript** | Type-safe interfaces between layers; critical once multiplayer and new shot types arrive. |
 | Build tool | **Vite** | Instant dev server, near-zero config — ideal for fast prototyping. |
 | Rendering | **PixiJS** (WebGL) | High-quality "clean modern 2D" now; smooth upgrade path to 2.5D effects later. |
-| Math input | **MathLive** | Desmos-style live notation rendering (the #1 requirement). Actively maintained successor to MathQuill. |
-| Math evaluation | **math.js** | Parses and compiles expressions into fast, sampleable functions. Decoupled from the input widget. |
+| Math input | **MathQuill** (`@edtr-io/mathquill`) | Desmos-style live notation rendering (the #1 requirement). Swapped in from MathLive; isolated behind `ui/MathInput.ts` so the input library can change in one file. |
+| Math evaluation | **@cortex-js/compute-engine** | Parses MathQuill's LaTeX directly (no fragile LaTeX→text step) and compiles expressions into fast, sampleable functions. Decoupled from the input widget. |
 | Testing | **Vitest** | Integrates with Vite; unit-tests the pure simulation layer with no browser. |
 
-**Key decoupling:** MathLive (input rendering) and math.js (evaluation) are independent. The
-simulation only ever receives a plain expression string / compiled function, so the input UI
-can change without affecting game logic.
+**Key decoupling:** MathQuill (input rendering) and the Compute Engine (evaluation) are
+independent. The simulation only ever receives a compiled `(x) => number` function, so the
+input UI can change without affecting game logic.
 
 ---
 
@@ -153,3 +153,60 @@ These are deferred to the detailed component design (next step):
 - Turn system and win-state representation for Stage B.
 - Project/folder structure and module boundaries.
 - Damage model (instant-hit vs. explosion radius).
+
+---
+
+## 10. Destructible Terrain — Planets
+
+**Decision:** Add **Planets** — destructible circular terrain — to the shooting prototype. A
+shot is blocked by a Planet's solid *meat*; each impact carves a fixed-radius **crater**
+(empty space) centered on the contact point, so terrain is whittled away hit-by-hit. Solidity
+is purely geometric (inside the circle, outside every crater) with **no connectivity rule** —
+detached chunks of meat remain solid. Planets are terrain only; they never count toward the
+win condition, and crater impacts do **not** splash-damage targets. (Glossary: `CONTEXT.md`;
+mechanics detail: `component-design.md`.)
+
+**Decision — layout is hand-authored for now.** The default round uses a **hand-placed**
+set of Planets (varied radii, kept clear of the soldier's muzzle and not overlapping
+targets). This is deterministic with zero RNG and easy to tune.
+
+**Deferred:** **seeded-random Planet layouts** (procedural scatter via a seeded RNG). This is
+an intended later option — the world model already treats Planets as plain data, so swapping
+hand-authored for seeded-random is a localized change with no engine/collision impact.
+
+**Rationale:** Hand-authoring gives a tuned, good-looking, guaranteed-playable first cut
+without building the seeded-RNG path yet. Because terrain is destructible, no layout is truly
+unwinnable (a player can always tunnel through), so the random path can wait until variety is
+actually wanted.
+
+---
+
+## 11. Curvature-Based Trajectory Sampling
+
+**Decision:** The trajectory sampler (`src/sim/trajectory.ts`) marches a **coarse** world-x
+step (`maxStepWorld = 0.05`) and inserts interior points by **adaptive subdivision keyed to
+chord deviation** (`flatTolWorld ≈ 0.01` world units), not to the raw step size. Density now
+follows **curvature**: flat regions stay sparse, tightly curved or oscillating regions get
+more points. The coarse march **always advances to the far horizontal bound**; refinement is
+best-effort and self-limits (`refineCap = maxSamples − 1000`) so the remaining march always
+fits under the hard `maxSamples` cap.
+
+**Problem it fixes:** the previous sampler used a tiny fixed step (`0.001`) and refined any
+segment whose vertical delta exceeded that step, bisecting up to 7 levels (~128×). A
+high-frequency function (even `sin(50x)`) inflated the sample count ~128× and hit the
+40 000-sample cap after ~0.3 world units, so the loop exited and the shot "expired"
+mid-air — the bullet visibly stopped just past the muzzle without hitting anything.
+
+**Discontinuity handling:** a coarse step no longer implies "big vertical jump ⇒ asymptote"
+(a steep but continuous line also jumps over a 0.05 step). Instead, a segment is flagged a
+gap only if a jump larger than `asymptoteJump` (2.5) **survives full subdivision** — a real
+pole keeps blowing up as you bisect toward it, while a steep line's per-sub-segment jump
+shrinks and is emitted connected.
+
+**Trade-off:** rendered-curve smoothness vs. guaranteed full-field traversal vs. tiny-target
+accuracy. Curvature-based density preserves smoothness (sub-pixel deviation tolerance) and
+keeps small-target hits accurate (collision is segment-based; flat regions are linear so the
+chord equals the curve, curvy regions get dense), while the always-complete coarse march
+guarantees a wild function flies the whole field and resolves a real hit-or-edge instead of
+stalling. The cost is that a pathological function (e.g. `sin(1e6 x)`) past the sample budget
+renders faceted — acceptable, because correctness (it still crosses the field) is preserved.
