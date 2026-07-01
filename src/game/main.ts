@@ -95,7 +95,7 @@ function handleRoundEnd(roundLoser: Team): void {
     renderFrom(match, viewTeam);
     ui!.resetInputs();
     ui!.setTurn(viewTeam, "");
-    if (matchConfig.noTurn) ui!.setNoTurnMode(true);
+    ui!.setNoTurnMode(matchConfig.noTurn);
     ui!.updateScoreboard(match.scores.red, match.scores.blue, match.round, matchConfig.rounds);
     if (matchConfig.mode === "hp") ui!.updateHp(redOf(match).hp, blueOf(match).hp);
     ui!.setStatus();
