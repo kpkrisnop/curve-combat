@@ -1,0 +1,263 @@
+/* ============================================================================
+   Graph War — Design Foundation
+   Tokens + primitives codified from the existing game dark theme (index.html).
+   This is a systematization of what already ships, not a redesign. Team colors
+   are kept as their own semantic tokens so the neutral UI accent can diverge
+   from the blue player identity later without a recolor.
+   ============================================================================ */
+
+:root {
+  /* ── Surfaces ──────────────────────────────────────────────────────────── */
+  --gw-bg: #0f141a;              /* app background */
+  --gw-surface: #121a22;         /* panels/cards (was rgba(18,26,34,.92)) */
+  --gw-surface-2: #0c1116;       /* inset fields, wells */
+  --gw-border: #2b3a49;          /* default hairline */
+  --gw-border-strong: #34506a;   /* emphasized/interactive border */
+
+  /* ── Text ──────────────────────────────────────────────────────────────── */
+  --gw-text: #cdd9e5;            /* primary */
+  --gw-text-muted: #8499ab;      /* secondary */
+  --gw-text-faint: #5e7081;      /* tertiary / hints / disabled labels */
+  --gw-text-code: #9fd8b6;       /* inline code / room codes */
+
+  /* ── Player identity (semantic — do NOT reuse as neutral UI accent) ──────── */
+  --gw-red: #ff4444;
+  --gw-red-dim: rgba(255, 68, 68, 0.18);
+  --gw-blue: #4488ff;
+  --gw-blue-dim: rgba(68, 136, 255, 0.18);
+
+  /* ── Neutral interactive accent (currently the blue hue; kept separate so it
+        can be retuned independently of the blue TEAM color) ────────────────── */
+  --gw-accent: #4488ff;
+  --gw-accent-hover: #2266dd;
+  --gw-accent-tint: rgba(68, 136, 255, 0.12);
+  --gw-danger: #c74440;
+
+  /* ── Type scale ────────────────────────────────────────────────────────── */
+  --gw-font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --gw-font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --gw-fs-2xs: 9px;
+  --gw-fs-xs: 11px;
+  --gw-fs-sm: 13px;
+  --gw-fs-md: 15px;
+  --gw-fs-lg: 22px;
+  --gw-fs-xl: 32px;
+  --gw-fs-2xl: 48px;
+
+  /* ── Spacing scale (4px base) ──────────────────────────────────────────── */
+  --gw-space-1: 4px;
+  --gw-space-2: 8px;
+  --gw-space-3: 12px;
+  --gw-space-4: 16px;
+  --gw-space-5: 20px;
+  --gw-space-6: 28px;
+  --gw-space-7: 36px;
+
+  /* ── Radii ─────────────────────────────────────────────────────────────── */
+  --gw-radius-sm: 6px;
+  --gw-radius-md: 8px;
+  --gw-radius-lg: 10px;
+  --gw-radius-xl: 12px;
+  --gw-radius-2xl: 16px;
+  --gw-radius-pill: 20px;
+
+  /* ── Elevation ─────────────────────────────────────────────────────────── */
+  --gw-shadow-sm: 0 6px 20px rgba(0, 0, 0, 0.45);
+  --gw-shadow-md: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --gw-shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.55);
+  --gw-glow-accent: 0 0 12px var(--gw-accent-tint);
+
+  /* ── Z-layers (codified from the game overlay stack) ───────────────────── */
+  --gw-z-hud: 5;
+  --gw-z-banner: 6;
+  --gw-z-splash: 7;
+  --gw-z-tutorial: 8;
+  --gw-z-lobby: 10;
+  --gw-z-popover: 20;
+
+  /* ── Motion ────────────────────────────────────────────────────────────── */
+  --gw-transition: 0.15s ease;
+}
+
+/* ============================================================================
+   Primitives — reusable classes the lobby, settings panel, and HUDs share.
+   ============================================================================ */
+
+/* ── Label (section eyebrow) ─────────────────────────────────────────────── */
+.gw-label {
+  font-size: var(--gw-fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--gw-text-faint);
+  text-transform: uppercase;
+  margin: 0 0 var(--gw-space-2);
+}
+
+/* ── Panel / card ────────────────────────────────────────────────────────── */
+.gw-panel {
+  background: var(--gw-surface);
+  border: 1px solid var(--gw-border);
+  border-radius: var(--gw-radius-2xl);
+  box-shadow: var(--gw-shadow-sm);
+}
+
+/* ── Button ──────────────────────────────────────────────────────────────── */
+.gw-btn {
+  font-family: inherit;
+  font-size: var(--gw-fs-sm);
+  font-weight: 600;
+  border: 1px solid var(--gw-border);
+  background: var(--gw-surface-2);
+  color: var(--gw-text-muted);
+  border-radius: var(--gw-radius-lg);
+  padding: var(--gw-space-3) var(--gw-space-4);
+  cursor: pointer;
+  transition:
+    border-color var(--gw-transition),
+    color var(--gw-transition),
+    background var(--gw-transition);
+}
+.gw-btn:hover:not(:disabled) {
+  border-color: var(--gw-accent);
+  color: var(--gw-text);
+}
+.gw-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.gw-btn--primary {
+  border: none;
+  background: var(--gw-accent);
+  color: #fff;
+  padding: var(--gw-space-3) var(--gw-space-5);
+  letter-spacing: 0.03em;
+}
+.gw-btn--primary:hover:not(:disabled) {
+  background: var(--gw-accent-hover);
+  color: #fff;
+}
+
+.gw-btn--ghost {
+  background: transparent;
+}
+
+.gw-btn--sm {
+  padding: var(--gw-space-1) var(--gw-space-3);
+  font-size: var(--gw-fs-xs);
+}
+
+/* ── Selectable card (mode / rounds pickers) ─────────────────────────────── */
+.gw-card {
+  position: relative;
+  flex: 1;
+  border: 1px solid var(--gw-border);
+  background: var(--gw-surface-2);
+  color: var(--gw-text-muted);
+  border-radius: var(--gw-radius-lg);
+  padding: var(--gw-space-3) var(--gw-space-4);
+  font-size: var(--gw-fs-sm);
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    border-color var(--gw-transition),
+    color var(--gw-transition),
+    background var(--gw-transition);
+}
+.gw-card:hover:not(:disabled) {
+  border-color: var(--gw-accent);
+  color: var(--gw-text);
+}
+.gw-card.is-active {
+  border-color: var(--gw-accent);
+  background: var(--gw-accent-tint);
+  color: var(--gw-text);
+}
+.gw-card:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.gw-card__hint {
+  display: block;
+  font-size: var(--gw-fs-xs);
+  font-weight: 400;
+  color: var(--gw-text-faint);
+  margin-top: 2px;
+}
+
+/* ── Field (labeled control: slider, input) ──────────────────────────────── */
+.gw-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gw-space-1);
+  font-size: var(--gw-fs-xs);
+  color: var(--gw-text-muted);
+}
+.gw-field__head {
+  display: flex;
+  justify-content: space-between;
+}
+.gw-field__value {
+  color: var(--gw-accent);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.gw-field input[type="range"] {
+  width: 100%;
+  accent-color: var(--gw-accent);
+}
+
+/* ── Toggle row (checkbox) ───────────────────────────────────────────────── */
+.gw-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--gw-space-3);
+}
+.gw-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--gw-accent);
+}
+.gw-toggle label {
+  font-size: var(--gw-fs-sm);
+  color: var(--gw-text-muted);
+  cursor: pointer;
+}
+
+/* ── Pill / badge ────────────────────────────────────────────────────────── */
+.gw-pill {
+  display: inline-block;
+  background: var(--gw-surface);
+  border: 1px solid var(--gw-border);
+  border-radius: var(--gw-radius-pill);
+  padding: var(--gw-space-2) var(--gw-space-4);
+  white-space: nowrap;
+  font-size: var(--gw-fs-sm);
+  font-weight: 600;
+  color: var(--gw-text-muted);
+  letter-spacing: 0.03em;
+}
+.gw-badge {
+  display: inline-block;
+  background: var(--gw-border);
+  color: var(--gw-text-faint);
+  font-size: var(--gw-fs-2xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 2px 5px;
+  border-radius: var(--gw-radius-sm);
+  text-transform: uppercase;
+}
+
+/* ── Inline code (room codes, seeds) ─────────────────────────────────────── */
+.gw-code {
+  font-family: var(--gw-font-mono);
+  background: var(--gw-surface-2);
+  border: 1px solid var(--gw-border);
+  border-radius: var(--gw-radius-sm);
+  padding: var(--gw-space-1) var(--gw-space-2);
+  color: var(--gw-text);
+  font-size: var(--gw-fs-xs);
+}

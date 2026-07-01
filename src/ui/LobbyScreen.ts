@@ -44,14 +44,14 @@ export class LobbyScreen {
 
   private selectMode(mode: MatchConfig["mode"]): void {
     this.selectedMode = mode;
-    this.modeClassicBtn.classList.toggle("active", mode === "classic");
-    this.modeHpBtn.classList.toggle("active", mode === "hp");
+    this.modeClassicBtn.classList.toggle("is-active", mode === "classic");
+    this.modeHpBtn.classList.toggle("is-active", mode === "hp");
   }
 
   private selectRounds(rounds: 3 | 5): void {
     this.selectedRounds = rounds;
-    this.rounds3Btn.classList.toggle("active", rounds === 3);
-    this.rounds5Btn.classList.toggle("active", rounds === 5);
+    this.rounds3Btn.classList.toggle("is-active", rounds === 3);
+    this.rounds5Btn.classList.toggle("is-active", rounds === 5);
   }
 
   private handleStart(): void {

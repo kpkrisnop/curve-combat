@@ -1,3 +1,4 @@
+import "../design/foundation.css";
 import { GameRenderer } from "./GameRenderer";
 import { GameUI } from "./GameUI";
 import { LobbyScreen } from "../ui/LobbyScreen";

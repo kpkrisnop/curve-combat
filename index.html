@@ -308,156 +308,52 @@
       }
       #tutorial-next:hover { background: #3d5f7d; }
 
-      /* ── Lobby screen ────────────────────────────────────────────────── */
+      /* ── Lobby screen (layout only; visuals via design-foundation primitives) ── */
       #lobby-screen {
         position: fixed;
         inset: 0;
-        background: #0f141a;
+        background: var(--gw-bg);
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 32px;
-        z-index: 10;
+        gap: var(--gw-space-7);
+        z-index: var(--gw-z-lobby);
       }
       #lobby-screen[hidden] { display: none; }
 
       #lobby-title {
-        font-size: 48px;
+        font-size: var(--gw-fs-2xl);
         font-weight: 800;
         letter-spacing: 0.08em;
         margin: 0;
       }
-      #lobby-title .t-red { color: #ff4444; }
-      #lobby-title .t-blue { color: #4488ff; }
+      #lobby-title .t-red { color: var(--gw-red); }
+      #lobby-title .t-blue { color: var(--gw-blue); }
 
       #lobby-tagline {
         font-size: 14px;
-        color: #5e7081;
+        color: var(--gw-text-faint);
         margin: -24px 0 0;
         letter-spacing: 0.05em;
       }
 
+      /* Panel chrome comes from .gw-panel; this only sets lobby-specific layout. */
       #lobby-config {
         display: flex;
         flex-direction: column;
-        gap: 20px;
-        background: rgba(18, 26, 34, 0.92);
-        border: 1px solid #2b3a49;
-        border-radius: 16px;
-        padding: 28px 36px;
+        gap: var(--gw-space-5);
+        padding: var(--gw-space-6) var(--gw-space-7);
         min-width: 340px;
-      }
-
-      .lobby-label {
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: 0.1em;
-        color: #5e7081;
-        text-transform: uppercase;
-        margin: 0 0 8px;
       }
 
       .lobby-btn-group {
         display: flex;
-        gap: 8px;
+        gap: var(--gw-space-2);
       }
 
-      .lobby-mode-btn,
-      .lobby-rounds-btn {
-        flex: 1;
-        border: 1px solid #2b3a49;
-        background: #0c1116;
-        color: #8499ab;
-        border-radius: 10px;
-        padding: 10px 16px;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: border-color 0.15s, color 0.15s, background 0.15s;
-        text-align: center;
-        position: relative;
-      }
-      .lobby-mode-btn:hover:not(:disabled),
-      .lobby-rounds-btn:hover:not(:disabled) {
-        border-color: #4488ff;
-        color: #cdd9e5;
-      }
-      .lobby-mode-btn.active,
-      .lobby-rounds-btn.active {
-        border-color: #4488ff;
-        background: rgba(68, 136, 255, 0.12);
-        color: #cdd9e5;
-      }
-      .lobby-mode-btn:disabled,
-      .lobby-rounds-btn:disabled {
-        opacity: 0.35;
-        cursor: default;
-      }
-
-      .coming-soon-badge {
-        position: absolute;
-        top: -8px;
-        right: -4px;
-        background: #2b3a49;
-        color: #5e7081;
-        font-size: 9px;
-        font-weight: 700;
-        letter-spacing: 0.06em;
-        padding: 2px 5px;
-        border-radius: 4px;
-        text-transform: uppercase;
-        pointer-events: none;
-      }
-
-      .lobby-noturn-row {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
-      .lobby-noturn-row input[type="checkbox"] {
-        width: 16px;
-        height: 16px;
-        cursor: pointer;
-      }
-      .lobby-noturn-label {
-        font-size: 13px;
-        color: #8499ab;
-        cursor: pointer;
-      }
-      .lobby-noturn-row .coming-soon-badge {
-        position: static;
-        display: inline-block;
-      }
-
-      #lobby-start-local {
-        border: none;
-        background: #4488ff;
-        color: #fff;
-        border-radius: 10px;
-        padding: 13px 24px;
-        font-size: 15px;
-        font-weight: 700;
-        cursor: pointer;
-        letter-spacing: 0.03em;
-        transition: background 0.15s;
-      }
-      #lobby-start-local:hover {
-        background: #2266dd;
-      }
-
-      #lobby-online {
-        border: 1px solid #2b3a49;
-        background: transparent;
-        color: #5e7081;
-        border-radius: 10px;
-        padding: 10px 24px;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: not-allowed;
-        opacity: 0.5;
-        letter-spacing: 0.03em;
-      }
+      /* Disabled-online button keeps a not-allowed cursor over the ghost primitive. */
+      #lobby-online { cursor: not-allowed; }
 
       /* ── HP bars (HP Mode only) — overlaid on the top of the map ─────────
          Inset 8px inside the map (which is itself inset 16px with a 16px
@@ -524,40 +420,40 @@
       </h1>
       <p id="lobby-tagline">Fire mathematical functions. Hit your opponent.</p>
 
-      <div id="lobby-config">
+      <div id="lobby-config" class="gw-panel">
         <!-- Mode -->
         <div>
-          <p class="lobby-label">Game Mode</p>
+          <p class="gw-label">Game Mode</p>
           <div class="lobby-btn-group">
-            <button id="lobby-mode-classic" class="lobby-mode-btn active">
+            <button id="lobby-mode-classic" class="gw-card is-active">
               Classic VS
-              <small style="display:block;font-size:11px;font-weight:400;color:#5e7081;margin-top:2px">One hit per round</small>
+              <span class="gw-card__hint">One hit per round</span>
             </button>
-            <button id="lobby-mode-hp" class="lobby-mode-btn">
+            <button id="lobby-mode-hp" class="gw-card">
               HP Mode
-              <small style="display:block;font-size:11px;font-weight:400;color:#5e7081;margin-top:2px">Slope = damage</small>
+              <span class="gw-card__hint">Slope = damage</span>
             </button>
           </div>
         </div>
 
         <!-- Rounds -->
         <div>
-          <p class="lobby-label">Rounds</p>
+          <p class="gw-label">Rounds</p>
           <div class="lobby-btn-group">
-            <button id="lobby-rounds-3" class="lobby-rounds-btn active">Best of 3</button>
-            <button id="lobby-rounds-5" class="lobby-rounds-btn">Best of 5</button>
+            <button id="lobby-rounds-3" class="gw-card is-active">Best of 3</button>
+            <button id="lobby-rounds-5" class="gw-card">Best of 5</button>
           </div>
         </div>
 
         <!-- No-Turn modifier -->
-        <div class="lobby-noturn-row">
+        <div class="gw-toggle">
           <input type="checkbox" id="lobby-noturn" />
-          <label for="lobby-noturn" class="lobby-noturn-label">No-Turn Mode (simultaneous fire)</label>
+          <label for="lobby-noturn">No-Turn Mode (simultaneous fire)</label>
         </div>
 
         <!-- Actions -->
-        <button id="lobby-start-local">▶ Play Locally</button>
-        <button id="lobby-online" disabled>Play Online — Coming Soon</button>
+        <button id="lobby-start-local" class="gw-btn gw-btn--primary">▶ Play Locally</button>
+        <button id="lobby-online" class="gw-btn gw-btn--ghost" disabled>Play Online — Coming Soon</button>
       </div>
     </div>
 
