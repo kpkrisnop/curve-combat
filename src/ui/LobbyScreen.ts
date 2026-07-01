@@ -1,5 +1,5 @@
 import type { MatchConfig } from "../game/matchLogic";
-import { arenaDefaults } from "../game/arenaDefaults";
+import { SettingsPanel } from "./settings/SettingsPanel";
 
 export class LobbyScreen {
   private el: HTMLElement;
@@ -9,6 +9,7 @@ export class LobbyScreen {
   private rounds5Btn: HTMLButtonElement;
   private startLocalBtn: HTMLButtonElement;
   private noTurnCheckbox: HTMLInputElement;
+  private settings: SettingsPanel;
 
   private selectedMode: MatchConfig["mode"] = "classic";
   private selectedRounds: 3 | 5 = 3;
@@ -17,6 +18,7 @@ export class LobbyScreen {
 
   constructor(root: ParentNode = document) {
     this.el = root.querySelector<HTMLElement>("#lobby-screen")!;
+    this.settings = new SettingsPanel(root);
     this.modeClassicBtn = root.querySelector<HTMLButtonElement>("#lobby-mode-classic")!;
     this.modeHpBtn = root.querySelector<HTMLButtonElement>("#lobby-mode-hp")!;
     this.rounds3Btn = root.querySelector<HTMLButtonElement>("#lobby-rounds-3")!;
@@ -61,7 +63,7 @@ export class LobbyScreen {
       rounds: this.selectedRounds,
       noTurn: this.noTurnCheckbox.checked,
       role: "local",
-      ...arenaDefaults(),
+      ...this.settings.getSettings(),
     };
     this.startCb?.(config);
   }

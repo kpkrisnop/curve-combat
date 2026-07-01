@@ -261,3 +261,34 @@
   color: var(--gw-text);
   font-size: var(--gw-fs-xs);
 }
+
+/* ── Settings panel layout (live-preview section) ────────────────────────── */
+.gw-preview {
+  display: block;
+  width: 100%;
+  background: #0a0e14;
+  border: 1px solid var(--gw-border);
+  border-radius: var(--gw-radius-sm);
+}
+.gw-readout {
+  display: flex;
+  gap: var(--gw-space-4);
+  font-size: var(--gw-fs-xs);
+  color: var(--gw-text-muted);
+  font-variant-numeric: tabular-nums;
+  margin: var(--gw-space-2) 0;
+}
+.gw-seed-row {
+  display: flex;
+  align-items: center;
+  gap: var(--gw-space-2);
+  margin-bottom: var(--gw-space-3);
+}
+.gw-seed-row .gw-code {
+  flex: 1;
+}
+.gw-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gw-space-2) var(--gw-space-3);
+}

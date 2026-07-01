@@ -451,6 +451,18 @@
           <label for="lobby-noturn">No-Turn Mode (simultaneous fire)</label>
         </div>
 
+        <!-- Arena settings + live preview (functional; visual polish deferred) -->
+        <div id="settings-panel">
+          <p class="gw-label">Arena</p>
+          <canvas id="arena-preview" class="gw-preview" width="360" height="210"></canvas>
+          <div id="arena-readout" class="gw-readout"></div>
+          <div class="gw-seed-row">
+            <code id="arena-seed" class="gw-code"></code>
+            <button id="arena-reroll" type="button" class="gw-btn gw-btn--ghost gw-btn--sm">Reroll</button>
+          </div>
+          <div id="arena-controls" class="gw-controls"></div>
+        </div>
+
         <!-- Actions -->
         <button id="lobby-start-local" class="gw-btn gw-btn--primary">▶ Play Locally</button>
         <button id="lobby-online" class="gw-btn gw-btn--ghost" disabled>Play Online — Coming Soon</button>
