@@ -32,6 +32,13 @@ function oneVsTwo(): RoundLayout {
 }
 
 describe("resolveFire guards", () => {
+  it("a shot does not count once the round has ended (phase not 'play')", () => {
+    const ended = { ...createMatch(CLASSIC, duel(), BOUNDS, "red"), phase: "between" as const };
+    const res = resolveFire(ended, { playerId: "r1", latex: "0" });
+    expect(res.rejected).toBe("game-over");
+    expect(res.next).toBe(ended); // unchanged state by reference
+  });
+
   it("rejects firing when it isn't your turn", () => {
     const m = createMatch(CLASSIC, duel(), BOUNDS, "red");
     const res = resolveFire(m, { playerId: "b1", latex: "0" });

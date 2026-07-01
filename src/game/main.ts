@@ -121,22 +121,32 @@ async function onFire(player: Team, latex: string): Promise<void> {
 
   ui!.setBusy(player, true);
   await renderer!.playShot(res.shot!, player);
-
-  // Commit the resolved state.
-  match = res.next;
   ui!.setBusy(player, false);
 
+  // Commit against LIVE state. In No-Turn the enemy may have mutated `match`
+  // (or ended the round) while this shot was in flight; per design an in-flight
+  // shot does not count once the round has ended.
+  let commit = res;
+  if (matchConfig.noTurn) {
+    commit = resolveFire(match!, { playerId: shooter.id, latex });
+    if (commit.rejected) {
+      ui!.focus();
+      return; // round already ended (or shooter eliminated) mid-flight — shot doesn't count
+    }
+  }
+  match = commit.next;
+
   // Crater / HP visuals.
-  if (res.shot!.hit.kind === "target" && matchConfig.mode === "hp" && res.damage) {
+  if (commit.shot!.hit.kind === "target" && matchConfig.mode === "hp" && commit.damage) {
     const defender: Team = player === "red" ? "blue" : "red";
-    renderer!.showFloatingDamage(res.shot!.hit.at, res.damage, defender);
+    renderer!.showFloatingDamage(commit.shot!.hit.at, commit.damage, defender);
   }
 
-  if (res.roundEnded) {
+  if (commit.roundEnded) {
     const viewTeam: Team = player; // shooter's view for the final frame
     renderFrom(match, viewTeam);
     if (matchConfig.mode === "hp") ui!.updateHp(redOf(match).hp, blueOf(match).hp);
-    handleRoundEnd(res.roundLoser!);
+    handleRoundEnd(commit.roundLoser!);
     return;
   }
 
@@ -147,7 +157,7 @@ async function onFire(player: Team, latex: string): Promise<void> {
   renderFrom(match, viewTeam);
   if (matchConfig.mode === "hp") ui!.updateHp(redOf(match).hp, blueOf(match).hp);
   if (!matchConfig.noTurn) ui!.setTurn(viewTeam, latex);
-  ui!.setStatus(res.shot!.hit.kind === "target" ? `Hit! -${res.damage ?? 0} HP` : noteFor(res.shot!.hit.kind));
+  ui!.setStatus(commit.shot!.hit.kind === "target" ? `Hit! -${commit.damage ?? 0} HP` : noteFor(commit.shot!.hit.kind));
   ui!.focus();
 }
 
