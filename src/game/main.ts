@@ -1,8 +1,10 @@
+import "../design/foundation.css";
 import { GameRenderer } from "./GameRenderer";
 import { GameUI } from "./GameUI";
 import { LobbyScreen } from "../ui/LobbyScreen";
 import { firstShooterNextRound, type MatchConfig } from "./matchLogic";
 import { configToHash, parseConfigFromHash } from "./configRouter";
+import { arenaDefaults } from "./arenaDefaults";
 import {
   createMatch,
   beginRound,
@@ -24,7 +26,7 @@ const gameEl = document.getElementById("game")!;
 
 let renderer: GameRenderer | null = null;
 let ui: GameUI | null = null;
-let matchConfig: MatchConfig = { mode: "classic", rounds: 3, noTurn: false, role: "local" };
+let matchConfig: MatchConfig = { mode: "classic", rounds: 3, noTurn: false, role: "local", ...arenaDefaults() };
 let match: MatchState | null = null;
 
 // ── View adapters (1 player per team → existing 2-panel renderer/UI) ───────────
@@ -45,8 +47,9 @@ function renderFrom(m: MatchState, viewTeam: Team): void {
 // ── Game lifecycle ────────────────────────────────────────────────────────────
 
 function start(): void {
+  renderer!.setMap(matchConfig.map);
   const bounds = renderer!.getEffectiveBounds();
-  match = createMatch(matchConfig, buildLocalLayout(bounds), bounds, "red");
+  match = createMatch(matchConfig, buildLocalLayout(bounds, matchConfig), bounds, "red");
 
   const viewTeam: Team = match.activePlayerId
     ? playerById(match, match.activePlayerId)!.team
@@ -87,7 +90,7 @@ function handleRoundEnd(roundLoser: Team): void {
     ui!.hideSplash();
     const bounds = renderer!.getEffectiveBounds();
     const firstTeam = firstShooterNextRound(roundLoser);
-    match = beginRound(m, buildLocalLayout(bounds), firstTeam);
+    match = beginRound(m, buildLocalLayout(bounds, matchConfig), firstTeam);
 
     const viewTeam: Team = match.activePlayerId
       ? playerById(match, match.activePlayerId)!.team

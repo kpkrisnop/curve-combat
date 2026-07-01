@@ -1,6 +1,10 @@
 import { Application, Container, Graphics, RenderTexture, Sprite, Text } from "pixi.js";
 import { Camera } from "../graph/Camera";
 import type { Bounds, ShotResult, Vec2, World } from "../sim/types";
+import type { MapConfig } from "./matchLogic";
+import { DEFAULT_MAP } from "./arenaDefaults";
+import { boundsFromMap } from "../sim/planetScatter";
+import { fitContain } from "../sim/fitRect";
 
 const COLORS = {
   bg: 0x0f141a,
@@ -21,8 +25,6 @@ const X_VELOCITY_WORLD = 6;
 const MIN_SHOT_MS = 200;
 const PLAYER_RADIUS_WORLD = 0.2;
 const BARREL_PX = 18;
-/** Fixed vertical half-range of the game world (±7 y). */
-const HALF_Y = 7;
 
 export class GameRenderer {
   readonly app = new Application();
@@ -45,10 +47,13 @@ export class GameRenderer {
   private bluePos: Vec2 = { x: 9, y: 0 };
 
   /**
-   * World bounds that exactly match the canvas edges. Computed from the canvas
-   * size: Y is always ±HALF_Y; X is derived so that the canvas fills edge-to-edge.
+   * The logical playfield rectangle (world units). Set from MatchConfig via
+   * setMap(); the camera scales it uniformly to fit the canvas (contain/letterbox).
    */
-  private effectiveBounds: Bounds = { minX: -12, maxX: 12, minY: -HALF_Y, maxY: HALF_Y };
+  private map: MapConfig = { ...DEFAULT_MAP };
+
+  /** Collision bounds — the map rectangle, centered on the origin. */
+  private effectiveBounds: Bounds = boundsFromMap(DEFAULT_MAP);
 
   async init(container: HTMLElement) {
     await this.app.init({
@@ -94,6 +99,12 @@ export class GameRenderer {
     return { ...this.effectiveBounds };
   }
 
+  /** Set the logical playfield rectangle. Call before getEffectiveBounds()/setWorld(). */
+  setMap(map: MapConfig): void {
+    this.map = { ...map };
+    if (this.camera) this.recomputeEffectiveBounds();
+  }
+
   setWorld(world: World, activeTurn: "red" | "blue", redPos: Vec2, bluePos: Vec2) {
     this.world = world;
     this.activeTurn = activeTurn;
@@ -109,17 +120,16 @@ export class GameRenderer {
   }
 
   /**
-   * Fit the camera so the world Y range (±HALF_Y) fills the canvas exactly,
-   * then derive the X bounds from the canvas width.
+   * Scale the logical map rectangle uniformly to fit the canvas (contain), so
+   * the same map looks identical on every display — only the pixel size differs.
+   * Any aspect mismatch becomes a letterbox/pillarbox margin.
    */
   private recomputeEffectiveBounds() {
     const cam = this.camera;
-    const scale = cam.height / (2 * HALF_Y);
-    cam.scale = scale;
+    cam.scale = fitContain(this.map, cam.width, cam.height).scale;
     cam.centerX = 0;
     cam.centerY = 0;
-    const halfBW = cam.width / (2 * scale);
-    this.effectiveBounds = { minX: -halfBW, maxX: halfBW, minY: -HALF_Y, maxY: HALF_Y };
+    this.effectiveBounds = boundsFromMap(this.map);
   }
 
   private drawStatic() {

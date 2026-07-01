@@ -1,31 +1,30 @@
 // src/game/localLayout.ts
-import type { Bounds, Planet } from "../sim/types";
+import type { Bounds } from "../sim/types";
 import type { RoundLayout, PlayerState } from "./matchState";
+import type { MatchConfig } from "./matchLogic";
+import { generatePlanets, computeSpawns } from "../sim/planetScatter";
 
-/** The hand-authored planet field (Decision D4 will later swap this for a seeded scatter). */
-function seedPlanets(): Planet[] {
-  return [
-    { id: "p1", pos: { x: -5, y: 3 }, radius: 1.2, craters: [] },
-    { id: "p2", pos: { x: -3, y: -2 }, radius: 1.8, craters: [] },
-    { id: "p3", pos: { x: 0, y: 2 }, radius: 1.5, craters: [] },
-    { id: "p4", pos: { x: 0, y: -3 }, radius: 1.4, craters: [] },
-    { id: "p5", pos: { x: 3, y: 1 }, radius: 2.0, craters: [] },
-    { id: "p6", pos: { x: 5, y: -2 }, radius: 1.3, craters: [] },
-  ];
+/** Pick a random element. */
+function pick<T>(xs: T[]): T {
+  return xs[Math.floor(Math.random() * xs.length)];
 }
 
-/** Local hot-seat layout: one player per team at random vertical positions near each edge. */
-export function buildLocalLayout(b: Bounds): RoundLayout {
-  const yLo = b.minY + 1;
-  const yHi = b.maxY - 1;
-  const xEdge = Math.abs(b.minX) - 0.3;
-  const xInner = Math.min(11, xEdge);
-  const xRange = Math.max(0, xEdge - xInner);
-  const ry = yLo + Math.random() * (yHi - yLo);
-  const by = yLo + Math.random() * (yHi - yLo);
+/**
+ * Local hot-seat layout (Decision D4): one player per team, and a seeded planet
+ * scatter generated from the room's ArenaConfig. Players sit on reserved spawn
+ * columns, so they are always clear of planets. A fresh seed is minted per round
+ * (the authoritative server will mint it instead in online play).
+ */
+export function buildLocalLayout(bounds: Bounds, config: MatchConfig): RoundLayout {
+  const seed = (Math.random() * 0xffffffff) >>> 0;
+  const spawns = computeSpawns(config.map, config.teamSize);
+  const planets = generatePlanets(seed, bounds, spawns, config.scatter);
+
+  const left = spawns.filter((s) => s.x < 0);
+  const right = spawns.filter((s) => s.x > 0);
   const players: PlayerState[] = [
-    { id: "r1", name: "RED", team: "red", pos: { x: -(xInner + Math.random() * xRange), y: ry }, hp: 100, alive: true },
-    { id: "b1", name: "BLUE", team: "blue", pos: { x: xInner + Math.random() * xRange, y: by }, hp: 100, alive: true },
+    { id: "r1", name: "RED", team: "red", pos: { ...pick(left) }, hp: 100, alive: true },
+    { id: "b1", name: "BLUE", team: "blue", pos: { ...pick(right) }, hp: 100, alive: true },
   ];
-  return { players, planets: seedPlanets() };
+  return { players, planets };
 }

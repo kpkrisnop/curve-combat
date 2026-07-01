@@ -1,4 +1,5 @@
 import type { MatchConfig } from "../game/matchLogic";
+import { SettingsPanel } from "./settings/SettingsPanel";
 
 export class LobbyScreen {
   private el: HTMLElement;
@@ -8,6 +9,7 @@ export class LobbyScreen {
   private rounds5Btn: HTMLButtonElement;
   private startLocalBtn: HTMLButtonElement;
   private noTurnCheckbox: HTMLInputElement;
+  private settings: SettingsPanel;
 
   private selectedMode: MatchConfig["mode"] = "classic";
   private selectedRounds: 3 | 5 = 3;
@@ -16,6 +18,7 @@ export class LobbyScreen {
 
   constructor(root: ParentNode = document) {
     this.el = root.querySelector<HTMLElement>("#lobby-screen")!;
+    this.settings = new SettingsPanel(root);
     this.modeClassicBtn = root.querySelector<HTMLButtonElement>("#lobby-mode-classic")!;
     this.modeHpBtn = root.querySelector<HTMLButtonElement>("#lobby-mode-hp")!;
     this.rounds3Btn = root.querySelector<HTMLButtonElement>("#lobby-rounds-3")!;
@@ -44,14 +47,14 @@ export class LobbyScreen {
 
   private selectMode(mode: MatchConfig["mode"]): void {
     this.selectedMode = mode;
-    this.modeClassicBtn.classList.toggle("active", mode === "classic");
-    this.modeHpBtn.classList.toggle("active", mode === "hp");
+    this.modeClassicBtn.classList.toggle("is-active", mode === "classic");
+    this.modeHpBtn.classList.toggle("is-active", mode === "hp");
   }
 
   private selectRounds(rounds: 3 | 5): void {
     this.selectedRounds = rounds;
-    this.rounds3Btn.classList.toggle("active", rounds === 3);
-    this.rounds5Btn.classList.toggle("active", rounds === 5);
+    this.rounds3Btn.classList.toggle("is-active", rounds === 3);
+    this.rounds5Btn.classList.toggle("is-active", rounds === 5);
   }
 
   private handleStart(): void {
@@ -60,6 +63,7 @@ export class LobbyScreen {
       rounds: this.selectedRounds,
       noTurn: this.noTurnCheckbox.checked,
       role: "local",
+      ...this.settings.getSettings(),
     };
     this.startCb?.(config);
   }
