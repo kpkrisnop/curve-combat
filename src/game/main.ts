@@ -47,8 +47,9 @@ function renderFrom(m: MatchState, viewTeam: Team): void {
 // ── Game lifecycle ────────────────────────────────────────────────────────────
 
 function start(): void {
+  renderer!.setMap(matchConfig.map);
   const bounds = renderer!.getEffectiveBounds();
-  match = createMatch(matchConfig, buildLocalLayout(bounds), bounds, "red");
+  match = createMatch(matchConfig, buildLocalLayout(bounds, matchConfig), bounds, "red");
 
   const viewTeam: Team = match.activePlayerId
     ? playerById(match, match.activePlayerId)!.team
@@ -89,7 +90,7 @@ function handleRoundEnd(roundLoser: Team): void {
     ui!.hideSplash();
     const bounds = renderer!.getEffectiveBounds();
     const firstTeam = firstShooterNextRound(roundLoser);
-    match = beginRound(m, buildLocalLayout(bounds), firstTeam);
+    match = beginRound(m, buildLocalLayout(bounds, matchConfig), firstTeam);
 
     const viewTeam: Team = match.activePlayerId
       ? playerById(match, match.activePlayerId)!.team

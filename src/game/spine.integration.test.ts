@@ -9,7 +9,7 @@ const BOUNDS = { minX: -12, minY: -7, maxX: 12, maxY: 7 };
 
 describe("local layout", () => {
   it("buildLocalLayout yields one red and one blue player and the planet field", () => {
-    const l = buildLocalLayout(BOUNDS);
+    const l = buildLocalLayout(BOUNDS, { mode: "classic", rounds: 3, noTurn: false, role: "local", ...arenaDefaults() });
     expect(l.players.map((p) => p.team).sort()).toEqual(["blue", "red"]);
     expect(l.players.find((p) => p.team === "red")!.pos.x).toBeLessThan(0);
     expect(l.players.find((p) => p.team === "blue")!.pos.x).toBeGreaterThan(0);
