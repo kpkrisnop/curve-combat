@@ -22,4 +22,11 @@ describe("RoomManager", () => {
     expect(state.phase).toBe("play");
     expect(m.get("WOLF")!.engine).not.toBeNull();
   });
+
+  it("rejects a third joiner (room full)", () => {
+    const m = new RoomManager();
+    m.join("WOLF", "Ann");
+    m.join("WOLF", "Bo");
+    expect(() => m.join("WOLF", "Cy")).toThrow(/full/i);
+  });
 });

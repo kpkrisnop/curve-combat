@@ -21,7 +21,9 @@ export class RoomManager {
   get(code: string): Room | undefined { return this.rooms.get(code); }
 
   join(code: string, name: string): { room: Room; playerId: string } {
-    let room = this.rooms.get(code);
+    const existing = this.rooms.get(code);
+    if (existing && existing.players.length >= 2) throw new Error("room full");
+    let room = existing;
     const id = nextId();
     if (!room) {
       room = { code, players: [], ownerId: id, config: { mode: "classic", rounds: 3, noTurn: false, ...arenaDefaults() }, engine: null };
