@@ -133,7 +133,7 @@ export class NetworkGame {
     if (state.turnDeadline !== null && state.phase === "play" && state.activePlayerId !== null) {
       const tick = () => {
         const secs = Math.max(0, Math.ceil(((state.turnDeadline as number) - Date.now()) / 1000));
-        this.ui.setStatus(`⏱ ${secs} s`);
+        this.ui.setStatus(`⏱ ${secs}s`);
       };
       tick();
       this.countdownInterval = setInterval(tick, 500);
