@@ -34,11 +34,11 @@ describe("protocol", () => {
 
   it("round-trips a lobbyState with spectators", () => {
     const msg = {
-      type: "lobbyState",
+      type: "lobbyState" as const,
       players: [{ id: "p1", name: "Ann", team: "red" as const }],
       ownerId: "p1",
       spectators: [{ id: "s1", name: "Eve" }],
-    } as const;
+    };
     expect(parseServerMessage(JSON.parse(encode(msg)))).toEqual(msg);
   });
 
