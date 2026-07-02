@@ -7,6 +7,6 @@ it("dispatches parsed server messages to type handlers", () => {
   const got = vi.fn();
   c.on("joined", got);
   // simulate an inbound message frame
-  (c as any).handleRaw(encode({ type: "joined", playerId: "p1", ownerId: "p1" }));
-  expect(got).toHaveBeenCalledWith({ type: "joined", playerId: "p1", ownerId: "p1" });
+  (c as any).handleRaw(encode({ type: "joined", playerId: "p1", ownerId: "p1", token: "tok-x" }));
+  expect(got).toHaveBeenCalledWith({ type: "joined", playerId: "p1", ownerId: "p1", token: "tok-x" });
 });

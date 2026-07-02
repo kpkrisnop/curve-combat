@@ -21,4 +21,29 @@ describe("protocol", () => {
   it("rejects a fireIntent missing latex", () => {
     expect(() => parseClientMessage({ type: "fireIntent" })).toThrow();
   });
+
+  it("round-trips a reconnect client message", () => {
+    const msg = { type: "reconnect", room: "WOLF", playerId: "p1", token: "tok-abc" } as const;
+    expect(parseClientMessage(JSON.parse(encode(msg)))).toEqual(msg);
+  });
+
+  it("round-trips a joined server message with token", () => {
+    const msg = { type: "joined", playerId: "p1", ownerId: "p1", token: "tok-abc" } as const;
+    expect(parseServerMessage(JSON.parse(encode(msg)))).toEqual(msg);
+  });
+
+  it("round-trips a lobbyState with spectators", () => {
+    const msg = {
+      type: "lobbyState",
+      players: [{ id: "p1", name: "Ann", team: "red" as const }],
+      ownerId: "p1",
+      spectators: [{ id: "s1", name: "Eve" }],
+    } as const;
+    expect(parseServerMessage(JSON.parse(encode(msg)))).toEqual(msg);
+  });
+
+  it("round-trips a peerStatus server message", () => {
+    const msg = { type: "peerStatus", playerId: "p1", name: "Ann", connected: false } as const;
+    expect(parseServerMessage(JSON.parse(encode(msg)))).toEqual(msg);
+  });
 });
