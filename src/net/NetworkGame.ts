@@ -46,7 +46,22 @@ export class NetworkGame {
       this.maybeShowStartButton();
     });
     this.client.on("shotPlayback", (m) => {
-      if (m.type === "shotPlayback") void this.renderer.playShot(m.shot);
+      if (m.type !== "shotPlayback") return;
+      void (async () => {
+        await this.renderer.playShot(m.shot);
+        if (
+          this.lastState?.config.mode === "hp" &&
+          m.shot.hit.kind === "target" &&
+          m.shot.hit.at
+        ) {
+          const dmg = computeDamage(m.shot.impactSlope);
+          const firer = this.lastState.players.find((p) => p.id === m.firerId);
+          if (firer) {
+            const targetTeam: Team = firer.team === "red" ? "blue" : "red";
+            this.renderer.showFloatingDamage(m.shot.hit.at, dmg, targetTeam);
+          }
+        }
+      })();
     });
     this.client.on("matchState", (m) => {
       if (m.type !== "matchState") return;
@@ -124,12 +139,6 @@ export class NetworkGame {
 
   private removeStartButton(): void {
     if (this.startBtn) { this.startBtn.remove(); this.startBtn = null; }
-  }
-
-  /** HP-2: compute damage from the last fired shot (wired in next task). */
-  protected computeLastShotDamage(impactSlope: number): number {
-    void this.lastState;
-    return computeDamage(impactSlope);
   }
 
   private render(state: MatchState): void {
