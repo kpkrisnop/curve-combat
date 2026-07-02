@@ -2,7 +2,7 @@
 import type { Bounds, Planet, Vec2, World } from "../sim/types";
 import type { MatchConfig } from "./matchLogic";
 import { HP_MAX } from "./hpLogic";
-import { buildTurnQueue } from "./turnQueue";
+import { buildTurnQueue, nextActive } from "./turnQueue";
 
 export type Team = "red" | "blue";
 export type MatchPhase = "play" | "between" | "over";
@@ -29,6 +29,8 @@ export interface MatchState {
   round: number;
   phase: MatchPhase;
   winner: Team | null;
+  /** Unix-ms deadline for the active player's turn; null when no timer is running. */
+  turnDeadline: number | null;
 }
 
 /** Positions + identities for one round; HP/alive are (re)set by the lifecycle fns. */
@@ -89,7 +91,22 @@ export function createMatch(
     round: 1,
     phase: "play",
     winner: null,
+    turnDeadline: null,
   };
+}
+
+/**
+ * Advance the active player's turn without a shot (timer-expiry skip).
+ * No-op in no-turn mode or when there is no active player.
+ */
+export function skipTurn(state: MatchState): MatchState {
+  if (state.config.noTurn || state.activePlayerId === null) return state;
+  const next = nextActive(
+    state.turnQueue,
+    state.activePlayerId,
+    (id) => state.players.find((p) => p.id === id)?.alive ?? false,
+  );
+  return { ...state, activePlayerId: next, turnDeadline: null };
 }
 
 /** Set up the next round: respawn everyone, install the new layout, keep scores. */
@@ -109,5 +126,6 @@ export function beginRound(
     round: prev.round + 1,
     phase: "play",
     winner: null,
+    turnDeadline: null,
   };
 }

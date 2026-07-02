@@ -19,6 +19,7 @@ export interface MatchConfig {
   mode: "classic" | "hp";
   noTurn: boolean;
   rounds: 3 | 5;
+  turnSeconds?: number;
   roomCode?: string;
   role?: "local" | "online";
   map: MapConfig;
