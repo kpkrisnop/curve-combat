@@ -16,6 +16,7 @@ export class ServerClient {
 
   connect(): Promise<void> {
     return new Promise((resolve, reject) => {
+      if (this.ws) this.ws.close();
       this.ws = new WebSocket(this.url);
       this.ws.onopen = () => resolve();
       this.ws.onerror = (e) => reject(e);
