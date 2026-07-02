@@ -7,6 +7,7 @@ import type { MatchState, Team } from "../game/matchState";
 const SESSION_KEY = "graphwar-session";
 
 export class NetworkGame {
+  private countdownInterval: ReturnType<typeof setInterval> | null = null;
   private myTeam: Team | null = null;
   private myId: string | null = null;
   private myToken: string | null = null;
@@ -77,6 +78,10 @@ export class NetworkGame {
   }
 
   close(): void {
+    if (this.countdownInterval !== null) {
+      clearInterval(this.countdownInterval);
+      this.countdownInterval = null;
+    }
     window.removeEventListener("beforeunload", this.boundClose);
     this.client.close();
   }
@@ -120,6 +125,22 @@ export class NetworkGame {
   }
 
   private render(state: MatchState): void {
+    // --- countdown ---
+    if (this.countdownInterval !== null) {
+      clearInterval(this.countdownInterval);
+      this.countdownInterval = null;
+    }
+    if (state.turnDeadline !== null && state.phase === "play" && state.activePlayerId !== null) {
+      const tick = () => {
+        const secs = Math.max(0, Math.ceil(((state.turnDeadline as number) - Date.now()) / 1000));
+        this.ui.setStatus(`⏱ ${secs} s`);
+      };
+      tick();
+      this.countdownInterval = setInterval(tick, 500);
+    } else {
+      this.ui.setStatus("");
+    }
+    // --- rest of render (unchanged below) ---
     const red = state.players.find((p) => p.team === "red")!;
     const blue = state.players.find((p) => p.team === "blue")!;
     const viewTeam: Team = this.myTeam ?? "red";
