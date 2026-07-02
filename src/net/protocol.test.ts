@@ -49,17 +49,17 @@ describe("protocol", () => {
 
   it("configureRoom round-trips", () => {
     const msg = { type: "configureRoom", mode: "hp", rounds: 5, noTurn: true, turnSeconds: 45 } as const;
-    expect(parseClientMessage(msg)).toEqual(msg);
+    expect(parseClientMessage(JSON.parse(encode(msg)))).toEqual(msg);
   });
 
   it("lobbyState with config round-trips", () => {
     const msg = {
-      type: "lobbyState",
+      type: "lobbyState" as const,
       players: [],
       ownerId: "p1",
       spectators: [],
-      config: { mode: "hp", rounds: 5, noTurn: false, turnSeconds: 30 },
-    } as const;
-    expect(parseServerMessage(msg)).toEqual(msg);
+      config: { mode: "hp" as const, rounds: 5 as const, noTurn: false, turnSeconds: 30 },
+    };
+    expect(parseServerMessage(JSON.parse(encode(msg)))).toEqual(msg);
   });
 });
