@@ -10,6 +10,7 @@ import {
   beginRound,
   worldFor,
   playerById,
+  skipTurn,
   type MatchState,
   type Team,
   type PlayerState,
@@ -32,6 +33,31 @@ let renderer: GameRenderer | null = null;
 let ui: GameUI | null = null;
 let matchConfig: MatchConfig = { mode: "classic", rounds: 3, noTurn: false, role: "local", ...arenaDefaults() };
 let match: MatchState | null = null;
+
+// ── Local turn timer ──────────────────────────────────────────────────────────
+
+let turnTimer: ReturnType<typeof setTimeout> | null = null;
+
+function cancelLocalTurnTimer(): void {
+  if (turnTimer !== null) { clearTimeout(turnTimer); turnTimer = null; }
+}
+
+function armLocalTurnTimer(): void {
+  cancelLocalTurnTimer();
+  if (!matchConfig || matchConfig.noTurn) return;
+  const ms = (matchConfig.turnSeconds ?? 60) * 1000;
+  turnTimer = setTimeout(() => {
+    turnTimer = null;
+    if (match) {
+      match = skipTurn(match);
+      const viewTeam: Team = match.activePlayerId
+        ? playerById(match, match.activePlayerId)!.team
+        : "red";
+      ui!.setTurn(viewTeam, "");
+      armLocalTurnTimer();
+    }
+  }, ms);
+}
 
 // ── View adapters (1 player per team → existing 2-panel renderer/UI) ───────────
 
@@ -62,6 +88,7 @@ function start(): void {
 
   ui!.resetInputs();
   ui!.setTurn(viewTeam, "");
+  armLocalTurnTimer();
   renderer!.setNoTurnMode(matchConfig.noTurn);
   if (matchConfig.noTurn) ui!.setNoTurnMode(true);
   ui!.hideWin();
@@ -76,6 +103,7 @@ function start(): void {
 function handleRoundEnd(roundLoser: Team): void {
   const m = match!;
   if (m.phase === "over") {
+    cancelLocalTurnTimer();
     ui!.setBusy("red", false);
     ui!.setBusy("blue", false);
     ui!.showWin(m.winner!, matchConfig.mode === "hp" ? "Health depleted." : "Direct hit.");
@@ -102,6 +130,7 @@ function handleRoundEnd(roundLoser: Team): void {
     renderFrom(match, viewTeam);
     ui!.resetInputs();
     ui!.setTurn(viewTeam, "");
+    armLocalTurnTimer();
     ui!.setNoTurnMode(matchConfig.noTurn);
     ui!.updateScoreboard(match.scores.red, match.scores.blue, match.round, matchConfig.rounds);
     if (matchConfig.mode === "hp") ui!.updateHp(redOf(match).hp, blueOf(match).hp);
@@ -111,6 +140,7 @@ function handleRoundEnd(roundLoser: Team): void {
 }
 
 async function onFire(player: Team, latex: string): Promise<void> {
+  cancelLocalTurnTimer();
   const m = match;
   if (!m || m.phase !== "play") return;
 
@@ -163,7 +193,10 @@ async function onFire(player: Team, latex: string): Promise<void> {
     : player;
   renderFrom(match, viewTeam);
   if (matchConfig.mode === "hp") ui!.updateHp(redOf(match).hp, blueOf(match).hp);
-  if (!matchConfig.noTurn) ui!.setTurn(viewTeam, latex);
+  if (!matchConfig.noTurn) {
+    ui!.setTurn(viewTeam, latex);
+    armLocalTurnTimer();
+  }
   ui!.setStatus(commit.shot!.hit.kind === "target" ? `Hit! -${commit.damage ?? 0} HP` : noteFor(commit.shot!.hit.kind));
   ui!.focus();
 }
