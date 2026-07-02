@@ -125,4 +125,37 @@ describe("RoomManager Phase 2", () => {
     expect(ttlFn).not.toHaveBeenCalled();
     expect(graceFn).not.toHaveBeenCalled();
   });
+
+  it("setConfig: owner can set config before match starts", () => {
+    const m = new RoomManager();
+    const { playerId: owner } = m.join("WOLF", "Ann");
+    m.join("WOLF", "Bo");
+    const newConfig = { mode: "hp" as const, rounds: 5, noTurn: true, turnSeconds: 15 };
+    m.setConfig("WOLF", owner, newConfig);
+    const room = m.get("WOLF")!;
+    expect(room.config.mode).toBe("hp");
+    expect(room.config.rounds).toBe(5);
+    expect(room.config.noTurn).toBe(true);
+    expect(room.config.turnSeconds).toBe(15);
+  });
+
+  it("setConfig: throws when room does not exist", () => {
+    const m = new RoomManager();
+    expect(() => m.setConfig("NONEXISTENT", "player", { mode: "classic", rounds: 3, noTurn: false, turnSeconds: 30 })).toThrow(/no such room/i);
+  });
+
+  it("setConfig: throws when byPlayerId is not the owner", () => {
+    const m = new RoomManager();
+    const { playerId: owner } = m.join("WOLF", "Ann");
+    const { playerId: nonOwner } = m.join("WOLF", "Bo");
+    expect(() => m.setConfig("WOLF", nonOwner, { mode: "classic", rounds: 3, noTurn: false, turnSeconds: 30 })).toThrow(/only the owner can configure/i);
+  });
+
+  it("setConfig: throws when engine is already running", () => {
+    const m = new RoomManager();
+    const { playerId: owner } = m.join("WOLF", "Ann");
+    m.join("WOLF", "Bo");
+    m.start("WOLF", owner); // start the match, engine is now active
+    expect(() => m.setConfig("WOLF", owner, { mode: "hp", rounds: 5, noTurn: true, turnSeconds: 15 })).toThrow(/cannot configure after match starts/i);
+  });
 });
