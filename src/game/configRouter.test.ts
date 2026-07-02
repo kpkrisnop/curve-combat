@@ -3,17 +3,17 @@ import { parseConfigFromHash, configToHash } from "./configRouter";
 import type { MatchConfig } from "./matchLogic";
 import { arenaDefaults } from "./arenaDefaults";
 
-const DEFAULT: MatchConfig = { mode: "classic", rounds: 3, noTurn: false, role: "local", ...arenaDefaults() };
+const DEFAULT: MatchConfig = { mode: "classic", rounds: 3, noTurn: false, turnSeconds: 60, role: "local", ...arenaDefaults() };
 const ARENA_HASH = "&w=24&h=14&rmn=0.8&rmx=2&gmn=0.5&gmx=2&sc=2&fm=0.5&mp=12&ts=1";
 
 describe("configToHash", () => {
   it("encodes classic 3-round default config with arena fields", () => {
-    expect(configToHash(DEFAULT)).toBe("#game?mode=classic&rounds=3&noTurn=false" + ARENA_HASH);
+    expect(configToHash(DEFAULT)).toBe("#game?mode=classic&rounds=3&noTurn=false&tt=60" + ARENA_HASH);
   });
 
   it("encodes 5-round no-turn config", () => {
     const cfg: MatchConfig = { mode: "classic", rounds: 5, noTurn: true, role: "local", ...arenaDefaults() };
-    expect(configToHash(cfg)).toBe("#game?mode=classic&rounds=5&noTurn=true" + ARENA_HASH);
+    expect(configToHash(cfg)).toBe("#game?mode=classic&rounds=5&noTurn=true&tt=60" + ARENA_HASH);
   });
 });
 
@@ -28,6 +28,7 @@ describe("parseConfigFromHash", () => {
       mode: "hp",
       rounds: 5,
       noTurn: true,
+      turnSeconds: 60,
       role: "local",
       map: { width: 30, height: 18 },
       scatter: { rMin: 1, rMax: 3, gapMin: 1, gapMax: 4, spawnClearance: 2.5, fieldMargin: 1, maxPlanets: 8 },
@@ -67,6 +68,7 @@ describe("parseConfigFromHash", () => {
       mode: "classic",
       rounds: 5,
       noTurn: false,
+      turnSeconds: 45,
       role: "local",
       map: { width: 28, height: 16 },
       scatter: { rMin: 0.5, rMax: 2.5, gapMin: 0.2, gapMax: 3, spawnClearance: 1.5, fieldMargin: 0.8, maxPlanets: 10 },

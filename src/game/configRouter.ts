@@ -5,6 +5,7 @@ const DEFAULT_CONFIG: MatchConfig = {
   mode: "classic",
   rounds: 3,
   noTurn: false,
+  turnSeconds: 60,
   role: "local",
   ...arenaDefaults(),
 };
@@ -17,8 +18,9 @@ function n(v: number): string {
 /** Encode a MatchConfig into a URL hash string. */
 export function configToHash(c: MatchConfig): string {
   const { map, scatter, teamSize } = c;
+  const tt = c.turnSeconds ?? 60;
   return (
-    `#game?mode=${c.mode}&rounds=${c.rounds}&noTurn=${c.noTurn}` +
+    `#game?mode=${c.mode}&rounds=${c.rounds}&noTurn=${c.noTurn}&tt=${tt}` +
     `&w=${n(map.width)}&h=${n(map.height)}` +
     `&rmn=${n(scatter.rMin)}&rmx=${n(scatter.rMax)}` +
     `&gmn=${n(scatter.gapMin)}&gmx=${n(scatter.gapMax)}` +
@@ -64,6 +66,7 @@ export function parseConfigFromHash(hash: string): MatchConfig {
     maxPlanets: Math.round(clampNum(p.get("mp"), 1, 24, DEFAULT_SCATTER.maxPlanets)),
   };
   const teamSize = Math.round(clampNum(p.get("ts"), 1, 5, arenaDefaults().teamSize)) as 1 | 2 | 3 | 4 | 5;
+  const turnSeconds = Math.round(clampNum(p.get("tt"), 15, 120, 60) / 5) * 5; // snap to 5s grid
 
-  return { mode, rounds, noTurn, role: "local", map, scatter, teamSize };
+  return { mode, rounds, noTurn, turnSeconds, role: "local", map, scatter, teamSize };
 }
