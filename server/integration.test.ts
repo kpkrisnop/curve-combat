@@ -166,4 +166,40 @@ describe("server integration (Phase 2)", () => {
 
     a.close(); b.close(); s.close(); await server.close();
   });
+
+  it("stale close after reconnect does not arm grace or destroy room", async () => {
+    const port = 3700 + Math.floor(Math.random() * 150);
+    const server = createServer(port);
+    const a = await open(port), b = await open(port);
+
+    a.send(encode({ type: "join", room: "STALE", name: "Ann" }));
+    const aJoined = await next(a, "joined");
+    const { playerId: aId, token: aToken } = aJoined as any;
+    b.send(encode({ type: "join", room: "STALE", name: "Bo" })); await next(b, "joined");
+    a.send(encode({ type: "startMatch" })); await next(a, "matchState");
+
+    // A reconnects on a new socket BEFORE closing the old one (simulates page-refresh race).
+    const a2 = await open(port);
+    a2.send(encode({ type: "reconnect", room: "STALE", playerId: aId, token: aToken }));
+    const rejoined = await next(a2, "joined");
+    expect((rejoined as any).playerId).toBe(aId);
+
+    // NOW close the old socket (stale close arrives after reconnect was processed).
+    a.close();
+
+    // Advance well past the 30s grace — room must NOT be destroyed.
+    vi.advanceTimersByTime(35_000);
+    await Promise.resolve(); // flush microtasks
+
+    // B must NOT receive opponent-timed-out (room still alive).
+    let gotTimedOut = false;
+    b.on("message", (buf: Buffer) => {
+      const m = parseServerMessage(JSON.parse(buf.toString()));
+      if (m.type === "error" && (m as any).code === "opponent-timed-out") gotTimedOut = true;
+    });
+    await new Promise<void>((r) => setTimeout(r, 50));
+    expect(gotTimedOut).toBe(false);
+
+    a2.close(); b.close(); await server.close();
+  });
 });

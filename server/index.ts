@@ -134,6 +134,12 @@ export function createServer(port: number): { close: () => Promise<void> } {
         return;
       }
 
+      // If the player already reconnected on a new socket, this close is stale — skip grace.
+      const alreadyReconnected = [...conns].some(
+        (c) => c.room === conn.room && c.playerId === conn.playerId && c.ws.readyState === WebSocket.OPEN,
+      );
+      if (alreadyReconnected) return;
+
       const player = room.players.find((p) => p.id === conn.playerId);
       const name = player?.name ?? "Player";
       broadcast(conn.room, { type: "peerStatus", playerId: conn.playerId!, name, connected: false });
