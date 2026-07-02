@@ -16,6 +16,10 @@ import {
 } from "./matchState";
 import { resolveFire } from "./resolveFire";
 import { buildLocalLayout } from "./localLayout";
+import { NetworkGame } from "../net/NetworkGame";
+import { ServerClient } from "../net/ServerClient";
+
+const WS_URL: string = (import.meta.env["VITE_WS_URL"] as string | undefined) ?? "ws://localhost:3001";
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
 
@@ -248,11 +252,42 @@ function goToLobby() {
   history.pushState(null, "", "/");
 }
 
+// ── Network game path ─────────────────────────────────────────────────────────
+
+async function startNetworkGame(room: string): Promise<void> {
+  lobbyEl.hidden = true;
+  gameEl.hidden = false;
+
+  if (!renderer) {
+    try {
+      const stage = document.getElementById("game-stage")!;
+      renderer = new GameRenderer();
+      await renderer.init(stage);
+
+      ui = new GameUI();
+      ui.onReset(goToLobby);
+    } catch (err) {
+      console.error("Failed to start network game:", err);
+      renderer = null;
+      ui = null;
+      goToLobby();
+      return;
+    }
+  }
+
+  const name = prompt("Enter your name:", "Player") ?? "Player";
+  const net = new NetworkGame(new ServerClient(WS_URL), renderer!, ui!);
+  await net.start(room, name);
+}
+
 // ── Router entry point ────────────────────────────────────────────────────────
 
 function route() {
   const hash = location.hash;
-  if (hash.startsWith("#game")) {
+  if (hash.startsWith("#room=")) {
+    const room = hash.slice("#room=".length);
+    void startNetworkGame(room);
+  } else if (hash.startsWith("#game")) {
     const config = parseConfigFromHash(hash);
     startGame(config);
   } else {
@@ -265,7 +300,10 @@ function route() {
 }
 
 window.addEventListener("popstate", () => {
-  if (location.hash.startsWith("#game")) {
+  if (location.hash.startsWith("#room=")) {
+    const room = location.hash.slice("#room=".length);
+    void startNetworkGame(room);
+  } else if (location.hash.startsWith("#game")) {
     startGame(parseConfigFromHash(location.hash));
   } else {
     goToLobby();
