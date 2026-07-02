@@ -21,6 +21,7 @@ export class NetworkGame {
   private name = "";
   private readonly boundClose = () => this.close();
   private config: MatchConfig;
+  private myBusy = false;
 
   constructor(
     private client: ServerClient,
@@ -101,7 +102,12 @@ export class NetworkGame {
       this.ui.setStatus(m.message);
     });
 
-    this.ui.onFire((_player, latex) => this.client.send({ type: "fireIntent", latex }));
+    this.ui.onFire((_player, latex) => {
+      if (this.myBusy) return;
+      this.myBusy = true;
+      if (this.myTeam) this.ui.setBusy(this.myTeam, true);
+      this.client.send({ type: "fireIntent", latex });
+    });
 
     await this.client.connect();
 
@@ -169,6 +175,14 @@ export class NetworkGame {
 
   private render(state: MatchState): void {
     this.lastState = state;
+    // Re-enable local player fire button if they were busy.
+    if (this.myBusy) {
+      const me = state.players.find((p) => p.id === this.myId);
+      if (me) {
+        this.myBusy = false;
+        this.ui.setBusy(me.team, false);
+      }
+    }
     // --- countdown ---
     if (this.countdownInterval !== null) {
       clearInterval(this.countdownInterval);
