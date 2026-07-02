@@ -20,6 +20,8 @@ export class RoomManager {
 
   get(code: string): Room | undefined { return this.rooms.get(code); }
 
+  remove(code: string): void { this.rooms.delete(code); }
+
   join(code: string, name: string): { room: Room; playerId: string } {
     const existing = this.rooms.get(code);
     if (existing && existing.players.length >= 2) throw new Error("room full");

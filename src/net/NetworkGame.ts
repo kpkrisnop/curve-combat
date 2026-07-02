@@ -34,6 +34,7 @@ export class NetworkGame {
       this.removeStartButton();
       this.render(m.state);
     });
+    this.client.on("error", (m) => { if (m.type === "error") this.ui.setStatus(m.message); });
     this.ui.onFire((_player, latex) => this.client.send({ type: "fireIntent", latex }));
     await this.client.connect();
     this.client.send({ type: "join", room, name });

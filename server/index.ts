@@ -57,16 +57,28 @@ export function createServer(port: number): { close: () => Promise<void> } {
         if (!r.ok) return send(ws, { type: "error", code: r.code, message: r.code });
         broadcast(room.code, { type: "shotPlayback", firerId: r.firerId, shot: r.shot, duration: r.duration });
         setTimeout(() => {
-          const state = engine.resolvePending();
+          const rm = rooms.get(room.code);
+          if (!rm || !rm.engine) return;
+          const state = rm.engine.resolvePending();
           broadcast(room.code, { type: "matchState", state });
           if (state.phase === "between") {
-            setTimeout(() => broadcast(room.code, { type: "matchState", state: engine.beginNextRound() }), 2000);
+            setTimeout(() => {
+              const rm2 = rooms.get(room.code);
+              if (!rm2 || !rm2.engine) return;
+              broadcast(room.code, { type: "matchState", state: rm2.engine.beginNextRound() });
+            }, 2000);
           }
         }, r.duration * 1000);
         return;
       }
     });
-    ws.on("close", () => conns.delete(conn));
+    ws.on("close", () => {
+      conns.delete(conn);
+      if (conn.room && rooms.get(conn.room)) {
+        broadcast(conn.room, { type: "error", code: "opponent-left", message: "Opponent disconnected — room closed." });
+        rooms.remove(conn.room);
+      }
+    });
   });
 
   return {

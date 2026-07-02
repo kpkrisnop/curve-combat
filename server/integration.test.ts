@@ -49,4 +49,18 @@ describe("server integration (1v1 skeleton)", () => {
     a.close(); b.close();
     await server.close();
   });
+
+  it("notifies the peer and closes the room when a player disconnects", async () => {
+    const port = 3600 + Math.floor(Math.random() * 200);
+    const server = createServer(port);
+    const a = await open(port), b = await open(port);
+    a.send(encode({ type: "join", room: "DROP", name: "Ann" })); await next(a, "joined");
+    b.send(encode({ type: "join", room: "DROP", name: "Bo" }));  await next(b, "joined");
+    a.send(encode({ type: "startMatch" })); await next(a, "matchState");
+    const errP = next(b, "error");
+    a.close();
+    const err = await errP;
+    expect((err as any).code).toBe("opponent-left");
+    b.close(); await server.close();
+  });
 });
