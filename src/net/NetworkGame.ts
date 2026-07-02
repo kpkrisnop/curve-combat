@@ -4,20 +4,36 @@ import type { GameRenderer } from "../game/GameRenderer";
 import type { GameUI } from "../game/GameUI";
 import type { MatchState, Team } from "../game/matchState";
 
+const SESSION_KEY = "graphwar-session";
+
 export class NetworkGame {
   private myTeam: Team | null = null;
   private myId: string | null = null;
+  private myToken: string | null = null;
   private ownerId: string | null = null;
   private startBtn: HTMLButtonElement | null = null;
+  private room = "";
+  private name = "";
+  private readonly boundClose = () => this.close();
 
   constructor(private client: ServerClient, private renderer: GameRenderer, private ui: GameUI) {}
 
   async start(room: string, name: string): Promise<void> {
+    this.room = room;
+    this.name = name;
+
+    window.addEventListener("beforeunload", this.boundClose);
+
     this.client.on("joined", (m) => {
       if (m.type !== "joined") return;
       this.myId = m.playerId;
+      this.myToken = m.token;
       this.ownerId = m.ownerId;
+      if (m.token) this.storeSession();
       this.maybeShowStartButton();
+      this.client.setReconnectHandler(() =>
+        this.client.send({ type: "reconnect", room: this.room, playerId: this.myId!, token: this.myToken! })
+      );
     });
     this.client.on("lobbyState", (m) => {
       if (m.type !== "lobbyState") return;
@@ -34,14 +50,55 @@ export class NetworkGame {
       this.removeStartButton();
       this.render(m.state);
     });
-    this.client.on("error", (m) => { if (m.type === "error") this.ui.setStatus(m.message); });
+    this.client.on("peerStatus", (m) => {
+      if (m.type !== "peerStatus") return;
+      this.ui.setStatus(m.connected ? "" : "Opponent disconnected — waiting up to 30s…");
+    });
+    this.client.on("error", (m) => {
+      if (m.type !== "error") return;
+      if (m.code === "rejoin-failed") {
+        this.clearSession();
+        this.client.send({ type: "join", room: this.room, name: this.name });
+        return;
+      }
+      this.ui.setStatus(m.message);
+    });
+
     this.ui.onFire((_player, latex) => this.client.send({ type: "fireIntent", latex }));
+
     await this.client.connect();
-    this.client.send({ type: "join", room, name });
+
+    const saved = this.loadSession();
+    if (saved) {
+      this.client.send({ type: "reconnect", room: this.room, playerId: saved.playerId, token: saved.token });
+    } else {
+      this.client.send({ type: "join", room: this.room, name: this.name });
+    }
+  }
+
+  close(): void {
+    window.removeEventListener("beforeunload", this.boundClose);
+    this.client.close();
+  }
+
+  private storeSession(): void {
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ room: this.room, playerId: this.myId, token: this.myToken }));
+  }
+
+  private clearSession(): void {
+    sessionStorage.removeItem(SESSION_KEY);
+  }
+
+  private loadSession(): { playerId: string; token: string } | null {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    try {
+      const s = JSON.parse(raw);
+      return s.room === this.room && s.playerId && s.token ? { playerId: s.playerId, token: s.token } : null;
+    } catch { return null; }
   }
 
   private maybeShowStartButton(): void {
-    // Only show once, only for the room owner, only before the match starts.
     if (this.startBtn) return;
     if (!this.myId || !this.ownerId || this.myId !== this.ownerId) return;
     const btn = document.createElement("button");
@@ -59,10 +116,7 @@ export class NetworkGame {
   }
 
   private removeStartButton(): void {
-    if (this.startBtn) {
-      this.startBtn.remove();
-      this.startBtn = null;
-    }
+    if (this.startBtn) { this.startBtn.remove(); this.startBtn = null; }
   }
 
   private render(state: MatchState): void {
@@ -70,7 +124,6 @@ export class NetworkGame {
     const blue = state.players.find((p) => p.team === "blue")!;
     const viewTeam: Team = this.myTeam ?? "red";
     const viewer = state.players.find((p) => p.team === viewTeam && p.alive) ?? red;
-    // Fix 2: set map so renderer scales the playfield correctly.
     this.renderer.setMap(state.config.map);
     this.renderer.setWorld(
       { soldier: { pos: viewer.pos, dir: viewTeam === "red" ? 1 : -1 }, bounds: state.bounds,
@@ -78,7 +131,6 @@ export class NetworkGame {
         planets: state.planets },
       viewTeam, red.pos, blue.pos,
     );
-    // Fix 1: enable the active team's HUD so the correct client can fire.
     const active = state.players.find((p) => p.id === state.activePlayerId);
     if (active) this.ui.setTurn(active.team);
     else this.ui.setNoTurnMode(true);
