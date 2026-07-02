@@ -38,13 +38,13 @@ describe("MatchEngine", () => {
     expect(e.fire("B", "0").ok).toBe(false);
   });
 
-  it("after resolvePending, the outcome is applied and the turn passes (on a miss)", () => {
+  it("after resolvePlayerShot, the outcome is applied and the turn passes (on a miss)", () => {
     const e = new MatchEngine(config(), PLAYERS, () => 1);
     // A flat 0 shot: hit-or-miss depends on layout; either way, if it doesn't end
     // the round the turn passes and busy clears.
     const r = e.fire("A", "x^2"); // parabola off the top → bounds (a miss)
     expect(r.ok).toBe(true);
-    const s = e.resolvePending();
+    const s = e.resolvePlayerShot("A");
     expect(e.busy).toBe(false);
     expect(s.activePlayerId).toBe("B");
   });
@@ -55,7 +55,7 @@ describe("MatchEngine", () => {
     const e = new MatchEngine(c, PLAYERS, () => 1);
     const r = e.fire("A", "0"); // red hits blue on the shared y-axis
     expect(r.ok).toBe(true);
-    const ended = e.resolvePending();
+    const ended = e.resolvePlayerShot("A");
     expect(ended.scores.red).toBe(1);
     expect(ended.phase).toBe("between"); // best-of-3, not over yet
     const next = e.beginNextRound();

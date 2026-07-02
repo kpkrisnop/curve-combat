@@ -13,7 +13,7 @@ type FireErr = { ok: false; code: string };
 
 export class MatchEngine {
   private state: MatchState;
-  private pending: MatchState | null = null;
+  private inFlight = new Map<string, string>(); // playerId → latex
   private roundLoser: Team | null = null;
 
   constructor(
@@ -40,23 +40,37 @@ export class MatchEngine {
     return { players: roster, planets };
   }
 
-  get busy(): boolean { return this.pending !== null; }
+  get busy(): boolean { return this.inFlight.size > 0; }
 
   snapshot(): MatchState { return this.state; }
 
   fire(playerId: string, latex: string): FireOk | FireErr {
-    if (this.busy) return { ok: false, code: "mid-animation" };
+    // Turn-based: any in-flight shot blocks all firing.
+    // No-Turn: only this player's own in-flight shot blocks them.
+    if (this.state.config.noTurn) {
+      if (this.inFlight.has(playerId)) return { ok: false, code: "mid-animation" };
+    } else {
+      if (this.inFlight.size > 0) return { ok: false, code: "mid-animation" };
+    }
     const res = resolveFire(this.state, { playerId, latex });
     if (res.rejected) return { ok: false, code: res.rejected };
-    this.pending = res.next;
-    this.roundLoser = res.roundLoser ?? null;
+    this.inFlight.set(playerId, latex);
     return { ok: true, firerId: playerId, shot: res.shot!, duration: shotDuration(res.shot!) };
   }
 
-  /** Commit the pending shot once its duration elapses. Callers invoke this only
-   *  after a successful fire() (busy === true); a no-op call returns current state. */
-  resolvePending(): MatchState {
-    if (this.pending) { this.state = this.pending; this.pending = null; }
+  /**
+   * Commit one player's in-flight shot against the current live state.
+   * Re-resolves the latex (same commit-against-live-state approach as local no-turn).
+   * If the player is now dead or their shot is otherwise rejected, it's a no-op.
+   */
+  resolvePlayerShot(playerId: string): MatchState {
+    const latex = this.inFlight.get(playerId);
+    this.inFlight.delete(playerId);
+    if (!latex) return this.state;
+    const res = resolveFire(this.state, { playerId, latex });
+    if (res.rejected) return this.state; // player eliminated mid-flight — shot doesn't count
+    this.state = res.next;
+    if (res.roundLoser) this.roundLoser = res.roundLoser;
     return this.state;
   }
 
@@ -70,7 +84,7 @@ export class MatchEngine {
 
   /** Skip the active player's turn (timer expiry). No-op if busy or not turn-based. */
   skipActiveTurn(): MatchState {
-    if (this.pending) return this.state;
+    if (this.inFlight.size > 0) return this.state;
     this.state = skipTurn(this.state);
     return this.state;
   }
