@@ -5,6 +5,7 @@ import type { MapConfig } from "./matchLogic";
 import { DEFAULT_MAP } from "./arenaDefaults";
 import { boundsFromMap } from "../sim/planetScatter";
 import { fitContain } from "../sim/fitRect";
+import { X_VELOCITY_WORLD } from "../sim/timing";
 
 const COLORS = {
   bg: 0x0f141a,
@@ -19,8 +20,6 @@ const COLORS = {
   dust: 0xb59a78,
 };
 
-/** World-units per second the bullet travels along the x-axis. */
-const X_VELOCITY_WORLD = 6;
 /** Minimum animation duration in ms — prevents instant flicker on zero-length shots. */
 const MIN_SHOT_MS = 200;
 const PLAYER_RADIUS_WORLD = 0.2;
