@@ -70,7 +70,10 @@ export function createServer(port: number): { close: () => Promise<void> } {
   });
 
   return {
-    close: () => new Promise<void>((res) => wss.close(() => res())),
+    close: () => new Promise<void>((res) => {
+      for (const c of conns) c.ws.terminate();
+      wss.close(() => res());
+    }),
   };
 }
 

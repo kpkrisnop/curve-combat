@@ -9,12 +9,17 @@ function open(port: number): Promise<WebSocket> {
   return new Promise((res) => ws.on("open", () => res(ws)));
 }
 function next(ws: WebSocket, type: string): Promise<ServerMessage> {
-  return new Promise((res) => {
+  return new Promise((res, rej) => {
+    const cleanup = () => { ws.off("message", on); ws.off("close", onClose); ws.off("error", onErr); };
     const on = (buf: Buffer) => {
       const m = parseServerMessage(JSON.parse(buf.toString()));
-      if (m.type === type) { ws.off("message", on); res(m); }
+      if (m.type === type) { cleanup(); res(m); }
     };
+    const onClose = () => { cleanup(); rej(new Error(`ws closed waiting for ${type}`)); };
+    const onErr = (e: Error) => { cleanup(); rej(e); };
     ws.on("message", on);
+    ws.once("close", onClose);
+    ws.once("error", onErr);
   });
 }
 
