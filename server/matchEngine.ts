@@ -21,11 +21,11 @@ export class MatchEngine {
     private players: RoomPlayer[],
     private seedFn: () => number = () => (Math.random() * 0xffffffff) >>> 0,
   ) {
-    this.state = createMatch(config, this.layout(seedFn(), "red"), boundsFromMap(config.map), "red");
+    this.state = createMatch(config, this.layout(seedFn()), boundsFromMap(config.map), "red");
   }
 
   /** Server-authoritative round layout: mint planets from the seed, seat each RoomPlayer on a spawn column. */
-  private layout(seed: number, firstTeam: Team): RoundLayout {
+  private layout(seed: number): RoundLayout {
     const bounds = boundsFromMap(this.config.map);
     const spawns = computeSpawns(this.config.map, this.config.teamSize);
     const planets = generatePlanets(seed, bounds, spawns, this.config.scatter);
@@ -37,7 +37,6 @@ export class MatchEngine {
       pos: { ...(p.team === "red" ? left[li++] : right[ri++]) },
       hp: 100, alive: true,
     }));
-    void firstTeam; // firstTeam handled by createMatch/beginRound turnQueue
     return { players: roster, planets };
   }
 
@@ -54,7 +53,8 @@ export class MatchEngine {
     return { ok: true, firerId: playerId, shot: res.shot!, duration: shotDuration(res.shot!) };
   }
 
-  /** Apply the mid-flight resolution once its duration elapses. */
+  /** Commit the pending shot once its duration elapses. Callers invoke this only
+   *  after a successful fire() (busy === true); a no-op call returns current state. */
   resolvePending(): MatchState {
     if (this.pending) { this.state = this.pending; this.pending = null; }
     return this.state;
@@ -63,7 +63,7 @@ export class MatchEngine {
   /** Start the next round after a "between" phase (loser shoots first). */
   beginNextRound(): MatchState {
     const first = this.roundLoser ? firstShooterNextRound(this.roundLoser) : "red";
-    this.state = beginRound(this.state, this.layout(this.seedFn(), first), first);
+    this.state = beginRound(this.state, this.layout(this.seedFn()), first);
     this.roundLoser = null;
     return this.state;
   }

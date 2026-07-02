@@ -48,4 +48,19 @@ describe("MatchEngine", () => {
     expect(e.busy).toBe(false);
     expect(s.activePlayerId).toBe("B");
   });
+
+  it("beginNextRound resets to play with the round loser shooting first", () => {
+    const c = config();
+    c.scatter = { ...c.scatter, maxPlanets: 0 }; // clear the lane so a flat shot connects
+    const e = new MatchEngine(c, PLAYERS, () => 1);
+    const r = e.fire("A", "0"); // red hits blue on the shared y-axis
+    expect(r.ok).toBe(true);
+    const ended = e.resolvePending();
+    expect(ended.scores.red).toBe(1);
+    expect(ended.phase).toBe("between"); // best-of-3, not over yet
+    const next = e.beginNextRound();
+    expect(next.phase).toBe("play");
+    expect(next.round).toBe(2);
+    expect(next.activePlayerId).toBe("B"); // loser (blue) shoots first
+  });
 });
