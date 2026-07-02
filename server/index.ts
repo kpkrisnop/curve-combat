@@ -163,10 +163,11 @@ export function createServer(port: number): { close: () => Promise<void> } {
         const r = engine.fire(conn.playerId, msg.latex);
         if (!r.ok) return send(ws, { type: "error", code: r.code, message: r.code });
         broadcast(room.code, { type: "shotPlayback", firerId: r.firerId, shot: r.shot, duration: r.duration });
+        const firerId = r.firerId;
         setTimeout(() => {
           const rm = rooms.get(room.code);
           if (!rm || !rm.engine) return;
-          const raw = rm.engine.resolvePending();
+          const raw = rm.engine.resolvePlayerShot(firerId);
           const patched = armTurnTimer(room.code, raw, rm.engine);
           broadcast(room.code, { type: "matchState", state: patched });
           if (raw.phase === "between") {
