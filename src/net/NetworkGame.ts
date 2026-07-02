@@ -3,11 +3,13 @@ import type { ServerClient } from "./ServerClient";
 import type { GameRenderer } from "../game/GameRenderer";
 import type { GameUI } from "../game/GameUI";
 import type { MatchState, Team } from "../game/matchState";
+import { computeDamage } from "../game/hpLogic";
 
 const SESSION_KEY = "graphwar-session";
 
 export class NetworkGame {
   private countdownInterval: ReturnType<typeof setInterval> | null = null;
+  private lastState: MatchState | null = null;
   private myTeam: Team | null = null;
   private myId: string | null = null;
   private myToken: string | null = null;
@@ -124,7 +126,14 @@ export class NetworkGame {
     if (this.startBtn) { this.startBtn.remove(); this.startBtn = null; }
   }
 
+  /** HP-2: compute damage from the last fired shot (wired in next task). */
+  protected computeLastShotDamage(impactSlope: number): number {
+    void this.lastState;
+    return computeDamage(impactSlope);
+  }
+
   private render(state: MatchState): void {
+    this.lastState = state;
     // --- countdown ---
     if (this.countdownInterval !== null) {
       clearInterval(this.countdownInterval);
@@ -156,6 +165,14 @@ export class NetworkGame {
     if (active) this.ui.setTurn(active.team);
     else this.ui.setNoTurnMode(true);
     this.ui.updateScoreboard(state.scores.red, state.scores.blue, state.round, state.config.rounds);
-    if (state.phase === "over" && state.winner) this.ui.showWin(state.winner, "Direct hit.");
+
+    if (state.config.mode === "hp") {
+      this.ui.updateHp(red.hp, blue.hp);
+    }
+
+    if (state.phase === "over" && state.winner) {
+      const detail = state.config.mode === "hp" ? "Out of HP." : "Direct hit.";
+      this.ui.showWin(state.winner, detail);
+    }
   }
 }
