@@ -29,7 +29,7 @@ export class NetworkGame {
     config?: Partial<MatchConfig>,
   ) {
     this.config = {
-      mode: "classic", rounds: 3, noTurn: false, turnSeconds: 60,
+      mode: "classic", rounds: 3, noTurn: false, turnSeconds: 60, role: "online",
       ...arenaDefaults(),
       ...config,
     };
