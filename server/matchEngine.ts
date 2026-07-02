@@ -1,5 +1,5 @@
 // server/matchEngine.ts
-import { createMatch, beginRound, type MatchState, type PlayerState, type Team, type RoundLayout } from "../src/game/matchState";
+import { createMatch, beginRound, skipTurn, type MatchState, type PlayerState, type Team, type RoundLayout } from "../src/game/matchState";
 import { resolveFire } from "../src/game/resolveFire";
 import { firstShooterNextRound, type MatchConfig } from "../src/game/matchLogic";
 import { generatePlanets, computeSpawns, boundsFromMap } from "../src/sim/planetScatter";
@@ -65,6 +65,13 @@ export class MatchEngine {
     const first = this.roundLoser ? firstShooterNextRound(this.roundLoser) : "red";
     this.state = beginRound(this.state, this.layout(this.seedFn()), first);
     this.roundLoser = null;
+    return this.state;
+  }
+
+  /** Skip the active player's turn (timer expiry). No-op if busy or not turn-based. */
+  skipActiveTurn(): MatchState {
+    if (this.pending) return this.state;
+    this.state = skipTurn(this.state);
     return this.state;
   }
 }

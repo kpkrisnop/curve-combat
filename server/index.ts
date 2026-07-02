@@ -2,8 +2,12 @@
 import { WebSocketServer, WebSocket } from "ws";
 import { RoomManager, type Room } from "./roomManager";
 import { parseClientMessage, encode, type ServerMessage } from "../src/net/protocol";
+import type { MatchState } from "../src/game/matchState";
+import { MatchEngine } from "./matchEngine";
 
 interface Conn { ws: WebSocket; playerId?: string; room?: string; isSpectator?: boolean }
+
+const turnTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 export function createServer(port: number): { close: () => Promise<void> } {
   const wss = new WebSocketServer({ port });
@@ -24,6 +28,31 @@ export function createServer(port: number): { close: () => Promise<void> } {
     for (const c of conns) if (c.room === code) c.ws.terminate();
     rooms.remove(code);
   };
+
+  function cancelTurnTimer(code: string): void {
+    const t = turnTimers.get(code);
+    if (t !== undefined) { clearTimeout(t); turnTimers.delete(code); }
+  }
+
+  /** Patch a wall-clock deadline onto state and arm the server turn timer. */
+  function armTurnTimer(code: string, state: MatchState, eng: MatchEngine): MatchState {
+    cancelTurnTimer(code);
+    if (state.phase !== "play" || state.activePlayerId === null || state.config.noTurn) {
+      return { ...state, turnDeadline: null };
+    }
+    const ms = (state.config.turnSeconds ?? 60) * 1000;
+    const deadline = Date.now() + ms;
+    turnTimers.set(
+      code,
+      setTimeout(() => {
+        turnTimers.delete(code);
+        const next = eng.skipActiveTurn();
+        const patched = armTurnTimer(code, next, eng);
+        broadcast(code, { type: "matchState", state: patched });
+      }, ms),
+    );
+    return { ...state, turnDeadline: deadline };
+  }
 
   wss.on("connection", (ws) => {
     const conn: Conn = { ws };
@@ -89,7 +118,8 @@ export function createServer(port: number): { close: () => Promise<void> } {
         try {
           const state = rooms.start(room.code, conn.playerId);
           rooms.startTTL(room.code, makeTTLExpiry(room.code));
-          broadcast(room.code, { type: "matchState", state });
+          const patched = armTurnTimer(room.code, state, room.engine!);
+          broadcast(room.code, { type: "matchState", state: patched });
         } catch (e) {
           send(ws, { type: "error", code: "start-failed", message: String((e as Error).message) });
         }
@@ -98,6 +128,7 @@ export function createServer(port: number): { close: () => Promise<void> } {
 
       // ── fireIntent ────────────────────────────────────────────────────────
       if (msg.type === "fireIntent") {
+        cancelTurnTimer(conn.room!);
         if (conn.isSpectator)
           return send(ws, { type: "error", code: "not-a-player", message: "spectators cannot fire" });
         const engine = room.engine;
@@ -108,13 +139,16 @@ export function createServer(port: number): { close: () => Promise<void> } {
         setTimeout(() => {
           const rm = rooms.get(room.code);
           if (!rm || !rm.engine) return;
-          const state = rm.engine.resolvePending();
-          broadcast(room.code, { type: "matchState", state });
-          if (state.phase === "between") {
+          const raw = rm.engine.resolvePending();
+          const patched = armTurnTimer(room.code, raw, rm.engine);
+          broadcast(room.code, { type: "matchState", state: patched });
+          if (raw.phase === "between") {
             setTimeout(() => {
               const rm2 = rooms.get(room.code);
               if (!rm2 || !rm2.engine) return;
-              broadcast(room.code, { type: "matchState", state: rm2.engine.beginNextRound() });
+              const nextRound = rm2.engine.beginNextRound();
+              const patched2 = armTurnTimer(room.code, nextRound, rm2.engine);
+              broadcast(room.code, { type: "matchState", state: patched2 });
             }, 2000);
           }
         }, r.duration * 1000);
@@ -146,6 +180,7 @@ export function createServer(port: number): { close: () => Promise<void> } {
 
       const code = conn.room;
       rooms.startGrace(code, conn.playerId!, () => {
+        cancelTurnTimer(code);
         const rm = rooms.get(code);
         if (rm) broadcast(code, { type: "error", code: "opponent-timed-out", message: "Opponent timed out — room closed." });
         rooms.remove(code);
