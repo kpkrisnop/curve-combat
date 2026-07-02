@@ -20,7 +20,7 @@ export interface MatchConfig {
   noTurn: boolean;
   rounds: 3 | 5;
   roomCode?: string;
-  role?: "host" | "guest" | "local";
+  role?: "local" | "online";
   map: MapConfig;
   scatter: ScatterConfig;
   teamSize: 1 | 2 | 3 | 4 | 5;
