@@ -111,6 +111,18 @@ export class RoomManager {
     return id;
   }
 
+  setConfig(
+    code: string,
+    byPlayerId: string,
+    partial: { mode: "classic" | "hp"; rounds: 3 | 5; noTurn: boolean; turnSeconds: number },
+  ): void {
+    const room = this.rooms.get(code);
+    if (!room) throw new Error("no such room");
+    if (room.ownerId !== byPlayerId) throw new Error("only the owner can configure");
+    if (room.engine !== null) throw new Error("cannot configure after match starts");
+    room.config = { ...room.config, ...partial };
+  }
+
   start(code: string, byPlayerId: string): MatchState {
     const room = this.rooms.get(code);
     if (!room) throw new Error("no such room");

@@ -111,6 +111,33 @@ export function createServer(port: number): { close: () => Promise<void> } {
       const room = conn.room ? rooms.get(conn.room) : undefined;
       if (!room || !conn.playerId) return send(ws, { type: "error", code: "no-room", message: "join first" });
 
+      // ── configureRoom ─────────────────────────────────────────────────────
+      if (msg.type === "configureRoom") {
+        try {
+          rooms.setConfig(room.code, conn.playerId, {
+            mode: msg.mode,
+            rounds: msg.rounds,
+            noTurn: msg.noTurn,
+            turnSeconds: msg.turnSeconds,
+          });
+          broadcast(room.code, {
+            type: "lobbyState",
+            players: room.players.map((p) => ({ id: p.id, name: p.name, team: p.team })),
+            ownerId: room.ownerId,
+            spectators: room.spectators.map((s) => ({ id: s.id, name: s.name })),
+            config: {
+              mode: room.config.mode,
+              rounds: room.config.rounds,
+              noTurn: room.config.noTurn,
+              turnSeconds: room.config.turnSeconds ?? 60,
+            },
+          });
+        } catch (e) {
+          send(ws, { type: "error", code: "configure-failed", message: (e as Error).message });
+        }
+        return;
+      }
+
       // ── startMatch ────────────────────────────────────────────────────────
       if (msg.type === "startMatch") {
         if (room.engine !== null)
