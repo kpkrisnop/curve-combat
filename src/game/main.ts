@@ -48,7 +48,7 @@ function armLocalTurnTimer(): void {
   const ms = (matchConfig.turnSeconds ?? 60) * 1000;
   turnTimer = setTimeout(() => {
     turnTimer = null;
-    if (match) {
+    if (match && match.phase === "play") {
       match = skipTurn(match);
       const viewTeam: Team = match.activePlayerId
         ? playerById(match, match.activePlayerId)!.team
@@ -280,6 +280,7 @@ async function startGame(config: MatchConfig) {
 // ── Lobby ─────────────────────────────────────────────────────────────────────
 
 function goToLobby() {
+  cancelLocalTurnTimer();
   gameEl.hidden = true;
   lobbyEl.hidden = false;
   history.pushState(null, "", "/");
