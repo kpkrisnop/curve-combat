@@ -4,6 +4,8 @@ import type { GameRenderer } from "../game/GameRenderer";
 import type { GameUI } from "../game/GameUI";
 import type { MatchState, Team } from "../game/matchState";
 import { computeDamage } from "../game/hpLogic";
+import { arenaDefaults } from "../game/arenaDefaults";
+import type { MatchConfig } from "../game/matchLogic";
 
 const SESSION_KEY = "graphwar-session";
 
@@ -18,8 +20,20 @@ export class NetworkGame {
   private room = "";
   private name = "";
   private readonly boundClose = () => this.close();
+  private config: MatchConfig;
 
-  constructor(private client: ServerClient, private renderer: GameRenderer, private ui: GameUI) {}
+  constructor(
+    private client: ServerClient,
+    private renderer: GameRenderer,
+    private ui: GameUI,
+    config?: Partial<MatchConfig>,
+  ) {
+    this.config = {
+      mode: "classic", rounds: 3, noTurn: false, turnSeconds: 60,
+      ...arenaDefaults(),
+      ...config,
+    };
+  }
 
   async start(room: string, name: string): Promise<void> {
     this.room = room;
@@ -43,6 +57,11 @@ export class NetworkGame {
       this.ownerId = m.ownerId;
       const me = m.players.find((p) => p.id === this.myId);
       if (me) this.myTeam = me.team;
+      if (m.config) {
+        const modeLabel = m.config.mode === "hp" ? "HP Mode" : "Classic";
+        const noTurnLabel = m.config.noTurn ? " · No-Turn" : "";
+        this.ui.setStatus(`${modeLabel} · ${m.config.rounds} rounds · ${m.config.turnSeconds}s${noTurnLabel}`);
+      }
       this.maybeShowStartButton();
     });
     this.client.on("shotPlayback", (m) => {
@@ -130,6 +149,13 @@ export class NetworkGame {
       "padding:16px 32px;font-size:1.4rem;font-weight:bold;cursor:pointer;" +
       "background:#e74c3c;color:#fff;border:none;border-radius:8px;z-index:9999;";
     btn.addEventListener("click", () => {
+      this.client.send({
+        type: "configureRoom",
+        mode: this.config.mode,
+        rounds: this.config.rounds,
+        noTurn: this.config.noTurn,
+        turnSeconds: this.config.turnSeconds ?? 60,
+      });
       this.client.send({ type: "startMatch" });
       this.removeStartButton();
     });

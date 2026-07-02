@@ -310,7 +310,7 @@ async function startNetworkGame(room: string): Promise<void> {
   }
 
   const name = prompt("Enter your name:", "Player") ?? "Player";
-  const net = new NetworkGame(new ServerClient(WS_URL), renderer!, ui!);
+  const net = new NetworkGame(new ServerClient(WS_URL), renderer!, ui!, matchConfig);
   await net.start(room, name);
 }
 
