@@ -46,4 +46,20 @@ describe("protocol", () => {
     const msg = { type: "peerStatus", playerId: "p1", name: "Ann", connected: false } as const;
     expect(parseServerMessage(JSON.parse(encode(msg)))).toEqual(msg);
   });
+
+  it("configureRoom round-trips", () => {
+    const msg = { type: "configureRoom", mode: "hp", rounds: 5, noTurn: true, turnSeconds: 45 } as const;
+    expect(parseClientMessage(msg)).toEqual(msg);
+  });
+
+  it("lobbyState with config round-trips", () => {
+    const msg = {
+      type: "lobbyState",
+      players: [],
+      ownerId: "p1",
+      spectators: [],
+      config: { mode: "hp", rounds: 5, noTurn: false, turnSeconds: 30 },
+    } as const;
+    expect(parseServerMessage(msg)).toEqual(msg);
+  });
 });
