@@ -1,6 +1,8 @@
 import { defineConfig } from "vitest/config";
+import react from "@vitejs/plugin-react";
 
 export default defineConfig({
+  plugins: [react()],
   build: {
     rollupOptions: {
       input: {
@@ -10,8 +12,6 @@ export default defineConfig({
     },
   },
   test: {
-    // Never recurse into isolated agent worktrees — they carry duplicate copies
-    // of the test files and inflate/duplicate the run.
     exclude: ["**/node_modules/**", "**/dist/**", "**/.claude/**"],
   },
 });
