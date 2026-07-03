@@ -1,0 +1,62 @@
+/* ── Phase-1 redesign: pitch black space-time ─────────────────────────── */
+:root {
+  --gw-bg: #000000;
+  --gw-surface: rgba(14, 18, 26, 0.82);
+  --gw-surface-2: rgba(8, 10, 15, 0.9);
+  --gw-border: #1c2530;
+  --gw-border-strong: #2e4256;
+  --gw-glow-red: 0 0 24px rgba(255, 68, 68, 0.35);
+  --gw-glow-blue: 0 0 24px rgba(68, 136, 255, 0.35);
+}
+
+html, body { margin: 0; background: var(--gw-bg); color: var(--gw-text); }
+body { font-family: var(--gw-font-sans); overflow: hidden; }
+
+.gw-layer { position: relative; z-index: 1; }
+.gw-bgcanvas {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  width: 100vw; height: 100vh; display: block;
+}
+
+.gw-app { min-height: 100vh; }
+
+/* Landing */
+.gw-landing {
+  min-height: 100vh; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: var(--gw-space-6);
+}
+.gw-landing h1 {
+  font-size: clamp(56px, 9vw, 128px); letter-spacing: 0.06em; margin: 0;
+  font-weight: 900;
+}
+.gw-landing h1 .t-red  { color: var(--gw-red);  text-shadow: var(--gw-glow-red); }
+.gw-landing h1 .t-blue { color: var(--gw-blue); text-shadow: var(--gw-glow-blue); }
+.gw-landing .gw-tagline { color: var(--gw-text-muted); font-size: var(--gw-fs-md); }
+
+.gw-btn {
+  font: inherit; cursor: pointer; border-radius: var(--gw-radius-lg);
+  border: 1px solid var(--gw-border-strong); padding: 14px 36px;
+  background: var(--gw-surface); color: var(--gw-text);
+  font-size: var(--gw-fs-md); font-weight: 700; letter-spacing: 0.04em;
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+.gw-btn:hover { transform: translateY(-1px); border-color: var(--gw-accent); }
+.gw-btn--primary { border-color: var(--gw-accent); box-shadow: var(--gw-glow-blue); }
+.gw-btn--danger  { border-color: var(--gw-red);   box-shadow: var(--gw-glow-red); }
+.gw-btn:disabled { opacity: 0.4; cursor: default; transform: none; box-shadow: none; }
+
+/* Card / seat / panel primitives (used by ConfigPanel, seats, HUD) */
+.gw-card {
+  background: var(--gw-surface); border: 1px solid var(--gw-border);
+  border-radius: var(--gw-radius-lg); padding: var(--gw-space-4);
+  backdrop-filter: blur(6px);
+}
+.gw-card.is-active { border-color: var(--gw-accent); box-shadow: var(--gw-glow-blue); }
+
+/* Phone gate */
+.gw-phonegate {
+  position: fixed; inset: 0; z-index: 100; display: none;
+  align-items: center; justify-content: center; text-align: center;
+  background: #000; padding: var(--gw-space-6);
+}
+@media (max-width: 1023px) { .gw-phonegate { display: flex; } }
