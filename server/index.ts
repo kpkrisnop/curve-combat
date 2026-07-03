@@ -167,10 +167,14 @@ export function createServer(port: number): { close: () => Promise<void> } {
         setTimeout(() => {
           const rm = rooms.get(room.code);
           if (!rm || !rm.engine) return;
+          const prevState = rm.engine.snapshot();
           const raw = rm.engine.resolvePlayerShot(firerId);
           const patched = armTurnTimer(room.code, raw, rm.engine);
           broadcast(room.code, { type: "matchState", state: patched });
-          if (raw.phase === "between") {
+          // Guard: only schedule beginNextRound if THIS shot caused the transition.
+          // In no-turn mode a concurrent shot may resolve after the round already ended;
+          // resolvePlayerShot returns the same state reference in that case.
+          if (raw !== prevState && raw.phase === "between") {
             setTimeout(() => {
               const rm2 = rooms.get(room.code);
               if (!rm2 || !rm2.engine) return;

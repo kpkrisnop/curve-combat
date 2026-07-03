@@ -49,6 +49,28 @@ describe("MatchEngine", () => {
     expect(s.activePlayerId).toBe("B");
   });
 
+  it("no-turn: resolvePlayerShot after round ended is a no-op (same state reference)", () => {
+    const c: MatchConfig = { ...config(), noTurn: true };
+    c.scatter = { ...c.scatter, maxPlanets: 0 };
+    const e = new MatchEngine(c, PLAYERS, () => 1);
+
+    // Both fire while in play (no-turn allows it)
+    expect(e.fire("A", "0").ok).toBe(true);
+    expect(e.fire("B", "0").ok).toBe(true);
+
+    // A's shot resolves first — ends the round
+    const afterA = e.resolvePlayerShot("A");
+    expect(afterA.phase).toBe("between");
+    expect(afterA.scores.red).toBe(1);
+
+    // B's shot resolves after the round ended — must return same reference (no-op)
+    // This is the property server/index.ts uses to skip scheduling a duplicate beginNextRound.
+    const snapBefore = e.snapshot();
+    const afterB = e.resolvePlayerShot("B");
+    expect(afterB).toBe(snapBefore); // same reference → no-op
+    expect(afterB.scores.red).toBe(1); // no double scoring
+  });
+
   it("beginNextRound resets to play with the round loser shooting first", () => {
     const c = config();
     c.scatter = { ...c.scatter, maxPlanets: 0 }; // clear the lane so a flat shot connects
