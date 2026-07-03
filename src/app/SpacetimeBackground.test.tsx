@@ -6,7 +6,11 @@ import { SpacetimeBackground } from "./SpacetimeBackground";
 describe("SpacetimeBackground", () => {
   it("mounts a canvas and starts an animation frame", () => {
     const raf = vi.spyOn(window, "requestAnimationFrame").mockReturnValue(1);
-    vi.spyOn(window, "matchMedia").mockReturnValue({ matches: false } as unknown as MediaQueryList);
+    vi.spyOn(window, "matchMedia").mockReturnValue({
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    } as unknown as MediaQueryList);
     // jsdom has no 2d context — stub it
     HTMLCanvasElement.prototype.getContext = vi.fn().mockReturnValue({
       clearRect: vi.fn(), beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(),
