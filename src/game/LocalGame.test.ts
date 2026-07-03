@@ -1,10 +1,30 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from "vitest";
 import { LocalGame } from "./LocalGame";
 import { boundsFromMap } from "../sim/planetScatter";
 import { arenaDefaults } from "./arenaDefaults";
 import type { MatchConfig } from "./matchLogic";
 import type { GameUiPort } from "./GameUiPort";
+
+// Under the default forks pool the per-file jsdom environment doesn't wire
+// localStorage onto globalThis.  Provide a minimal Map-backed stub so tests
+// that call localStorage.setItem/getItem/removeItem work without vmThreads.
+beforeAll(() => {
+  if (typeof localStorage === "undefined") {
+    const store = new Map<string, string>();
+    Object.defineProperty(globalThis, "localStorage", {
+      value: {
+        getItem: (k: string) => store.get(k) ?? null,
+        setItem: (k: string, v: string) => store.set(k, v),
+        removeItem: (k: string) => store.delete(k),
+        clear: () => store.clear(),
+        get length() { return store.size; },
+        key: (i: number) => [...store.keys()][i] ?? null,
+      },
+      writable: true,
+    });
+  }
+});
 
 const cfg: MatchConfig = {
   mode: "classic", rounds: 3, noTurn: false, turnSeconds: 60, role: "local", ...arenaDefaults(),

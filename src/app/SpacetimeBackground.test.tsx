@@ -6,10 +6,6 @@ import { SpacetimeBackground } from "./SpacetimeBackground";
 describe("SpacetimeBackground", () => {
   it("mounts a canvas and starts an animation frame", () => {
     const raf = vi.spyOn(window, "requestAnimationFrame").mockReturnValue(1);
-    // vmThreads jsdom does not define matchMedia — define before spying
-    if (!window.matchMedia) {
-      Object.defineProperty(window, "matchMedia", { writable: true, value: () => ({}) });
-    }
     vi.spyOn(window, "matchMedia").mockReturnValue({
       matches: false,
       addEventListener: vi.fn(),
