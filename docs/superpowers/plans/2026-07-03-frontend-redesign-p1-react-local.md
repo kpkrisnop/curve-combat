@@ -1407,7 +1407,9 @@ git add src/app/arena/ src/app/theme.css
 git commit -m "feat(arena): shared renderer singleton + CSS-scaled ArenaStage (ADR-0003 zoom)"
 ```
 
----### Task 8: LocalGame Controller + Seeded Layout
+---
+
+### Task 8: LocalGame Controller + Seeded Layout
 
 Port the local match flow out of `src/game/main.ts` into a class that (a) depends only on `GameRenderer` + `GameUiPort`, (b) splits **preview** (build & render round 1 — the "arena is the waiting room" state) from **begin** (tutorial, timers, play), and (c) ticks the visible turn timer.
 
