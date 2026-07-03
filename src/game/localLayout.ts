@@ -15,10 +15,10 @@ function pick<T>(xs: T[]): T {
  * columns, so they are always clear of planets. A fresh seed is minted per round
  * (the authoritative server will mint it instead in online play).
  */
-export function buildLocalLayout(bounds: Bounds, config: MatchConfig): RoundLayout {
-  const seed = (Math.random() * 0xffffffff) >>> 0;
+export function buildLocalLayout(bounds: Bounds, config: MatchConfig, seed?: number): RoundLayout {
+  const layoutSeed = seed ?? (Math.random() * 0xffffffff) >>> 0;
   const spawns = computeSpawns(config.map, config.teamSize);
-  const planets = generatePlanets(seed, bounds, spawns, config.scatter);
+  const planets = generatePlanets(layoutSeed, bounds, spawns, config.scatter);
 
   const left = spawns.filter((s) => s.x < 0);
   const right = spawns.filter((s) => s.x > 0);
