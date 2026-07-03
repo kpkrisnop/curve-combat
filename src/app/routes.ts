@@ -13,7 +13,7 @@ export function parseRoute(hash: string): Route {
     const code = hash.slice("#room=".length).trim().toUpperCase();
     return code ? { screen: "room", code } : { screen: "landing" };
   }
-  if (hash.startsWith("#game")) return { screen: "game", config: parseConfigFromHash(hash) };
+  if (hash === "#game" || hash.startsWith("#game?")) return { screen: "game", config: parseConfigFromHash(hash) };
   if (hash === "#local") return { screen: "local" };
   return { screen: "landing" };
 }

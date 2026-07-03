@@ -5,6 +5,7 @@ describe("parseRoute", () => {
   it("empty or unknown hash → landing", () => {
     expect(parseRoute("").screen).toBe("landing");
     expect(parseRoute("#nonsense").screen).toBe("landing");
+    expect(parseRoute("#gameover").screen).toBe("landing");
   });
   it("#local → local config", () => {
     expect(parseRoute("#local").screen).toBe("local");
