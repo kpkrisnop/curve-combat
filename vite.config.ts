@@ -13,6 +13,7 @@ export default defineConfig({
   },
   test: {
     exclude: ["**/node_modules/**", "**/dist/**", "**/.claude/**"],
+    setupFiles: ["./src/test-setup.ts"],
     environmentOptions: {
       jsdom: { url: "http://localhost/" },
     },

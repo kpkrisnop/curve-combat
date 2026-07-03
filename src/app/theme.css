@@ -64,3 +64,31 @@ body { font-family: var(--gw-font-sans); overflow: hidden; }
 /* ── Arena layout (ADR-0003) ────────────────────────────────────────────── */
 .arena-frame { position: absolute; inset: 0; overflow: hidden; }
 .arena-stage { position: absolute; inset: 0; transform-origin: 50% 46%; }
+
+/* ── LocalFlow + ConfigPanel ────────────────────────────────────────────── */
+.local-flow { position: absolute; inset: 0; }
+.seat { position: absolute; bottom: 18px; z-index: 6; font-size: var(--gw-fs-md); }
+.seat-red { left: 18px; } .seat-blue { right: 18px; }
+.config-drawer {
+  position: absolute; top: 0; right: 0; bottom: 0; z-index: 7; width: 340px;
+  overflow-y: auto; padding: var(--gw-space-4);
+  display: flex; flex-direction: column; gap: var(--gw-space-3);
+  background: linear-gradient(270deg, rgba(0,0,0,0.85), rgba(0,0,0,0.55));
+}
+.cfg-row { display: flex; gap: var(--gw-space-2); }
+.cfg-opt { flex: 1; display: flex; flex-direction: column; gap: 4px; cursor: pointer; font-weight: 700; }
+.cfg-opt small { color: var(--gw-text-faint); font-weight: 400; }
+.cfg-toggle, .cfg-timer { display: flex; align-items: center; gap: var(--gw-space-2); margin: var(--gw-space-2) 0; }
+.cfg-arena { display: flex; flex-direction: column; gap: 6px; }
+.cfg-slider { display: grid; grid-template-columns: 130px 1fr; align-items: center; gap: 8px;
+  font-size: var(--gw-fs-xs); color: var(--gw-text-muted); }
+.cfg-seed { display: flex; align-items: center; justify-content: space-between; margin-top: var(--gw-space-2);
+  font-family: var(--gw-font-mono); color: var(--gw-text-code); }
+.cfg-start { margin-top: var(--gw-space-3); }
+.gw-countdown { z-index: 20; background: rgba(0, 0, 0, 0.35); }
+.gw-countdown-num {
+  font-size: 220px; font-weight: 900; color: var(--gw-text);
+  text-shadow: 0 0 60px rgba(68, 136, 255, 0.5);
+  animation: gw-count-pop 900ms ease-out;
+}
+@keyframes gw-count-pop { from { transform: scale(1.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
