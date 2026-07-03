@@ -28,7 +28,7 @@ describe("HudBar", () => {
 
   it("disables the inactive side's Fire button in turn-based mode", () => {
     render(<HudBar makeInput={makeInput} />);
-    hudController.setTurn("red");
+    act(() => hudController.setTurn("red"));
     const fires = screen.getAllByRole("button", { name: "Fire" });
     expect((fires[0] as HTMLButtonElement).disabled).toBe(false); // red (left)
     expect((fires[1] as HTMLButtonElement).disabled).toBe(true);  // blue (right)

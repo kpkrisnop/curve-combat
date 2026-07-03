@@ -11,7 +11,7 @@ function TimerBadge() {
   return <span className={cls}>{timer}s</span>;
 }
 
-function PlayerPanel({ team, makeInput }: { team: Team; makeInput?: never | (() => any) }) {
+function PlayerPanel({ team, makeInput }: { team: Team; makeInput?: () => any }) {
   const turn = useStore(hudStore, (s) => s.turn);
   const noTurn = useStore(hudStore, (s) => s.noTurn);
   const busy = useStore(hudStore, (s) => s.busy[team]);
