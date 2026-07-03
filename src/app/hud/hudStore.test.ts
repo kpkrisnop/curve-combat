@@ -68,4 +68,35 @@ describe("HudController", () => {
     expect(r.setLatex).toHaveBeenCalledWith("");
     expect(b.setLatex).toHaveBeenCalledWith("");
   });
+
+  it("setTurn writes lastEquation into the opponent's (now-inactive) input", () => {
+    const r = fakeInput(), b = fakeInput();
+    inputs.register("red", r);
+    inputs.register("blue", b);
+    // Switching to red: the blue input (opponent) receives lastEquation
+    hud.setTurn("red", "x^2");
+    expect(b.setLatex).toHaveBeenCalledWith("x^2");
+    expect(r.setLatex).not.toHaveBeenCalledWith("x^2");
+    // Switching to blue: the red input (opponent) receives lastEquation
+    hud.setTurn("blue", "\\sin(x)");
+    expect(r.setLatex).toHaveBeenCalledWith("\\sin(x)");
+  });
+
+  it("requestFire is blocked when the player is busy", () => {
+    const cb = vi.fn();
+    hud.onFire(cb);
+    inputs.register("red", fakeInput("x"));
+    hud.setTurn("red");
+    hud.setBusy("red", true);
+    hud.requestFire("red");
+    expect(cb).not.toHaveBeenCalled();
+  });
+
+  it("tutorialSkip invokes the onSkip callback", () => {
+    const onNext = vi.fn(), onSkip = vi.fn();
+    hud.showTutorialStep("step 1", onNext, onSkip);
+    hud.tutorialSkip();
+    expect(onSkip).toHaveBeenCalled();
+    expect(onNext).not.toHaveBeenCalled();
+  });
 });

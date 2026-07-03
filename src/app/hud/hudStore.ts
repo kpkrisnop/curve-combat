@@ -68,7 +68,15 @@ export class HudController implements GameUiPort {
   // ── GameUiPort ───────────────────────────────────────────────────────────
   onFire(cb: (player: Team, latex: string) => void): void { this.fireCb = cb; }
   onReset(cb: () => void): void { this.resetCb = cb; }
-  setTurn(turn: Team): void { this.store.set({ turn, status: "" }); }
+  setTurn(turn: Team, lastEquation?: string): void {
+    this.store.set({ turn, status: "" });
+    // Mirror GameUI.setTurn: write the last equation into the now-inactive
+    // opponent's input (the player who just finished their turn).
+    if (lastEquation !== undefined) {
+      const opponent: Team = turn === "red" ? "blue" : "red";
+      this.inputs.get(opponent)?.setLatex(lastEquation);
+    }
+  }
   setBusy(player: Team, busy: boolean): void {
     this.store.set((s) => ({ busy: { ...s.busy, [player]: busy } }));
   }
