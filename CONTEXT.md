@@ -6,9 +6,37 @@ destructible terrain.
 
 ## Language
 
+**Team**:
+One of exactly two sides — **RED** and **BLUE** — on opposite sides of the field. A Team has one or more **Players**. Local hot-seat is always one Player per Team; online Teams may have any size (NvN, online only).
+_Avoid_: side, faction
+
 **Player**:
-One of exactly two contestants — **RED** and **BLUE** — on opposite sides of the field, played hot-seat on one keyboard. A Player takes the **Soldier** role on its own turn and the **Target** role on the opponent's. A single direct **Shot** hit on the opposing Player wins the game.
-_Avoid_: user, team, unit
+A single contestant belonging to one **Team**, owning exactly one **Soldier** on the field. Plays hot-seat on a shared keyboard (1v1 only) or online from their own device. A Player takes the **Soldier** role when firing and the **Target** role toward opponents.
+_Avoid_: user, unit
+
+**Match**:
+A full contest between the two Teams: best-of-N **Rounds** (3 or 5). The first Team to win a majority of Rounds wins the Match.
+_Avoid_: game (ambiguous — could mean one Round or the whole Match), session
+
+**Round**:
+One play-through from a fresh field to a single winner. In Classic VS a Round ends on the first direct hit; in HP Mode it ends when a Player's HP reaches zero. The Round loser shoots first in the next Round.
+_Avoid_: level, stage
+
+**Room**:
+A server-side rendezvous for one online Match, identified by a 4-letter human-readable code (e.g. `WOLF`). Created by the **Host**; joined by **Guests** via typed code or shared URL.
+_Avoid_: lobby (the Lobby is the pre-game screen, not the rendezvous), session
+
+**Host**:
+The Player who creates a **Room**, controls the match configuration, and starts the Match. Canonical UI/docs term; the server internally calls this the room's owner.
+_Avoid_: owner (code-internal only), creator, admin
+
+**Guest**:
+Any Player who joins an existing **Room** (one or more per Room). Sees the Host's match configuration read-only and waits for the Host to start.
+_Avoid_: joiner, client (that's a network term)
+
+**Spectator**:
+A non-playing viewer in a **Room** beyond the two Player seats. Watches the Match read-only; cannot fire or affect play.
+_Avoid_: observer, viewer
 
 **Soldier**:
 The *role* a Player occupies on its own turn: the shooter. Fires one **Shot** from its world position toward the opponent. (Also how the pure engine names the firing unit.)

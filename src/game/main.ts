@@ -330,6 +330,13 @@ function route() {
     gameEl.hidden = true;
     const lobby = new LobbyScreen();
     lobby.onStart((config) => startGame(config));
+
+    const onlineBtn = document.getElementById("lobby-online") as HTMLButtonElement | null;
+    onlineBtn?.addEventListener("click", () => {
+      const raw = prompt("Room code (leave blank to create a new room):", "")?.trim().toUpperCase();
+      const code = raw || Array.from({ length: 4 }, () => "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random() * 26)]).join("");
+      location.hash = `#room=${code}`;
+    });
   }
 }
 
