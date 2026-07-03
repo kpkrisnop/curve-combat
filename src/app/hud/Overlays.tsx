@@ -1,0 +1,64 @@
+import { useStore } from "../store";
+import { hudStore, hudController } from "./hudStore";
+
+function HpBars() {
+  const hp = useStore(hudStore, (s) => s.hp);
+  if (!hp.visible) return null;
+  return (
+    <div className="hp-overlay">
+      {(["red", "blue"] as const).map((t) => (
+        <div key={t} className={`hp-wrap is-${t}`}>
+          <div className="hp-fill" style={{ width: `${Math.max(0, Math.min(100, hp[t]))}%` }} />
+          <span className="hp-label">{hp[t]} HP</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function WinBanner() {
+  const win = useStore(hudStore, (s) => s.win);
+  if (!win) return null;
+  return (
+    <div className="gw-overlay-center">
+      <div className="win-banner">
+        <h2 className={`w-${win.winner}`}>{win.winner.toUpperCase()} WINS!</h2>
+        <p>{win.detail}</p>
+        <button className="gw-btn gw-btn--primary" onClick={() => hudController.requestReset()}>
+          Back to Lobby
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function RoundSplash() {
+  const splash = useStore(hudStore, (s) => s.splash);
+  if (!splash) return null;
+  return (
+    <div className="gw-overlay-center">
+      {/* splash html is app-generated (LocalGame), never user input */}
+      <div className="round-splash" dangerouslySetInnerHTML={{ __html: splash }} />
+    </div>
+  );
+}
+
+function TutorialOverlay() {
+  const tutorial = useStore(hudStore, (s) => s.tutorial);
+  if (!tutorial) return null;
+  return (
+    <div className="gw-overlay-center">
+      <div className="tutorial-box">
+        <p>{tutorial.text}</p>
+        <div className="tutorial-actions">
+          <button className="gw-btn" onClick={() => hudController.tutorialSkip()}>Skip tutorial</button>
+          <button className="gw-btn gw-btn--primary" onClick={() => hudController.tutorialNext()}>OK</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function HudOverlays() {
+  return (<><HpBars /><WinBanner /><RoundSplash /><TutorialOverlay /></>);
+}
