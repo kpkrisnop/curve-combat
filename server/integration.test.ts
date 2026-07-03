@@ -203,3 +203,55 @@ describe("server integration (Phase 2)", () => {
     a2.close(); b.close(); await server.close();
   });
 });
+
+describe("server integration (Phase 3)", () => {
+  it("no-turn: both players can fire concurrently without mid-animation rejection", async () => {
+    const port = 3850 + Math.floor(Math.random() * 100);
+    const server = createServer(port);
+    const a = await open(port), b = await open(port);
+
+    a.send(encode({ type: "join", room: "NOTURN", name: "Ann" }));
+    await next(a, "joined");
+    b.send(encode({ type: "join", room: "NOTURN", name: "Bo" }));
+    await next(b, "joined");
+
+    // configureRoom then startMatch sent in order — server processes them sequentially
+    a.send(encode({ type: "configureRoom", mode: "classic", rounds: 3, noTurn: true, turnSeconds: 60 }));
+    const aStartP = next(a, "matchState");
+    const bStartP = next(b, "matchState");
+    a.send(encode({ type: "startMatch" }));
+    await Promise.all([aStartP, bStartP]);
+
+    // Listen for mid-animation errors alongside the next() listeners
+    let aMidAnim = false;
+    let bMidAnim = false;
+    const onAMsg = (buf: Buffer) => {
+      const m = parseServerMessage(JSON.parse(buf.toString()));
+      if (m.type === "error" && (m as any).code === "mid-animation") aMidAnim = true;
+    };
+    const onBMsg = (buf: Buffer) => {
+      const m = parseServerMessage(JSON.parse(buf.toString()));
+      if (m.type === "error" && (m as any).code === "mid-animation") bMidAnim = true;
+    };
+    a.on("message", onAMsg);
+    b.on("message", onBMsg);
+
+    // Register matchState listeners before firing to avoid race
+    const aFinalP = next(a, "matchState");
+    const bFinalP = next(b, "matchState");
+    a.send(encode({ type: "fireIntent", latex: "0" }));
+    b.send(encode({ type: "fireIntent", latex: "0" }));
+    const [aFinal, bFinal] = await Promise.all([aFinalP, bFinalP]);
+
+    a.off("message", onAMsg);
+    b.off("message", onBMsg);
+
+    expect(aMidAnim).toBe(false);
+    expect(bMidAnim).toBe(false);
+    expect(["play", "between", "over"]).toContain((aFinal as any).state.phase);
+    expect(["play", "between", "over"]).toContain((bFinal as any).state.phase);
+
+    a.close(); b.close();
+    await server.close();
+  });
+});
