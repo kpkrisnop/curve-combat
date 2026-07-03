@@ -60,3 +60,7 @@ body { font-family: var(--gw-font-sans); overflow: hidden; }
   background: #000; padding: var(--gw-space-6);
 }
 @media (max-width: 1023px) { .gw-phonegate { display: flex; } }
+
+/* ── Arena layout (ADR-0003) ────────────────────────────────────────────── */
+.arena-frame { position: absolute; inset: 0; overflow: hidden; }
+.arena-stage { position: absolute; inset: 0; transform-origin: 50% 46%; }
