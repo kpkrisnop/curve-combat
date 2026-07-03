@@ -1,6 +1,7 @@
 import "../design/foundation.css";
 import { GameRenderer } from "./GameRenderer";
 import { GameUI } from "./GameUI";
+import type { GameUiPort } from "./GameUiPort";
 import { LobbyScreen } from "../ui/LobbyScreen";
 import { firstShooterNextRound, type MatchConfig } from "./matchLogic";
 import { configToHash, parseConfigFromHash } from "./configRouter";
@@ -299,6 +300,9 @@ async function startNetworkGame(room: string): Promise<void> {
       await renderer.init(stage);
 
       ui = new GameUI();
+      // Temporary shim: GameUI lacks setTimer; NetworkGame.ui is now typed
+      // as GameUiPort which requires it. Deleted with main.ts in Task 10.
+      Object.assign(ui, { setTimer: () => {} });
       ui.onReset(goToLobby);
     } catch (err) {
       console.error("Failed to start network game:", err);
@@ -310,7 +314,7 @@ async function startNetworkGame(room: string): Promise<void> {
   }
 
   const name = prompt("Enter your name:", "Player") ?? "Player";
-  const net = new NetworkGame(new ServerClient(WS_URL), renderer!, ui!, matchConfig);
+  const net = new NetworkGame(new ServerClient(WS_URL), renderer!, ui! as unknown as GameUiPort, matchConfig);
   await net.start(room, name);
 }
 

@@ -1,7 +1,7 @@
 // src/net/NetworkGame.ts
 import type { ServerClient } from "./ServerClient";
 import type { GameRenderer } from "../game/GameRenderer";
-import type { GameUI } from "../game/GameUI";
+import type { GameUiPort } from "../game/GameUiPort";
 import type { MatchState, Team } from "../game/matchState";
 import { computeDamage } from "../game/hpLogic";
 import { arenaDefaults } from "../game/arenaDefaults";
@@ -26,7 +26,7 @@ export class NetworkGame {
   constructor(
     private client: ServerClient,
     private renderer: GameRenderer,
-    private ui: GameUI,
+    private ui: GameUiPort,
     config?: Partial<MatchConfig>,
   ) {
     this.config = {
