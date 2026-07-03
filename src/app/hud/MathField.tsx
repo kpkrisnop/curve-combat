@@ -36,7 +36,7 @@ export function MathField({ team, registry, onEnter, placeholder = "type a funct
       registry.unregister(team);
       input.el.remove();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- makeInput and placeholder are mount-only by design
   }, [team, registry]);
 
   return <span ref={hostRef} className="hud-input" />;
