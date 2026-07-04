@@ -93,6 +93,31 @@ body { font-family: var(--gw-font-sans); overflow: hidden; }
 }
 @keyframes gw-count-pop { from { transform: scale(1.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
+/* ── RosterColumns ──────────────────────────────────────────────────────── */
+.roster-col {
+  position: absolute; bottom: 18px; width: 220px; z-index: 6;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.roster-col.is-red  { left: 18px; }
+.roster-col.is-blue { right: 18px; }
+.roster-row {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--gw-surface); border: 1px solid var(--gw-border);
+  border-radius: var(--gw-radius-lg); padding: 6px 10px;
+  backdrop-filter: blur(6px); font-size: var(--gw-fs-sm);
+}
+.roster-row.is-me   { border-color: var(--gw-accent); }
+.roster-host-badge  { font-size: 0.85em; opacity: 0.9; }
+.roster-name        { flex: 1; }
+.roster-switch-btn  { align-self: flex-start; font-size: var(--gw-fs-xs); padding: 6px 12px; }
+
+/* Config-flash animation — pulse used by Task 4 when host changes config */
+@keyframes gw-config-flash {
+  0%   { border-color: var(--gw-border); }
+  30%  { border-color: #ffffff; box-shadow: 0 0 12px rgba(255,255,255,0.6); }
+  100% { border-color: var(--gw-border); box-shadow: none; }
+}
+
 /* ── Online screens ─────────────────────────────────────────────────────── */
 .gw-code-entry {
   font-family: var(--gw-font-mono); font-size: 64px; letter-spacing: 0.4em;

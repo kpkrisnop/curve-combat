@@ -35,4 +35,22 @@ describe("ConfigPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: /Reroll/ }));
     expect(onReroll).toHaveBeenCalled();
   });
+
+  it("readOnly disables all controls via fieldset", () => {
+    render(<ConfigPanel value={base} onChange={vi.fn()} seed={7} onReroll={vi.fn()} readOnly />);
+    const fieldset = document.querySelector("fieldset");
+    expect(fieldset).toBeTruthy();
+    expect(fieldset!.disabled).toBe(true);
+  });
+
+  it("hideSeedRow removes seed row", () => {
+    render(<ConfigPanel value={base} onChange={vi.fn()} seed={42} onReroll={vi.fn()} hideSeedRow />);
+    expect(screen.queryByText(/seed 42/)).toBeNull();
+    expect(screen.queryByRole("button", { name: /Reroll/ })).toBeNull();
+  });
+
+  it("hideSeedRow=false still shows seed row", () => {
+    render(<ConfigPanel value={base} onChange={vi.fn()} seed={42} onReroll={vi.fn()} />);
+    expect(screen.getByText(/seed 42/)).toBeTruthy();
+  });
 });
