@@ -6,7 +6,9 @@ export type Route =
   | { screen: "landing" }
   | { screen: "local" }
   | { screen: "game"; config: MatchConfig }
-  | { screen: "room"; code: string };
+  | { screen: "room"; code: string }
+  | { screen: "online" }
+  | { screen: "join" };
 
 export function parseRoute(hash: string): Route {
   if (hash.startsWith("#room=")) {
@@ -15,6 +17,8 @@ export function parseRoute(hash: string): Route {
   }
   if (hash === "#game" || hash.startsWith("#game?")) return { screen: "game", config: parseConfigFromHash(hash) };
   if (hash === "#local") return { screen: "local" };
+  if (hash === "#online") return { screen: "online" };
+  if (hash === "#join") return { screen: "join" };
   return { screen: "landing" };
 }
 

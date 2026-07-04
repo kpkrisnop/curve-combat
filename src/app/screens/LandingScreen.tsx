@@ -12,13 +12,7 @@ export function LandingScreen() {
         <button className="gw-btn gw-btn--primary" onClick={() => { location.hash = "#local"; }}>
           ▶ Play Locally
         </button>
-        <button className="gw-btn" onClick={() => {
-          // Phase-1 parity: prompt for a code or create one. Phase 3 replaces this.
-          const raw = prompt("Room code (leave blank to create a new room):", "")?.trim().toUpperCase();
-          const code = raw || Array.from({ length: 4 }, () =>
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[Math.floor(Math.random() * 26)]).join("");
-          location.hash = `#room=${code}`;
-        }}>Play Online</button>
+        <button className="gw-btn" onClick={() => { location.hash = "#online"; }}>Play Online</button>
       </div>
     </div>
   );

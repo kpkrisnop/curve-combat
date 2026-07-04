@@ -25,4 +25,10 @@ describe("parseRoute", () => {
   it("#room= with empty code → landing", () => {
     expect(parseRoute("#room=").screen).toBe("landing");
   });
+  it("#online → online", () => {
+    expect(parseRoute("#online").screen).toBe("online");
+  });
+  it("#join → join", () => {
+    expect(parseRoute("#join").screen).toBe("join");
+  });
 });

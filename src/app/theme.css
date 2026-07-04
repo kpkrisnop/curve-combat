@@ -92,3 +92,12 @@ body { font-family: var(--gw-font-sans); overflow: hidden; }
   animation: gw-count-pop 900ms ease-out;
 }
 @keyframes gw-count-pop { from { transform: scale(1.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* ── Online screens ─────────────────────────────────────────────────────── */
+.gw-code-entry {
+  font-family: var(--gw-font-mono); font-size: 64px; letter-spacing: 0.4em;
+  text-align: center; width: 5ch;
+  background: var(--gw-surface-2); border: 1px solid var(--gw-border-strong);
+  border-radius: var(--gw-radius-lg); color: var(--gw-text-code);
+  padding: 12px 0 12px 0.4em;
+}
