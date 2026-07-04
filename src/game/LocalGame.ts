@@ -14,7 +14,12 @@ import type { Bounds, World, Vec2, ShotResult } from "../sim/types";
 export interface RendererPort {
   setMap(map: MapConfig): void;
   getEffectiveBounds(): Bounds;
-  setWorld(world: World, activeTurn: Team, redPos: Vec2, bluePos: Vec2): void;
+  setWorld(
+    world: World,
+    activeTurn: Team,
+    players: PlayerState[],
+    opts: { phase: "pregame" | "ingame"; mode: MatchConfig["mode"] },
+  ): void;
   setNoTurnMode(enabled: boolean): void;
   playShot(result: ShotResult, player?: Team): Promise<void>;
   showFloatingDamage(at: Vec2, dmg: number, player: Team): void;
@@ -70,7 +75,10 @@ export class LocalGame {
 
   private renderFrom(m: MatchState, viewTeam: Team): void {
     const viewer = m.players.find((p) => p.team === viewTeam && p.alive) ?? this.redOf(m);
-    this.renderer.setWorld(worldFor(m, viewer), viewTeam, this.redOf(m).pos, this.blueOf(m).pos);
+    this.renderer.setWorld(worldFor(m, viewer), viewTeam, m.players, {
+      phase: this.started ? "ingame" : "pregame",
+      mode: this.config.mode,
+    });
   }
 
   private initRoundHud(): void {

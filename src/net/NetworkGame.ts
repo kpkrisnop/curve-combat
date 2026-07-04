@@ -259,7 +259,7 @@ export class NetworkGame {
       { soldier: { pos: viewer.pos, dir: viewTeam === "red" ? 1 : -1 }, bounds: state.bounds,
         targets: state.players.filter((p) => p.team !== viewTeam && p.alive).map((p) => ({ id: p.id, pos: p.pos, radius: 0.1 })),
         planets: state.planets },
-      viewTeam, red.pos, blue.pos,
+      viewTeam, state.players, { phase: "ingame", mode: state.config.mode },
     );
     const active = state.players.find((p) => p.id === state.activePlayerId);
     if (active) this.ui.setTurn(active.team);

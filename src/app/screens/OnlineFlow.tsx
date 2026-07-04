@@ -7,7 +7,6 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { ArenaStage } from "../arena/ArenaStage";
 import { Footer } from "../hud/Footer";
 import { HudOverlays } from "../hud/Overlays";
-import { TeamStrip } from "../hud/TeamStrip";
 import { hudController } from "../hud/hudStore";
 import { NetworkGame } from "../../net/NetworkGame";
 import { ServerClient } from "../../net/ServerClient";
@@ -50,7 +49,6 @@ export function OnlineFlow({ code }: Props) {
   const configFlash = useStore(netLobbyStore, (s) => s.configFlash);
   const roomCode = useStore(netLobbyStore, (s) => s.roomCode);
   const matchPlayers = useStore(netLobbyStore, (s) => s.matchPlayers);
-  const matchActivePlayerId = useStore(netLobbyStore, (s) => s.matchActivePlayerId);
 
   // ── Config flash ref (for toggling CSS class) ─────────────────────────────
   const configFlashRef = useRef<HTMLDivElement | null>(null);
@@ -111,6 +109,19 @@ export function OnlineFlow({ code }: Props) {
     const layout = buildArenaPreview(cfg, seed, counts);
     const redPlayer = layout.players.find((p) => p.team === "red")!;
     const bluePlayer = layout.players.find((p) => p.team === "blue")!;
+
+    // buildArenaPreview deals synthetic placeholder names/ids ("RED"/"r1"…) onto
+    // spawn slots in team order (mirrors the server's left/right dealing) — swap
+    // in the real roster names so pregame badges show actual player names.
+    const redRoster = pls.filter((p) => p.team === "red");
+    const blueRoster = pls.filter((p) => p.team === "blue");
+    let ri = 0;
+    let bi = 0;
+    const namedPlayers = layout.players.map((p) => {
+      const real = p.team === "red" ? redRoster[ri++] : blueRoster[bi++];
+      return real ? { ...p, id: real.id, name: real.name } : p;
+    });
+
     renderer.setWorld(
       {
         soldier: { pos: redPlayer.pos, dir: 1 },
@@ -119,8 +130,8 @@ export function OnlineFlow({ code }: Props) {
         planets: layout.planets,
       },
       "red",
-      redPlayer.pos,
-      bluePlayer.pos,
+      namedPlayers,
+      { phase: "pregame", mode: cfg.mode },
     );
   }, []);
 
@@ -284,13 +295,12 @@ export function OnlineFlow({ code }: Props) {
       )}
 
       {/* ── Play chrome ──────────────────────────────────────────────── */}
+      {/* Names + HP now live in the on-map name badges (GameRenderer), anchored
+          to each soldier dot — see src/game/badge.ts. TeamStrip is retired from
+          the arena; matchPlayers/matchActivePlayerId already reach the renderer
+          via NetworkGame.render(), which is where those badges are drawn. */}
       {isPlay && amSpectator && (
         <>
-          <TeamStrip
-            players={matchPlayers}
-            myId={myId}
-            activePlayerId={matchActivePlayerId}
-          />
           <div className="spectator-badge">
             Spectating · {roomCode}
           </div>
@@ -305,11 +315,6 @@ export function OnlineFlow({ code }: Props) {
 
       {isPlay && !amSpectator && (
         <>
-          <TeamStrip
-            players={matchPlayers}
-            myId={myId}
-            activePlayerId={matchActivePlayerId}
-          />
           <Footer mode="ingame" singleTeam={myTeam ?? undefined} />
           <HudOverlays />
           <ReconnectOverlays />

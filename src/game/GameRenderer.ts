@@ -6,6 +6,9 @@ import { DEFAULT_MAP } from "./arenaDefaults";
 import { boundsFromMap } from "../sim/planetScatter";
 import { fitContain, boundaryRectPx } from "../sim/fitRect";
 import { X_VELOCITY_WORLD } from "../sim/timing";
+import type { PlayerState } from "./matchState";
+import { HP_MAX } from "./hpLogic";
+import { badgeText, badgeSize, hpFraction, showHpBar, type BadgePhase, type MatchMode } from "./badge";
 
 const COLORS = {
   bg: 0x0f141a,
@@ -40,12 +43,22 @@ export class GameRenderer {
   private trailLayerRed = new Graphics();
   private trailLayerBlue = new Graphics();
   private fxLayer = new Graphics();
+  /**
+   * Name badges anchored to each soldier dot (Task D1+D2). A plain Pixi layer —
+   * Text/Graphics here never receive pointer events (nothing in this app enables
+   * `eventMode`), and the sim's hit detection resolves purely against
+   * `world.targets` (position + PLAYER_RADIUS), so badges are excluded from the
+   * hitbox by construction, not by an extra check.
+   */
+  private badgeLayer = new Container();
 
   private world!: World;
   private activeTurn: "red" | "blue" = "red";
   private noTurnMode = false;
-  private redPos: Vec2 = { x: -9, y: 0 };
-  private bluePos: Vec2 = { x: 9, y: 0 };
+  /** Full soldier roster for the current round — drives both dots and badges. */
+  private players: PlayerState[] = [];
+  private badgePhase: BadgePhase = "pregame";
+  private badgeMode: MatchMode = "classic";
 
   /**
    * The logical playfield rectangle (world units). Set from MatchConfig via
@@ -77,6 +90,7 @@ export class GameRenderer {
       this.trailLayerRed,
       this.trailLayerBlue,
       this.fxLayer,
+      this.badgeLayer,
     );
 
     // Pre-compute before setWorld is called so main.ts can read bounds immediately.
@@ -107,11 +121,22 @@ export class GameRenderer {
     if (this.camera) this.recomputeEffectiveBounds();
   }
 
-  setWorld(world: World, activeTurn: "red" | "blue", redPos: Vec2, bluePos: Vec2) {
+  /**
+   * @param players Full soldier roster for the round (any NvN size) — every
+   *   alive entry gets a dot + name badge; `opts.phase`/`opts.mode` control
+   *   badge size and whether the HP bar shows (see src/game/badge.ts).
+   */
+  setWorld(
+    world: World,
+    activeTurn: "red" | "blue",
+    players: PlayerState[],
+    opts: { phase: BadgePhase; mode: MatchMode },
+  ) {
     this.world = world;
     this.activeTurn = activeTurn;
-    this.redPos = redPos;
-    this.bluePos = bluePos;
+    this.players = players;
+    this.badgePhase = opts.phase;
+    this.badgeMode = opts.mode;
     this.recomputeEffectiveBounds();
     this.trailLayerRed.clear();
     this.trailLayerBlue.clear();
@@ -249,33 +274,86 @@ export class GameRenderer {
     this.noTurnMode = enabled;
   }
 
+  /**
+   * Draws every alive soldier as a dot (full brightness on the active team,
+   * dimmed otherwise) plus its anchored name badge. Runs for any NvN roster
+   * size, not just one red + one blue — badges track camera scale/pan because
+   * they're positioned from the same `toScreen()` used for the dot itself, and
+   * this whole method reruns on every resize (see the "resize" handler above).
+   */
   private drawField() {
     const g = this.fieldLayer;
     const cam = this.camera;
     g.clear();
+    this.badgeLayer.removeChildren();
 
     const rPx = PLAYER_RADIUS_WORLD * cam.scale;
 
-    // RED — full brightness when active, dimmed when waiting.
-    const rs = this.toScreen(this.redPos);
-    const isRedActive = this.noTurnMode || this.activeTurn === "red";
-    if (isRedActive) {
-      g.circle(rs.x, rs.y, rPx + 6).stroke({ width: 2.5, color: COLORS.red, alpha: 0.35 });
+    for (const p of this.players) {
+      if (!p.alive) continue;
+      const color = p.team === "red" ? COLORS.red : COLORS.blue;
+      const isActive = this.noTurnMode || this.activeTurn === p.team;
+      const s = this.toScreen(p.pos);
+
+      if (isActive) {
+        g.circle(s.x, s.y, rPx + 6).stroke({ width: 2.5, color, alpha: 0.35 });
+      }
+      g.circle(s.x, s.y, rPx).fill({ color, alpha: isActive ? 1.0 : 0.4 });
+      if (isActive) {
+        const dir = p.team === "red" ? 1 : -1;
+        g.moveTo(s.x, s.y).lineTo(s.x + dir * BARREL_PX, s.y).stroke({ width: 3, color });
+      }
+
+      this.drawBadge(p, s, color, rPx);
     }
-    g.circle(rs.x, rs.y, rPx).fill({ color: COLORS.red, alpha: isRedActive ? 1.0 : 0.4 });
-    if (isRedActive) {
-      g.moveTo(rs.x, rs.y).lineTo(rs.x + BARREL_PX, rs.y).stroke({ width: 3, color: COLORS.red });
+  }
+
+  /**
+   * One name badge, anchored above its soldier dot. `size="lg"` pre-game,
+   * `size="sm"` in-game (badge.ts:badgeSize); HP mode additionally shows a
+   * mini fill bar + the numeric HP (badge.ts:showHpBar/hpFraction) — Classic
+   * mode shows only the name. Never interactive, so never part of the hitbox.
+   */
+  private drawBadge(p: PlayerState, dotScreenPos: Vec2, color: number, dotRadiusPx: number): void {
+    const big = badgeSize(this.badgePhase) === "lg";
+    const withHp = showHpBar(this.badgeMode);
+    const fontSize = big ? 12 : 9;
+    const barW = big ? 36 : 26;
+    const barH = 5;
+
+    const group = new Container();
+
+    const nameText = new Text({
+      text: badgeText(p.name),
+      style: { fill: color, fontSize, fontFamily: "monospace", fontWeight: "600" },
+    });
+    nameText.anchor.set(0.5, 1);
+    nameText.position.set(0, withHp ? -(barH + 6) : 0);
+    group.addChild(nameText);
+
+    if (withHp) {
+      const frac = hpFraction(p.hp, HP_MAX);
+      const barX = -barW / 2;
+      const barY = -barH;
+      group.addChild(
+        new Graphics()
+          .roundRect(barX, barY, barW, barH, 2)
+          .fill({ color: 0x0b0e15 })
+          .stroke({ width: 1, color }),
+        new Graphics().roundRect(barX, barY, Math.max(1, barW * frac), barH, 2).fill({ color }),
+      );
+
+      const hpText = new Text({
+        text: `${Math.round(p.hp)}`,
+        style: { fill: color, fontSize: Math.max(8, fontSize - 2), fontFamily: "monospace" },
+      });
+      hpText.anchor.set(0, 0.5);
+      hpText.position.set(barW / 2 + 4, barY + barH / 2);
+      group.addChild(hpText);
     }
 
-    const bs = this.toScreen(this.bluePos);
-    const isBlueActive = this.noTurnMode || this.activeTurn === "blue";
-    if (isBlueActive) {
-      g.circle(bs.x, bs.y, rPx + 6).stroke({ width: 2.5, color: COLORS.blue, alpha: 0.35 });
-    }
-    g.circle(bs.x, bs.y, rPx).fill({ color: COLORS.blue, alpha: isBlueActive ? 1.0 : 0.4 });
-    if (isBlueActive) {
-      g.moveTo(bs.x, bs.y).lineTo(bs.x - BARREL_PX, bs.y).stroke({ width: 3, color: COLORS.blue });
-    }
+    group.position.set(dotScreenPos.x, dotScreenPos.y - dotRadiusPx - (big ? 12 : 8));
+    this.badgeLayer.addChild(group);
   }
 
   playShot(result: ShotResult, player?: "red" | "blue"): Promise<void> {
