@@ -2,10 +2,8 @@
 import { timingSafeEqual, randomUUID } from "crypto";
 import { MatchEngine, type RoomPlayer } from "./matchEngine";
 import { arenaDefaults } from "../src/game/arenaDefaults";
-import type { MatchConfig } from "../src/game/matchLogic";
+import type { MatchConfig, MapConfig, ScatterConfig } from "../src/game/matchLogic";
 import type { MatchState, Team } from "../src/game/matchState";
-import type { ScatterConfig } from "../src/sim/planetScatter";
-import type { MapId } from "../src/game/arenaDefaults";
 
 export interface Room {
   code: string;
@@ -148,7 +146,7 @@ export class RoomManager {
       rounds: 3 | 5;
       noTurn: boolean;
       turnSeconds: number;
-      map?: MapId;
+      map?: MapConfig;
       scatter?: ScatterConfig;
     },
   ): void {

@@ -131,7 +131,7 @@ describe("RoomManager Phase 2", () => {
     const m = new RoomManager();
     const { playerId: owner } = m.join("WOLF", "Ann");
     m.join("WOLF", "Bo");
-    const newConfig = { mode: "hp" as const, rounds: 5, noTurn: true, turnSeconds: 15 };
+    const newConfig = { mode: "hp" as const, rounds: 5 as const, noTurn: true, turnSeconds: 15 };
     m.setConfig("WOLF", owner, newConfig);
     const room = m.get("WOLF")!;
     expect(room.config.mode).toBe("hp");
