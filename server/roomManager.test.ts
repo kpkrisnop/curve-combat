@@ -245,3 +245,42 @@ describe("RoomManager NvN (ADR-0002)", () => {
     expect(room.players.find((p) => p.id === playerId)!.name).toBe("Ada");
   });
 });
+
+describe("RoomManager relayout (A2)", () => {
+  it("switchTeam triggers a relayout (new seed) and allows emptying a side", () => {
+    const m = new RoomManager();
+    const a = m.join("WOLF", "A"); // red (tie)
+    m.join("WOLF", "B"); // blue (smaller)
+    const before = m.roundSeed("WOLF");
+    expect(() => m.switchTeam("WOLF", a.playerId, "blue")).not.toThrow();
+    expect(m.roundSeed("WOLF")).not.toBe(before);
+    const room = m.get("WOLF")!;
+    expect(room.players.filter((p) => p.team === "red")).toHaveLength(0); // side left behind is empty
+  });
+
+  it("join triggers a relayout for subsequent joiners", () => {
+    const m = new RoomManager();
+    m.join("WOLF", "A");
+    const before = m.roundSeed("WOLF");
+    m.join("WOLF", "B");
+    expect(m.roundSeed("WOLF")).not.toBe(before);
+  });
+
+  it("manual reroll by a non-owner still throws (host-gate preserved even though relayout itself is ungated)", () => {
+    const m = new RoomManager();
+    const a = m.join("WOLF", "A");
+    const b = m.join("WOLF", "B");
+    expect(() => m.reroll("WOLF", b.playerId)).toThrow(/host/i);
+    void a;
+  });
+
+  it("relayout is a no-op once the match has started", () => {
+    const m = new RoomManager();
+    const a = m.join("WOLF", "A");
+    m.join("WOLF", "B");
+    m.start("WOLF", a.playerId);
+    const seed = m.roundSeed("WOLF");
+    m.relayout("WOLF");
+    expect(m.roundSeed("WOLF")).toBe(seed);
+  });
+});

@@ -40,6 +40,12 @@ export class RoomManager {
 
   get(code: string): Room | undefined { return this.rooms.get(code); }
 
+  roundSeed(code: string): number {
+    const room = this.rooms.get(code);
+    if (!room) throw new Error("no such room");
+    return room.round1Seed;
+  }
+
   remove(code: string): void {
     const room = this.rooms.get(code);
     if (room) {
@@ -77,6 +83,7 @@ export class RoomManager {
     room.players.push({ id, name, team });
     const token = randomUUID();
     room.rejoinTokens.set(id, token);
+    this.relayout(code);
     return { room, playerId: id, token };
   }
 
@@ -89,6 +96,7 @@ export class RoomManager {
     const targetCount = room.players.filter((p) => p.team === team).length;
     if (targetCount >= TEAM_CAP) throw new Error("team full");
     player.team = team;
+    this.relayout(code);
   }
 
   setName(code: string, playerId: string, name: string): void {
@@ -172,13 +180,27 @@ export class RoomManager {
     }
   }
 
+  /**
+   * Picks a fresh round-1 seed so terrain + all player positions reroll to
+   * match the current roster. Not host-gated — called internally on every
+   * roster change (join / switchTeam / player removal). A no-op once the
+   * match has started (`room.engine !== null`), since terrain is frozen
+   * for an in-progress match.
+   */
+  relayout(code: string): void {
+    const room = this.rooms.get(code);
+    if (!room) return;
+    if (room.engine !== null) return;
+    room.round1Seed = mintSeed();
+  }
+
   reroll(code: string, byPlayerId: string): number {
     const room = this.rooms.get(code);
     if (!room) throw new Error("no such room");
     if (room.ownerId !== byPlayerId) throw new Error("only the host can reroll");
     if (room.locked) throw new Error("room locked");
     if (room.engine !== null) throw new Error("cannot reroll after match starts");
-    room.round1Seed = mintSeed();
+    this.relayout(code);
     return room.round1Seed;
   }
 
