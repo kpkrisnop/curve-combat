@@ -16,7 +16,13 @@ export function ArenaStage({ scale, onReady, factory }: Props) {
   useEffect(() => {
     let cancelled = false;
     void acquireRenderer(hostRef.current!, factory).then((r) => {
-      if (!cancelled) onReadyRef.current(r);
+      if (cancelled) return;
+      onReadyRef.current(r);
+      // Pixi's resizeTo measures the container at init and only re-measures on
+      // window resize. When this stage mounts into a screen whose layout settles
+      // a frame later, the canvas can keep a stale (collapsed) size — re-measure
+      // once the layout has settled so it fills its box.
+      requestAnimationFrame(() => { if (!cancelled) r.app.resize?.(); });
     });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps

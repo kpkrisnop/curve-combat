@@ -67,6 +67,7 @@ body { font-family: var(--gw-font-sans); overflow: hidden; }
 
 /* ── LocalFlow + ConfigPanel ────────────────────────────────────────────── */
 .local-flow { position: absolute; inset: 0; }
+.online-flow { position: absolute; inset: 0; }
 .seat { position: absolute; bottom: 18px; z-index: 6; font-size: var(--gw-fs-md); }
 .seat-red { left: 18px; } .seat-blue { right: 18px; }
 .config-drawer {
