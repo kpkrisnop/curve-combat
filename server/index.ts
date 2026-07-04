@@ -194,6 +194,9 @@ export function createServer(port: number): { close: () => Promise<void> } {
             const patched = armTurnTimer(room.code, state, rm.engine!);
             broadcast(room.code, { type: "matchState", state: patched });
           } catch (e) {
+            // Unlock so the room is retryable — otherwise it stays locked with
+            // no engine forever, and clients hang after matchStarting.
+            rm.locked = false;
             broadcast(room.code, { type: "error", code: "start-failed", message: String((e as Error).message) });
           }
         }, startAt - Date.now());
