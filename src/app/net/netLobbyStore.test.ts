@@ -7,19 +7,25 @@ import { netLobbyStore, initialNetLobbyState, bindNetworkGame } from "./netLobby
 import type { LobbySnapshot } from "../../net/NetworkGame";
 
 // ── Stub NetworkGame ──────────────────────────────────────────────────────────
-// Minimal stand-in: captures the callbacks registered via onLobby / onMatchStarting
+// Minimal stand-in: captures the callbacks registered via onLobby / onMatchStarting / onState
 // and exposes emit helpers for tests.
+import type { MatchState } from "../../game/matchState";
+
 type LobbyCallback = (s: LobbySnapshot) => void;
 type StartingCallback = (startAt: number) => void;
+type StateCallback = (s: MatchState) => void;
 
 function makeStubNet() {
   let lobbyCb: LobbyCallback | null = null;
   let startingCb: StartingCallback | null = null;
+  let stateCb: StateCallback | null = null;
   return {
     onLobby(cb: LobbyCallback) { lobbyCb = cb; },
     onMatchStarting(cb: StartingCallback) { startingCb = cb; },
+    onState(cb: StateCallback) { stateCb = cb; },
     emitLobby(s: LobbySnapshot) { lobbyCb?.(s); },
     emitMatchStarting(startAt: number) { startingCb?.(startAt); },
+    emitState(s: MatchState) { stateCb?.(s); },
   };
 }
 

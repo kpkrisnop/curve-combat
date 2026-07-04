@@ -43,12 +43,21 @@ function Scoreboard() {
   );
 }
 
-export function HudBar({ makeInput }: { makeInput?: () => any }) {
+export function HudBar({ makeInput, singleTeam }: { makeInput?: () => any; singleTeam?: Team }) {
   return (
     <div className="hud-bar">
-      <PlayerPanel team="red" makeInput={makeInput} />
-      <Scoreboard />
-      <PlayerPanel team="blue" makeInput={makeInput} />
+      {singleTeam ? (
+        <>
+          <PlayerPanel team={singleTeam} makeInput={makeInput} />
+          <Scoreboard />
+        </>
+      ) : (
+        <>
+          <PlayerPanel team="red" makeInput={makeInput} />
+          <Scoreboard />
+          <PlayerPanel team="blue" makeInput={makeInput} />
+        </>
+      )}
     </div>
   );
 }

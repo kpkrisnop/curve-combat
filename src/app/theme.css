@@ -126,3 +126,123 @@ body { font-family: var(--gw-font-sans); overflow: hidden; }
   border-radius: var(--gw-radius-lg); color: var(--gw-text-code);
   padding: 12px 0 12px 0.4em;
 }
+
+/* ── TeamStrip — NvN player status rows ─────────────────────────────────── */
+.team-strip {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 20;
+  display: flex; justify-content: space-between; align-items: flex-start;
+  pointer-events: none;
+  padding: 6px 12px;
+  gap: 8px;
+}
+
+.team-strip__team {
+  display: flex; flex-direction: column; gap: 2px;
+  min-width: 140px;
+}
+
+.team-strip__team--red  { align-items: flex-start; }
+.team-strip__team--blue { align-items: flex-end; }
+
+.team-strip__row {
+  display: flex; align-items: center; gap: 6px;
+  font-size: var(--gw-fs-xs, 11px);
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: rgba(0,0,0,0.55);
+  border: 1px solid transparent;
+  color: var(--gw-text-muted, rgba(180,190,210,0.8));
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.team-strip__row--red  { border-left: 3px solid var(--gw-red, #ff4444); }
+.team-strip__row--blue { border-right: 3px solid var(--gw-blue, #4488ff); border-left: none; }
+
+.team-strip__row.is-dead {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+
+.team-strip__row.is-active {
+  border-color: rgba(255,255,255,0.5);
+  box-shadow: 0 0 8px rgba(255,255,255,0.2);
+  color: var(--gw-text, #e8eaf0);
+}
+
+.team-strip__row.is-me {
+  font-weight: 700;
+  color: var(--gw-text, #e8eaf0);
+}
+
+.team-strip__ring {
+  display: inline-block; width: 8px; height: 8px;
+  border-radius: 50%;
+  background: transparent;
+  border: 2px solid rgba(255,255,255,0.8);
+  flex-shrink: 0;
+}
+
+.team-strip__name  { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.team-strip__skull { font-size: 0.9em; }
+.team-strip__hp    { display: flex; align-items: center; gap: 2px; white-space: nowrap; }
+.team-strip__hp-icon { color: #ff6680; }
+
+/* ── ReconnectOverlays ───────────────────────────────────────────────────── */
+.reconnect-overlay--blocking {
+  position: fixed; inset: 0; z-index: 200;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.78);
+  backdrop-filter: blur(4px);
+}
+
+.reconnect-overlay__inner {
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+  color: var(--gw-text, #e8eaf0);
+  font-size: var(--gw-fs-md, 18px);
+  font-weight: 600;
+}
+
+.reconnect-overlay__spinner {
+  display: inline-block; width: 36px; height: 36px;
+  border: 3px solid rgba(255,255,255,0.2);
+  border-top-color: rgba(255,255,255,0.9);
+  border-radius: 50%;
+  animation: gw-spin 0.8s linear infinite;
+}
+
+@keyframes gw-spin {
+  to { transform: rotate(360deg); }
+}
+
+.reconnect-overlay--banner {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+  z-index: 100;
+  background: rgba(14,18,26,0.92);
+  border: 1px solid var(--gw-border-strong, #2e4256);
+  border-radius: 8px;
+  padding: 10px 20px;
+  color: var(--gw-text, #e8eaf0);
+  font-size: var(--gw-fs-sm, 13px);
+  white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+
+/* ── Spectator badge + leave button ─────────────────────────────────────── */
+.spectator-badge {
+  position: fixed; top: 48px; left: 50%; transform: translateX(-50%);
+  z-index: 30;
+  background: rgba(0,0,0,0.7);
+  border: 1px solid var(--gw-border-strong, #2e4256);
+  border-radius: 6px;
+  padding: 4px 14px;
+  font-size: var(--gw-fs-xs, 11px);
+  color: var(--gw-text-muted, rgba(180,190,210,0.8));
+  letter-spacing: 0.04em;
+  pointer-events: none;
+}
+
+.spectator-leave {
+  position: fixed; bottom: 24px; right: 24px; z-index: 30;
+  font-size: var(--gw-fs-sm, 13px);
+  padding: 8px 18px;
+}

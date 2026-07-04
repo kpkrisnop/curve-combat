@@ -55,6 +55,39 @@ describe("HudBar", () => {
   });
 });
 
+describe("HudBar — singleTeam prop", () => {
+  beforeEach(() => hudStore.set(initialHudState()));
+  afterEach(() => cleanup());
+
+  it("singleTeam='blue' renders exactly one Fire button and it belongs to blue", () => {
+    act(() => hudController.setTurn("blue"));
+    render(<HudBar makeInput={makeInput} singleTeam="blue" />);
+    const fires = screen.getAllByRole("button", { name: "Fire" });
+    expect(fires).toHaveLength(1);
+    // The single panel should be the blue panel
+    const panel = document.querySelector(".player-panel.is-blue");
+    expect(panel).toBeTruthy();
+    expect(document.querySelector(".player-panel.is-red")).toBeNull();
+  });
+
+  it("singleTeam='red' renders exactly one Fire button for red", () => {
+    act(() => hudController.setTurn("red"));
+    render(<HudBar makeInput={makeInput} singleTeam="red" />);
+    const fires = screen.getAllByRole("button", { name: "Fire" });
+    expect(fires).toHaveLength(1);
+    expect(document.querySelector(".player-panel.is-red")).toBeTruthy();
+    expect(document.querySelector(".player-panel.is-blue")).toBeNull();
+  });
+
+  it("singleTeam unset renders both panels (dual layout unchanged)", () => {
+    render(<HudBar makeInput={makeInput} />);
+    const fires = screen.getAllByRole("button", { name: "Fire" });
+    expect(fires).toHaveLength(2);
+    expect(document.querySelector(".player-panel.is-red")).toBeTruthy();
+    expect(document.querySelector(".player-panel.is-blue")).toBeTruthy();
+  });
+});
+
 describe("HudOverlays", () => {
   beforeEach(() => hudStore.set(initialHudState()));
   afterEach(() => cleanup());

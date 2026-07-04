@@ -37,6 +37,7 @@ export class NetworkGame {
   private myBusy = false;
   private lobbyCallback: ((s: LobbySnapshot) => void) | null = null;
   private matchStartingCallback: ((startAt: number) => void) | null = null;
+  private stateCallback: ((s: MatchState) => void) | null = null;
 
   constructor(
     private client: ServerClient,
@@ -52,12 +53,15 @@ export class NetworkGame {
 
     this.client.on("joined", (m) => {
       if (m.type !== "joined") return;
+      // Clear self-reconnecting flag — we're back in.
+      netLobbyStore.set({ selfReconnecting: false });
       this.myId = m.playerId;
       this.myToken = m.token;
       if (m.token) this.storeSession();
-      this.client.setReconnectHandler(() =>
-        this.client.send({ type: "reconnect", room: this.room, playerId: this.myId!, token: this.myToken! })
-      );
+      this.client.setReconnectHandler(() => {
+        netLobbyStore.set({ selfReconnecting: true });
+        this.client.send({ type: "reconnect", room: this.room, playerId: this.myId!, token: this.myToken! });
+      });
     });
     this.client.on("lobbyState", (m) => {
       if (m.type !== "lobbyState") return;
@@ -108,7 +112,17 @@ export class NetworkGame {
     });
     this.client.on("peerStatus", (m) => {
       if (m.type !== "peerStatus") return;
-      this.ui.setStatus(m.connected ? "" : "Opponent disconnected — waiting up to 30s…");
+      if (m.connected) {
+        netLobbyStore.set({ peerDown: null });
+        this.ui.setStatus("");
+      } else {
+        // Find the peer's name from lastState for the overlay
+        const peerName = this.lastState
+          ? (this.lastState.players.find((p) => p.id !== this.myId)?.name ?? "Opponent")
+          : "Opponent";
+        netLobbyStore.set({ peerDown: { name: peerName, deadline: Date.now() + 30_000 } });
+        this.ui.setStatus("Opponent disconnected — waiting up to 30s…");
+      }
     });
     this.client.on("error", (m) => {
       if (m.type !== "error") return;
@@ -131,6 +145,7 @@ export class NetworkGame {
 
     const saved = this.loadSession();
     if (saved) {
+      netLobbyStore.set({ selfReconnecting: true });
       this.client.send({ type: "reconnect", room: this.room, playerId: saved.playerId, token: saved.token });
     } else {
       this.client.send({ type: "join", room: this.room, name: this.name });
@@ -144,6 +159,11 @@ export class NetworkGame {
 
   onMatchStarting(cb: (startAt: number) => void): void {
     this.matchStartingCallback = cb;
+  }
+
+  /** Called at the top of every render(state) with the full server-authoritative MatchState. */
+  onState(cb: (s: MatchState) => void): void {
+    this.stateCallback = cb;
   }
 
   sendConfigure(partial: {
@@ -204,6 +224,7 @@ export class NetworkGame {
   }
 
   private render(state: MatchState): void {
+    this.stateCallback?.(state);
     this.lastState = state;
     // Re-enable local player fire button if they were busy.
     if (this.myBusy) {

@@ -6,6 +6,7 @@
 import { createStore, type Store } from "../store";
 import type { NetworkGame, LobbySnapshot } from "../../net/NetworkGame";
 import type { PanelConfig } from "../screens/ConfigPanel";
+import type { PlayerState } from "../../game/matchState";
 import { DEFAULT_MAP, DEFAULT_SCATTER } from "../../game/arenaDefaults";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -21,6 +22,10 @@ export interface NetLobbyState {
   amSpectator: boolean;
   players: { id: string; name: string; team: "red" | "blue" }[];
   spectators: { id: string; name: string }[];
+  /** Live player states from MatchState, updated on every server matchState event. */
+  matchPlayers: PlayerState[];
+  /** Active player id (from MatchState.activePlayerId), for TeamStrip ring. */
+  matchActivePlayerId: string | null;
   config: PanelConfig;   // Phase 1's PanelConfig (mode/rounds/noTurn/turnSeconds/map/scatter)
   round1Seed: number | null;
   startAt: number | null;
@@ -51,6 +56,8 @@ export function initialNetLobbyState(roomCode: string): NetLobbyState {
     amSpectator: false,
     players: [],
     spectators: [],
+    matchPlayers: [],
+    matchActivePlayerId: null,
     config: { ...DEFAULT_PANEL_CONFIG, map: { ...DEFAULT_MAP }, scatter: { ...DEFAULT_SCATTER } },
     round1Seed: null,
     startAt: null,
@@ -98,10 +105,18 @@ function snapshotToPanel(
  * responsible for not binding twice on the same instance.
  */
 export function bindNetworkGame(
-  net: Pick<NetworkGame, "onLobby" | "onMatchStarting">,
+  net: Pick<NetworkGame, "onLobby" | "onMatchStarting" | "onState">,
   _myIdProvider: () => string | null,
 ): () => void {
   let active = true;
+
+  net.onState((state) => {
+    if (!active) return;
+    netLobbyStore.set({
+      matchPlayers: state.players,
+      matchActivePlayerId: state.activePlayerId,
+    });
+  });
 
   net.onLobby((snap: LobbySnapshot) => {
     if (!active) return;

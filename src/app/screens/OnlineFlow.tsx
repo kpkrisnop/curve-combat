@@ -7,10 +7,12 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { ArenaStage } from "../arena/ArenaStage";
 import { HudBar } from "../hud/HudBar";
 import { HudOverlays } from "../hud/Overlays";
+import { TeamStrip } from "../hud/TeamStrip";
 import { hudController } from "../hud/hudStore";
 import { NetworkGame } from "../../net/NetworkGame";
 import { ServerClient } from "../../net/ServerClient";
 import { netLobbyStore, initialNetLobbyState, bindNetworkGame } from "../net/netLobbyStore";
+import { ReconnectOverlays } from "../net/ReconnectOverlays";
 import { buildArenaPreview } from "../net/arenaPreview";
 import { getNickname } from "../net/nickname";
 import { useStore } from "../store";
@@ -43,11 +45,14 @@ export function OnlineFlow({ code }: Props) {
   const myId = useStore(netLobbyStore, (s) => s.myId);
   const hostId = useStore(netLobbyStore, (s) => s.hostId);
   const amHost = useStore(netLobbyStore, (s) => s.amHost);
+  const amSpectator = useStore(netLobbyStore, (s) => s.amSpectator);
   const config = useStore(netLobbyStore, (s) => s.config);
   const round1Seed = useStore(netLobbyStore, (s) => s.round1Seed);
   const startAt = useStore(netLobbyStore, (s) => s.startAt);
   const configFlash = useStore(netLobbyStore, (s) => s.configFlash);
   const roomCode = useStore(netLobbyStore, (s) => s.roomCode);
+  const matchPlayers = useStore(netLobbyStore, (s) => s.matchPlayers);
+  const matchActivePlayerId = useStore(netLobbyStore, (s) => s.matchActivePlayerId);
 
   // ── Config flash ref (for toggling CSS class) ─────────────────────────────
   const configFlashRef = useRef<HTMLDivElement | null>(null);
@@ -184,6 +189,9 @@ export function OnlineFlow({ code }: Props) {
     void navigator.clipboard.writeText(`${location.origin}/#room=${roomCode}`);
   }, [roomCode]);
 
+  // ── Derive my team from matchPlayers (available in play phase) ───────────
+  const myTeam = matchPlayers.find((p) => p.id === myId)?.team ?? null;
+
   // ── Scale: 0.87 until play, 1 in play ────────────────────────────────────
   const scale = phase === "play" ? 1 : 0.87;
 
@@ -285,10 +293,35 @@ export function OnlineFlow({ code }: Props) {
       )}
 
       {/* ── Play chrome ──────────────────────────────────────────────── */}
-      {isPlay && (
+      {isPlay && amSpectator && (
         <>
-          <HudBar />
+          <TeamStrip
+            players={matchPlayers}
+            myId={myId}
+            activePlayerId={matchActivePlayerId}
+          />
+          <div className="spectator-badge">
+            Spectating · {roomCode}
+          </div>
+          <button
+            className="gw-btn spectator-leave"
+            onClick={() => { location.hash = ""; }}
+          >
+            Leave
+          </button>
+        </>
+      )}
+
+      {isPlay && !amSpectator && (
+        <>
+          <TeamStrip
+            players={matchPlayers}
+            myId={myId}
+            activePlayerId={matchActivePlayerId}
+          />
+          <HudBar singleTeam={myTeam ?? undefined} />
           <HudOverlays />
+          <ReconnectOverlays />
         </>
       )}
     </div>

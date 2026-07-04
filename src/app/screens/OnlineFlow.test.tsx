@@ -33,6 +33,7 @@ const mockNet = {
   requestStart: vi.fn(),
   onLobby: vi.fn(),
   onMatchStarting: vi.fn(),
+  onState: vi.fn(),
 };
 
 vi.mock("../../net/NetworkGame", () => ({
