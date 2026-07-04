@@ -4,7 +4,7 @@ import type { Bounds, ShotResult, Vec2, World } from "../sim/types";
 import type { MapConfig } from "./matchLogic";
 import { DEFAULT_MAP } from "./arenaDefaults";
 import { boundsFromMap } from "../sim/planetScatter";
-import { fitContain } from "../sim/fitRect";
+import { fitContain, boundaryRectPx } from "../sim/fitRect";
 import { X_VELOCITY_WORLD } from "../sim/timing";
 
 const COLORS = {
@@ -12,6 +12,7 @@ const COLORS = {
   grid: 0x1d2935,
   axis: 0x3b4f60,
   label: 0x5b7185,
+  boundary: 0x5b7185,
   red: 0xff4444,
   blue: 0x4488ff,
   projectile: 0xffffff,
@@ -32,6 +33,7 @@ export class GameRenderer {
   private gridLayer = new Graphics();
   private axisLayer = new Graphics();
   private labelLayer = new Container();
+  private boundaryLayer = new Graphics();
   private planetLayer = new Container();
   private planetTextures: RenderTexture[] = [];
   private fieldLayer = new Graphics();
@@ -69,6 +71,7 @@ export class GameRenderer {
       this.gridLayer,
       this.axisLayer,
       this.labelLayer,
+      this.boundaryLayer,
       this.planetLayer,
       this.fieldLayer,
       this.trailLayerRed,
@@ -141,17 +144,23 @@ export class GameRenderer {
     a.clear();
     this.labelLayer.removeChildren();
 
-    const eb = this.effectiveBounds;
+    // The spacetime grid is ambient and paints the entire viewport — it is not
+    // clipped to the world/play bounds. The play boundary is drawn separately
+    // (drawBoundary()) as an explicit rect at the sim's collision bounds.
     const step = niceStep(45 / cam.scale);
+    const left = cam.screenToWorldX(0);
+    const right = cam.screenToWorldX(w);
+    const top = cam.screenToWorldY(0);
+    const bottom = cam.screenToWorldY(h);
     const axisX = clamp(cam.worldToScreenX(0), 0, w);
     const axisY = clamp(cam.worldToScreenY(0), 0, h);
 
-    for (let x = Math.ceil(eb.minX / step) * step; x <= eb.maxX; x += step) {
+    for (let x = Math.ceil(left / step) * step; x <= right; x += step) {
       const sx = cam.worldToScreenX(x);
       g.moveTo(sx, 0).lineTo(sx, h);
       if (Math.abs(x) > 1e-9) this.addLabel(fmt(x), sx + 3, clamp(axisY, 2, h - 14));
     }
-    for (let y = Math.ceil(eb.minY / step) * step; y <= eb.maxY; y += step) {
+    for (let y = Math.ceil(bottom / step) * step; y <= top; y += step) {
       const sy = cam.worldToScreenY(y);
       g.moveTo(0, sy).lineTo(w, sy);
       if (Math.abs(y) > 1e-9) this.addLabel(fmt(y), clamp(axisX + 3, 2, w - 30), sy + 2);
@@ -161,6 +170,23 @@ export class GameRenderer {
     a.moveTo(0, cam.worldToScreenY(0)).lineTo(w, cam.worldToScreenY(0));
     a.moveTo(cam.worldToScreenX(0), 0).lineTo(cam.worldToScreenX(0), h);
     a.stroke({ width: 1.5, color: COLORS.axis });
+
+    this.drawBoundary();
+  }
+
+  /**
+   * Draws the visible play-boundary rectangle — the same `bounds` the sim
+   * collides bullets against (`detectCollision` in src/sim/collision.ts),
+   * derived here via the shared pure `boundaryRectPx()` (src/sim/fitRect.ts).
+   * Never a separate constant: single source of truth is `boundsFromMap(map)`.
+   */
+  private drawBoundary() {
+    const cam = this.camera;
+    const rect = boundaryRectPx(this.map, cam.width, cam.height);
+    this.boundaryLayer.clear();
+    this.boundaryLayer
+      .rect(rect.x, rect.y, rect.w, rect.h)
+      .stroke({ width: 2, color: COLORS.boundary, alpha: 0.6 });
   }
 
   private addLabel(text: string, x: number, y: number) {
