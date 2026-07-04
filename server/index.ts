@@ -23,6 +23,15 @@ export function createServer(port: number): { close: () => Promise<void> } {
     players: room.players.map((p) => ({ id: p.id, name: p.name, team: p.team })),
     ownerId: room.ownerId,
     spectators: room.spectators.map((s) => ({ id: s.id, name: s.name })),
+    round1Seed: room.round1Seed,
+    config: {
+      mode: room.config.mode,
+      rounds: room.config.rounds,
+      noTurn: room.config.noTurn,
+      turnSeconds: room.config.turnSeconds ?? 60,
+      map: room.config.map,
+      scatter: room.config.scatter,
+    },
   });
   const makeTTLExpiry = (code: string) => () => {
     for (const c of conns) if (c.room === code) c.ws.terminate();
@@ -85,8 +94,22 @@ export function createServer(port: number): { close: () => Promise<void> } {
           send(ws, { type: "joined", playerId, token, ownerId: room.ownerId });
           broadcast(msg.room, rosterMsg(room));
           rooms.startTTL(msg.room, makeTTLExpiry(msg.room));
-        } catch (e) {
-          send(ws, { type: "error", code: "join-failed", message: (e as Error).message });
+        } catch {
+          // Room is locked/full/started — fall back to spectator
+          const fallbackRoom = rooms.get(msg.room);
+          if (!fallbackRoom) return send(ws, { type: "error", code: "join-failed", message: "room not found" });
+          try {
+            const id = rooms.joinSpectator(msg.room, msg.name);
+            conn.playerId = id; conn.room = msg.room; conn.isSpectator = true;
+            send(ws, { type: "joined", playerId: id, token: "", ownerId: fallbackRoom.ownerId });
+            broadcast(msg.room, rosterMsg(fallbackRoom));
+            if (fallbackRoom.engine) {
+              const snap = fallbackRoom.engine.snapshot();
+              setImmediate(() => send(ws, { type: "matchState", state: snap }));
+            }
+          } catch (e2) {
+            send(ws, { type: "error", code: "join-failed", message: (e2 as Error).message });
+          }
         }
         return;
       }
@@ -119,37 +142,61 @@ export function createServer(port: number): { close: () => Promise<void> } {
             rounds: msg.rounds,
             noTurn: msg.noTurn,
             turnSeconds: msg.turnSeconds,
+            ...(msg.map !== undefined ? { map: msg.map } : {}),
+            ...(msg.scatter !== undefined ? { scatter: msg.scatter } : {}),
           });
-          broadcast(room.code, {
-            type: "lobbyState",
-            players: room.players.map((p) => ({ id: p.id, name: p.name, team: p.team })),
-            ownerId: room.ownerId,
-            spectators: room.spectators.map((s) => ({ id: s.id, name: s.name })),
-            config: {
-              mode: room.config.mode,
-              rounds: room.config.rounds,
-              noTurn: room.config.noTurn,
-              turnSeconds: room.config.turnSeconds ?? 60,
-            },
-          });
+          broadcast(room.code, rosterMsg(room));
         } catch (e) {
           send(ws, { type: "error", code: "configure-failed", message: (e as Error).message });
         }
         return;
       }
 
+      // ── switchTeam ────────────────────────────────────────────────────────
+      if (msg.type === "switchTeam") {
+        try {
+          rooms.switchTeam(room.code, conn.playerId, msg.team);
+          broadcast(room.code, rosterMsg(room));
+        } catch (e) {
+          send(ws, { type: "error", code: "switch-failed", message: (e as Error).message });
+        }
+        return;
+      }
+
+      // ── rerollArena ───────────────────────────────────────────────────────
+      if (msg.type === "rerollArena") {
+        try {
+          rooms.reroll(room.code, conn.playerId);
+          broadcast(room.code, rosterMsg(room));
+        } catch (e) {
+          send(ws, { type: "error", code: "reroll-failed", message: (e as Error).message });
+        }
+        return;
+      }
+
       // ── startMatch ────────────────────────────────────────────────────────
       if (msg.type === "startMatch") {
-        if (room.engine !== null)
+        if (room.engine !== null || room.locked)
           return send(ws, { type: "error", code: "already-started", message: "match already in progress" });
-        try {
-          const state = rooms.start(room.code, conn.playerId);
-          rooms.startTTL(room.code, makeTTLExpiry(room.code));
-          const patched = armTurnTimer(room.code, state, room.engine!);
-          broadcast(room.code, { type: "matchState", state: patched });
-        } catch (e) {
-          send(ws, { type: "error", code: "start-failed", message: String((e as Error).message) });
-        }
+        if (!rooms.canStart(room.code))
+          return send(ws, { type: "error", code: "start-failed", message: "both teams need at least one player" });
+        if (conn.playerId !== room.ownerId)
+          return send(ws, { type: "error", code: "start-failed", message: "only the host can start" });
+        rooms.lock(room.code);
+        const startAt = Date.now() + 3000;
+        broadcast(room.code, { type: "matchStarting", startAt });
+        setTimeout(() => {
+          const rm = rooms.get(room.code);
+          if (!rm) return;
+          try {
+            const state = rooms.start(room.code, rm.ownerId);
+            rooms.startTTL(room.code, makeTTLExpiry(room.code));
+            const patched = armTurnTimer(room.code, state, rm.engine!);
+            broadcast(room.code, { type: "matchState", state: patched });
+          } catch (e) {
+            broadcast(room.code, { type: "error", code: "start-failed", message: String((e as Error).message) });
+          }
+        }, startAt - Date.now());
         return;
       }
 
