@@ -63,3 +63,31 @@ describe("protocol", () => {
     expect(parseServerMessage(JSON.parse(encode(msg)))).toEqual(msg);
   });
 });
+
+describe("protocol v2 (NvN + arena + countdown)", () => {
+  it("parses switchTeam and rerollArena client messages", () => {
+    expect(parseClientMessage({ type: "switchTeam", team: "blue" }).type).toBe("switchTeam");
+    expect(parseClientMessage({ type: "rerollArena" }).type).toBe("rerollArena");
+    expect(() => parseClientMessage({ type: "switchTeam", team: "green" })).toThrow();
+  });
+
+  it("configureRoom accepts optional map + scatter and still accepts the old shape", () => {
+    const old = { type: "configureRoom", mode: "classic", rounds: 3, noTurn: false, turnSeconds: 60 };
+    expect(parseClientMessage(old).type).toBe("configureRoom");
+    const withArena = {
+      ...old,
+      map: { width: 24, height: 14 },
+      scatter: { rMin: 0.8, rMax: 2, gapMin: 0.5, gapMax: 2, spawnClearance: 2, fieldMargin: 0.5, maxPlanets: 12 },
+    };
+    const parsed = parseClientMessage(withArena);
+    if (parsed.type === "configureRoom") expect(parsed.map?.width).toBe(24);
+  });
+
+  it("parses matchStarting and lobbyState with round1Seed", () => {
+    expect(parseServerMessage({ type: "matchStarting", startAt: 123 }).type).toBe("matchStarting");
+    const lobby = parseServerMessage({
+      type: "lobbyState", players: [], ownerId: "p1", spectators: [], round1Seed: 42,
+    });
+    if (lobby.type === "lobbyState") expect(lobby.round1Seed).toBe(42);
+  });
+});

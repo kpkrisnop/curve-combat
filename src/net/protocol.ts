@@ -3,6 +3,15 @@ import { z } from "zod";
 import type { ShotResult } from "../sim/types";
 import type { MatchState } from "../game/matchState";
 
+// ── Shared arena shapes ───────────────────────────────────────────────────────
+const mapShape = z.object({ width: z.number().min(8).max(60), height: z.number().min(6).max(40) });
+const scatterShape = z.object({
+  rMin: z.number().min(0.3).max(4), rMax: z.number().min(0.3).max(4),
+  gapMin: z.number().min(0).max(6), gapMax: z.number().min(0).max(6),
+  spawnClearance: z.number().min(0).max(5), fieldMargin: z.number().min(0).max(3),
+  maxPlanets: z.number().int().min(1).max(24),
+});
+
 // ── Client → Server ──────────────────────────────────────────────────────────
 const join = z.object({ type: z.literal("join"), room: z.string(), name: z.string(), asSpectator: z.boolean().optional() });
 const reconnect = z.object({ type: z.literal("reconnect"), room: z.string(), playerId: z.string(), token: z.string() });
@@ -14,8 +23,12 @@ const configureRoom = z.object({
   rounds: z.union([z.literal(3), z.literal(5)]),
   noTurn: z.boolean(),
   turnSeconds: z.number().int().min(15).max(120),
+  map: mapShape.optional(),
+  scatter: scatterShape.optional(),
 });
-const clientSchema = z.discriminatedUnion("type", [join, startMatch, fireIntent, reconnect, configureRoom]);
+const switchTeam = z.object({ type: z.literal("switchTeam"), team: z.enum(["red", "blue"]) });
+const rerollArena = z.object({ type: z.literal("rerollArena") });
+const clientSchema = z.discriminatedUnion("type", [join, startMatch, fireIntent, reconnect, configureRoom, switchTeam, rerollArena]);
 export type ClientMessage = z.infer<typeof clientSchema>;
 
 // ── Server → Client ──────────────────────────────────────────────────────────
@@ -25,11 +38,14 @@ const lobbyState = z.object({
   players: z.array(z.object({ id: z.string(), name: z.string(), team: z.enum(["red", "blue"]) })),
   ownerId: z.string(),
   spectators: z.array(z.object({ id: z.string(), name: z.string() })),
+  round1Seed: z.number().optional(),
   config: z.object({
     mode: z.enum(["classic", "hp"]),
     rounds: z.union([z.literal(3), z.literal(5)]),
     noTurn: z.boolean(),
     turnSeconds: z.number(),
+    map: mapShape.optional(),
+    scatter: scatterShape.optional(),
   }).optional(),
 });
 const shotPlayback = z.object({
@@ -41,7 +57,8 @@ const shotPlayback = z.object({
 const matchStateMsg = z.object({ type: z.literal("matchState"), state: z.custom<MatchState>() });
 const errorMsg = z.object({ type: z.literal("error"), code: z.string(), message: z.string() });
 const peerStatus = z.object({ type: z.literal("peerStatus"), playerId: z.string(), name: z.string(), connected: z.boolean() });
-const serverSchema = z.discriminatedUnion("type", [joined, lobbyState, shotPlayback, matchStateMsg, errorMsg, peerStatus]);
+const matchStarting = z.object({ type: z.literal("matchStarting"), startAt: z.number() });
+const serverSchema = z.discriminatedUnion("type", [joined, lobbyState, shotPlayback, matchStateMsg, errorMsg, peerStatus, matchStarting]);
 export type ServerMessage = z.infer<typeof serverSchema>;
 
 export function parseClientMessage(raw: unknown): ClientMessage {
