@@ -65,17 +65,87 @@ body { font-family: var(--gw-font-sans); overflow: hidden; }
 .arena-frame { position: absolute; inset: 0; overflow: hidden; }
 .arena-stage { position: absolute; inset: 0; transform-origin: 50% 46%; }
 
-/* ── LocalFlow + ConfigPanel ────────────────────────────────────────────── */
+/* ── Arena shell — CSS grid of cards (arena-shell-redesign C1–C3) ─────────
+   ONE shared gutter token (--gw-gap) is reused as BOTH the grid `gap` and
+   the shell `padding`, so every gap — card-to-card and card-to-screen-edge
+   — is equal. Rows: MAP row shrinks to fit (minmax(0,1fr)); FOOTER row
+   grows for tall equations (minmax(--gw-footer-min, auto)). Columns: a
+   single column when settings are closed; a second column (SIDE PANEL)
+   opens without ever overlapping the map or footer. */
 .local-flow { position: absolute; inset: 0; }
 .online-flow { position: absolute; inset: 0; }
+.arena-shell {
+  display: grid;
+  gap: var(--gw-gap);
+  padding: var(--gw-gap);
+  grid-template-columns: 1fr;
+  grid-template-rows: minmax(0, 1fr) minmax(var(--gw-footer-min), auto);
+}
+.arena-shell--open { grid-template-columns: 1fr var(--gw-panel-w); }
+
+/* Card primitive shared by MAP / SIDE PANEL / FOOTER */
+.comp {
+  position: relative;
+  border: 2px solid var(--gw-border-strong);
+  border-radius: var(--gw-radius-xl);
+  background: var(--gw-surface);
+  min-height: 0; min-width: 0;
+}
+
+/* MAP card — transparent so the spacetime grid shows through; the renderer
+   canvas + drawn world-boundary rectangle live inside it (untouched here). */
+.comp.map-card {
+  grid-column: 1 / 2; grid-row: 1 / 2;
+  background: transparent;
+  overflow: hidden;
+}
+
+/* SIDE PANEL card — its own grid column; reserves a top strip so the fixed
+   gear (never part of the grid) sits visually on top of it. */
+.comp.side-panel {
+  grid-column: 2 / 3; grid-row: 1 / 2;
+  overflow-y: auto;
+  padding: 52px var(--gw-space-3) var(--gw-space-3);
+  display: flex; flex-direction: column; gap: var(--gw-space-3);
+}
+
+/* FOOTER card — spans the full width beneath the map (+ panel) */
+.comp.footer {
+  grid-column: 1 / -1; grid-row: 2 / 3;
+  display: flex; align-items: center; gap: var(--gw-space-3);
+  padding: 0 var(--gw-space-4);
+}
+.footer--ingame { justify-content: center; }
+.footer-sep { width: 1px; align-self: stretch; background: var(--gw-border); flex: none; }
+.footer-waiting { font-weight: 600; color: var(--gw-text-muted); }
+.footer-name { display: flex; align-items: center; gap: var(--gw-space-2); font-size: var(--gw-fs-xs); }
+.footer-name-input {
+  background: var(--gw-surface-2); border: 1px solid var(--gw-border);
+  border-radius: var(--gw-radius-sm); padding: 6px 10px; color: var(--gw-text);
+}
+
+/* Fixed config gear — a constant top-right SCREEN position; identical
+   whether the settings panel is open or closed; never moves with the map. */
+.gear {
+  position: absolute;
+  top: calc(var(--gw-gap) + 8px); right: calc(var(--gw-gap) + 8px);
+  z-index: 9; width: 38px; height: 38px; border-radius: 12px;
+  border: 2px solid var(--gw-accent); background: var(--gw-surface-2);
+  color: var(--gw-text); font-size: 17px; line-height: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* Room-code badge — out-of-flow (absolute) so it never becomes an implicit
+   grid item of .arena-shell; mirrors the gear's corner on the opposite side. */
+.net-room-code {
+  position: absolute;
+  top: calc(var(--gw-gap) + 8px); left: calc(var(--gw-gap) + 8px);
+  z-index: 6; display: flex; align-items: center; gap: var(--gw-space-2);
+}
+
+/* ── LocalFlow + ConfigPanel ────────────────────────────────────────────── */
 .seat { position: absolute; bottom: 18px; z-index: 6; font-size: var(--gw-fs-md); }
 .seat-red { left: 18px; } .seat-blue { right: 18px; }
-.config-drawer {
-  position: absolute; top: 0; right: 0; bottom: 0; z-index: 7; width: 340px;
-  overflow-y: auto; padding: var(--gw-space-4);
-  display: flex; flex-direction: column; gap: var(--gw-space-3);
-  background: linear-gradient(270deg, rgba(0,0,0,0.85), rgba(0,0,0,0.55));
-}
 .cfg-row { display: flex; gap: var(--gw-space-2); }
 .cfg-opt { flex: 1; display: flex; flex-direction: column; gap: 4px; cursor: pointer; font-weight: 700; }
 .cfg-opt small { color: var(--gw-text-faint); font-weight: 400; }
@@ -85,7 +155,6 @@ body { font-family: var(--gw-font-sans); overflow: hidden; }
   font-size: var(--gw-fs-xs); color: var(--gw-text-muted); }
 .cfg-seed { display: flex; align-items: center; justify-content: space-between; margin-top: var(--gw-space-2);
   font-family: var(--gw-font-mono); color: var(--gw-text-code); }
-.cfg-start { margin-top: var(--gw-space-3); }
 .gw-countdown { z-index: 20; background: rgba(0, 0, 0, 0.35); }
 .gw-countdown-num {
   font-size: 220px; font-weight: 900; color: var(--gw-text);

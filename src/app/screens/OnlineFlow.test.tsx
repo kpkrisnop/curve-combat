@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, act } from "@testing-library/react";
+import { render, screen, act, fireEvent } from "@testing-library/react";
 import { netLobbyStore, initialNetLobbyState } from "../net/netLobbyStore";
 import type { NetLobbyState } from "../net/netLobbyStore";
 import { OnlineFlow } from "./OnlineFlow";
@@ -108,8 +108,8 @@ describe("OnlineFlow", () => {
     // Guest ConfigPanel has readOnly → fieldset disabled
     const fieldset = document.querySelector("fieldset[disabled]");
     expect(fieldset).toBeTruthy();
-    // Guest sees waiting text
-    expect(screen.getByText(/Waiting for host to start/i)).toBeTruthy();
+    // Guest sees waiting text in the footer
+    expect(screen.getByText(/Waiting for host/i)).toBeTruthy();
     // Guest does NOT see Start button
     expect(screen.queryByRole("button", { name: /Start Match/i })).toBeNull();
   });
@@ -186,5 +186,55 @@ describe("OnlineFlow", () => {
     // The countdown num should be visible since startAt is in the future
     const countdownEl = document.querySelector(".gw-countdown-num");
     expect(countdownEl).toBeTruthy();
+  });
+
+  it("host sees the switch-side and copy controls in the full-width footer", async () => {
+    await act(async () => {
+      render(<OnlineFlow code="ROOM1" />);
+    });
+    act(() => {
+      setLobbyState({
+        phase: "lobby",
+        roomCode: "ROOM1",
+        players: BASE_PLAYERS,
+        myId: "r1",
+        hostId: "r1",
+        amHost: true,
+        amSpectator: false,
+      });
+    });
+    expect(document.querySelector(".comp.footer")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Switch side/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Copy code/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Copy link/i })).toBeTruthy();
+  });
+
+  it("gear toggles the settings panel as a second grid column, without moving the gear", async () => {
+    await act(async () => {
+      render(<OnlineFlow code="ROOM1" />);
+    });
+    act(() => {
+      setLobbyState({
+        phase: "lobby",
+        roomCode: "ROOM1",
+        players: BASE_PLAYERS,
+        myId: "r1",
+        hostId: "r1",
+        amHost: true,
+        amSpectator: false,
+      });
+    });
+
+    const shell = document.querySelector(".online-flow") as HTMLElement;
+    const gear = screen.getByRole("button", { name: /settings/i });
+    const gearClassBefore = gear.className;
+
+    expect(document.querySelector(".comp.side-panel")).toBeTruthy();
+    expect(shell.className).toContain("arena-shell--open");
+
+    fireEvent.click(gear);
+    expect(document.querySelector(".comp.side-panel")).toBeNull();
+    expect(shell.className).not.toContain("arena-shell--open");
+    expect(gear.className).toBe(gearClassBefore);
   });
 });

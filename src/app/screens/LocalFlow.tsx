@@ -5,7 +5,7 @@ import type { GameRenderer } from "../../game/GameRenderer";
 import { configToHash } from "../../game/configRouter";
 import { hudController } from "../hud/hudStore";
 import { ArenaStage } from "../arena/ArenaStage";
-import { HudBar } from "../hud/HudBar";
+import { Footer } from "../hud/Footer";
 import { HudOverlays } from "../hud/Overlays";
 import { ConfigPanel, type PanelConfig } from "./ConfigPanel";
 import { CountdownOverlay } from "./CountdownOverlay";
@@ -25,6 +25,7 @@ export function LocalFlow({ initial, autostart = false }: Props) {
     turnSeconds: initial.turnSeconds ?? 60, map: initial.map, scatter: initial.scatter,
   });
   const [seed, setSeed] = useState(newSeed);
+  const [settingsOpen, setSettingsOpen] = useState(true);
   const gameRef = useRef<LocalGame | null>(null);
 
   const toMatchConfig = (c: PanelConfig): MatchConfig =>
@@ -65,22 +66,44 @@ export function LocalFlow({ initial, autostart = false }: Props) {
     gameRef.current?.begin();
   };
 
+  const shellClass = [
+    "local-flow", "gw-layer", "arena-shell",
+    phase === "config" && settingsOpen ? "arena-shell--open" : "",
+  ].filter(Boolean).join(" ");
+
   return (
-    <div className="local-flow gw-layer">
-      <ArenaStage scale={phase === "play" ? 1 : 0.87} onReady={onReady} />
-      {phase === "config" && (
-        <>
-          {/* proto-HUD seats: same edges the player panels will occupy */}
-          <div className="seat seat-red gw-card">P1 · <b style={{ color: "var(--gw-red)" }}>RED</b></div>
-          <div className="seat seat-blue gw-card">P2 · <b style={{ color: "var(--gw-blue)" }}>BLUE</b></div>
-          <aside className="config-drawer">
-            <ConfigPanel value={config} onChange={onChange} seed={seed} onReroll={onReroll} />
-            <button className="gw-btn gw-btn--primary cfg-start" onClick={onStart}>▶ Start Match</button>
-          </aside>
-        </>
+    <div className={shellClass}>
+      <div className="comp map-card">
+        <ArenaStage scale={phase === "play" ? 1 : 0.87} onReady={onReady} />
+        {phase === "config" && (
+          <>
+            {/* proto-HUD seats: same edges the player panels will occupy */}
+            <div className="seat seat-red gw-card">P1 · <b style={{ color: "var(--gw-red)" }}>RED</b></div>
+            <div className="seat seat-blue gw-card">P2 · <b style={{ color: "var(--gw-blue)" }}>BLUE</b></div>
+          </>
+        )}
+      </div>
+
+      {phase === "config" && settingsOpen && (
+        <div className="comp side-panel">
+          <ConfigPanel value={config} onChange={onChange} seed={seed} onReroll={onReroll} />
+        </div>
       )}
+
+      {phase === "config" && (
+        <button
+          type="button"
+          className="gear"
+          aria-label={settingsOpen ? "Close settings" : "Open settings"}
+          onClick={() => setSettingsOpen((v) => !v)}
+        >
+          ⚙
+        </button>
+      )}
+
+      {phase === "config" && <Footer mode="pregame-local" onStart={onStart} />}
       {phase === "countdown" && <CountdownOverlay seconds={3} onDone={onCountdownDone} />}
-      {phase === "play" && (<><HudBar /><HudOverlays /></>)}
+      {phase === "play" && (<><Footer mode="ingame" /><HudOverlays /></>)}
     </div>
   );
 }

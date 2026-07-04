@@ -5,7 +5,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { ArenaStage } from "../arena/ArenaStage";
-import { HudBar } from "../hud/HudBar";
+import { Footer } from "../hud/Footer";
 import { HudOverlays } from "../hud/Overlays";
 import { TeamStrip } from "../hud/TeamStrip";
 import { hudController } from "../hud/hudStore";
@@ -16,7 +16,6 @@ import { ReconnectOverlays } from "../net/ReconnectOverlays";
 import { buildArenaPreview } from "../net/arenaPreview";
 import { getNickname } from "../net/nickname";
 import { useStore } from "../store";
-import { RosterColumns } from "./RosterColumns";
 import { ConfigPanel } from "./ConfigPanel";
 import { NetCountdown } from "./NetCountdown";
 import type { GameRenderer } from "../../game/GameRenderer";
@@ -36,14 +35,13 @@ export function OnlineFlow({ code }: Props) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startedRef = useRef(false);
 
-  // ── Drawer open/close state ────────────────────────────────────────────────
-  const [drawerOpen, setDrawerOpen] = useState(true);
+  // ── Settings panel open/close state (fixed gear toggles this) ─────────────
+  const [settingsOpen, setSettingsOpen] = useState(true);
 
   // ── Store subscriptions ────────────────────────────────────────────────────
   const phase = useStore(netLobbyStore, (s) => s.phase);
   const players = useStore(netLobbyStore, (s) => s.players);
   const myId = useStore(netLobbyStore, (s) => s.myId);
-  const hostId = useStore(netLobbyStore, (s) => s.hostId);
   const amHost = useStore(netLobbyStore, (s) => s.amHost);
   const amSpectator = useStore(netLobbyStore, (s) => s.amSpectator);
   const config = useStore(netLobbyStore, (s) => s.config);
@@ -62,6 +60,11 @@ export function OnlineFlow({ code }: Props) {
   const redCount = players.filter((p) => p.team === "red").length;
   const blueCount = players.filter((p) => p.team === "blue").length;
   const bothTeamsFilled = redCount >= 1 && blueCount >= 1;
+
+  // My roster entry in the LOBBY (distinct from `matchPlayers`-derived team below,
+  // which only exists once play starts).
+  const myLobbyTeam = players.find((p) => p.id === myId)?.team ?? null;
+  const myName = players.find((p) => p.id === myId)?.name ?? "";
 
   // ── Initialize store on mount ─────────────────────────────────────────────
   useEffect(() => {
@@ -185,9 +188,14 @@ export function OnlineFlow({ code }: Props) {
     netRef.current?.requestStart();
   }, []);
 
-  const onCopyLink = useCallback(() => {
-    void navigator.clipboard.writeText(`${location.origin}/#room=${roomCode}`);
-  }, [roomCode]);
+  // Footer's "⇄ Switch side" toggles to whichever team I'm not currently on.
+  // Reuses the existing sendSwitchTeam dispatch (already wired) — the actual
+  // setName/switchTeam re-preview coupling to A2's relayout is E2/E3's job;
+  // this is just the existing switch behavior relocated into the footer.
+  const onFooterSwitchSide = useCallback(() => {
+    if (!myLobbyTeam) return;
+    onSwitchTeam(myLobbyTeam === "red" ? "blue" : "red");
+  }, [myLobbyTeam, onSwitchTeam]);
 
   // ── Derive my team from matchPlayers (available in play phase) ───────────
   const myTeam = matchPlayers.find((p) => p.id === myId)?.team ?? null;
@@ -199,91 +207,74 @@ export function OnlineFlow({ code }: Props) {
   const isCountdown = phase === "countdown";
   const isPlay = phase === "play";
 
+  const shellClass = [
+    "online-flow", "gw-layer", "arena-shell",
+    isLobby && settingsOpen ? "arena-shell--open" : "",
+  ].filter(Boolean).join(" ");
+
   return (
-    <div className="online-flow gw-layer">
-      <ArenaStage scale={scale} onReady={onReady} />
+    <div className={shellClass}>
+      <div className="comp map-card">
+        <ArenaStage scale={scale} onReady={onReady} />
+      </div>
 
       {/* ── Lobby chrome ──────────────────────────────────────────────── */}
       {isLobby && (
         <>
-          {/* Room code + copy link */}
+          {/* Room code badge — out-of-flow, doesn't become a grid item */}
           <div className="net-room-code gw-card">
             <span className="net-room-code__label">Room</span>
             <span className="net-room-code__code">{roomCode}</span>
-            <button className="gw-btn" onClick={onCopyLink}>Copy link</button>
           </div>
 
-          {/* Roster columns */}
-          <div ref={configFlashRef}>
-            <RosterColumns
-              players={players}
-              myId={myId}
-              hostId={hostId}
-              locked={false}
-              onSwitch={onSwitchTeam}
-            />
-          </div>
-
-          {/* Config drawer */}
-          <aside className="config-drawer">
-            <div className="net-drawer-header">
-              <span className="gw-label">Arena Settings</span>
-              <button
-                className="gw-btn net-drawer-toggle"
-                onClick={() => setDrawerOpen((v) => !v)}
-                aria-label={drawerOpen ? "Collapse settings" : "Expand settings"}
-              >
-                {drawerOpen ? "▶" : "◀"}
-              </button>
+          {/* SIDE PANEL — arena settings, second grid column when open */}
+          {settingsOpen && (
+            <div className="comp side-panel" ref={configFlashRef}>
+              {amHost ? (
+                <>
+                  <ConfigPanel
+                    value={config}
+                    onChange={onConfigChange}
+                    seed={round1Seed ?? 0}
+                    onReroll={onReroll}
+                    hideSeedRow
+                  />
+                  <button className="gw-btn" onClick={onReroll}>Reroll terrain</button>
+                </>
+              ) : (
+                <ConfigPanel
+                  value={config}
+                  onChange={() => { /* guest: no-op */ }}
+                  seed={round1Seed ?? 0}
+                  onReroll={() => { /* guest: no-op */ }}
+                  readOnly
+                  hideSeedRow
+                />
+              )}
             </div>
+          )}
 
-            {drawerOpen && (
-              <>
-                {amHost ? (
-                  <>
-                    <ConfigPanel
-                      value={config}
-                      onChange={onConfigChange}
-                      seed={round1Seed ?? 0}
-                      onReroll={onReroll}
-                      hideSeedRow
-                    />
-                    <button
-                      className="gw-btn"
-                      onClick={onReroll}
-                    >
-                      Reroll terrain
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <ConfigPanel
-                      value={config}
-                      onChange={() => { /* guest: no-op */ }}
-                      seed={round1Seed ?? 0}
-                      onReroll={() => { /* guest: no-op */ }}
-                      readOnly
-                      hideSeedRow
-                    />
-                    <p className="net-waiting-text gw-text-muted">
-                      Waiting for host to start…
-                    </p>
-                  </>
-                )}
+          {/* Fixed config gear — constant top-right position, pre-game only */}
+          <button
+            type="button"
+            className="gear"
+            aria-label={settingsOpen ? "Close settings" : "Open settings"}
+            onClick={() => setSettingsOpen((v) => !v)}
+          >
+            ⚙
+          </button>
 
-                {/* Host-only Start button */}
-                {amHost && (
-                  <button
-                    className="gw-btn gw-btn--primary cfg-start"
-                    disabled={!bothTeamsFilled}
-                    onClick={onStart}
-                  >
-                    ▶ Start Match
-                  </button>
-                )}
-              </>
-            )}
-          </aside>
+          {/* FOOTER — Start (host) / Waiting… (guest), name, switch, copy */}
+          <Footer
+            mode="pregame-online"
+            isHost={amHost}
+            onStart={onStart}
+            startDisabled={!bothTeamsFilled}
+            name={myName}
+            onNameChange={() => { /* seam: setName dispatch lands here (E2) */ }}
+            onSwitchSide={onFooterSwitchSide}
+            roomCode={roomCode}
+          />
         </>
       )}
 
@@ -319,7 +310,7 @@ export function OnlineFlow({ code }: Props) {
             myId={myId}
             activePlayerId={matchActivePlayerId}
           />
-          <HudBar singleTeam={myTeam ?? undefined} />
+          <Footer mode="ingame" singleTeam={myTeam ?? undefined} />
           <HudOverlays />
           <ReconnectOverlays />
         </>
