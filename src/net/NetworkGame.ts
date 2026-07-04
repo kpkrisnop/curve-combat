@@ -4,8 +4,8 @@ import type { GameRenderer } from "../game/GameRenderer";
 import type { GameUiPort } from "../game/GameUiPort";
 import type { MatchState, Team } from "../game/matchState";
 import { computeDamage } from "../game/hpLogic";
-import { arenaDefaults } from "../game/arenaDefaults";
-import type { MatchConfig, ScatterConfig } from "../game/matchLogic";
+import type { ScatterConfig } from "../game/matchLogic";
+import { netLobbyStore } from "../app/net/netLobbyStore";
 
 export interface LobbySnapshot {
   players: { id: string; name: string; team: "red" | "blue" }[];
@@ -31,12 +31,9 @@ export class NetworkGame {
   private myTeam: Team | null = null;
   private myId: string | null = null;
   private myToken: string | null = null;
-  private ownerId: string | null = null;
-  private startBtn: HTMLButtonElement | null = null;
   private room = "";
   private name = "";
   private readonly boundClose = () => this.close();
-  private config: MatchConfig;
   private myBusy = false;
   private lobbyCallback: ((s: LobbySnapshot) => void) | null = null;
   private matchStartingCallback: ((startAt: number) => void) | null = null;
@@ -45,14 +42,7 @@ export class NetworkGame {
     private client: ServerClient,
     private renderer: GameRenderer,
     private ui: GameUiPort,
-    config?: Partial<MatchConfig>,
-  ) {
-    this.config = {
-      mode: "classic", rounds: 3, noTurn: false, turnSeconds: 60, role: "online",
-      ...arenaDefaults(),
-      ...config,
-    };
-  }
+  ) {}
 
   async start(room: string, name: string): Promise<void> {
     this.room = room;
@@ -64,24 +54,15 @@ export class NetworkGame {
       if (m.type !== "joined") return;
       this.myId = m.playerId;
       this.myToken = m.token;
-      this.ownerId = m.ownerId;
       if (m.token) this.storeSession();
-      this.maybeShowStartButton();
       this.client.setReconnectHandler(() =>
         this.client.send({ type: "reconnect", room: this.room, playerId: this.myId!, token: this.myToken! })
       );
     });
     this.client.on("lobbyState", (m) => {
       if (m.type !== "lobbyState") return;
-      this.ownerId = m.ownerId;
       const me = m.players.find((p) => p.id === this.myId);
       if (me) this.myTeam = me.team;
-      if (m.config) {
-        const modeLabel = m.config.mode === "hp" ? "HP Mode" : "Classic";
-        const noTurnLabel = m.config.noTurn ? " · No-Turn" : "";
-        this.ui.setStatus(`${modeLabel} · ${m.config.rounds} rounds · ${m.config.turnSeconds}s${noTurnLabel}`);
-      }
-      this.maybeShowStartButton();
       // Phase 3 event surface — build snapshot and fire callback
       if (this.lobbyCallback) {
         const snapshot: LobbySnapshot = {
@@ -119,7 +100,10 @@ export class NetworkGame {
     });
     this.client.on("matchState", (m) => {
       if (m.type !== "matchState") return;
-      this.removeStartButton();
+      // Server-authoritative phase flip: first matchState → "play"
+      if (netLobbyStore.get().phase !== "play") {
+        netLobbyStore.set({ phase: "play" });
+      }
       this.render(m.state);
     });
     this.client.on("peerStatus", (m) => {
@@ -217,34 +201,6 @@ export class NetworkGame {
       const s = JSON.parse(raw);
       return s.room === this.room && s.playerId && s.token ? { playerId: s.playerId, token: s.token } : null;
     } catch { return null; }
-  }
-
-  private maybeShowStartButton(): void {
-    if (this.startBtn) return;
-    if (!this.myId || !this.ownerId || this.myId !== this.ownerId) return;
-    const btn = document.createElement("button");
-    btn.textContent = "Start Match";
-    btn.style.cssText =
-      "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);" +
-      "padding:16px 32px;font-size:1.4rem;font-weight:bold;cursor:pointer;" +
-      "background:#e74c3c;color:#fff;border:none;border-radius:8px;z-index:9999;";
-    btn.addEventListener("click", () => {
-      this.client.send({
-        type: "configureRoom",
-        mode: this.config.mode,
-        rounds: this.config.rounds,
-        noTurn: this.config.noTurn,
-        turnSeconds: this.config.turnSeconds ?? 60,
-      });
-      this.client.send({ type: "startMatch" });
-      this.removeStartButton();
-    });
-    document.body.appendChild(btn);
-    this.startBtn = btn;
-  }
-
-  private removeStartButton(): void {
-    if (this.startBtn) { this.startBtn.remove(); this.startBtn = null; }
   }
 
   private render(state: MatchState): void {
