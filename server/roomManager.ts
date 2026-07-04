@@ -91,6 +91,15 @@ export class RoomManager {
     player.team = team;
   }
 
+  setName(code: string, playerId: string, name: string): void {
+    const room = this.rooms.get(code);
+    if (!room) throw new Error("no such room");
+    const player = room.players.find((p) => p.id === playerId);
+    if (!player) throw new Error("unknown player");
+    const trimmed = name.trim();
+    if (trimmed.length > 0) player.name = trimmed.slice(0, 24);
+  }
+
   startTTL(code: string, onExpire: () => void): void {
     const room = this.rooms.get(code);
     if (!room) return;

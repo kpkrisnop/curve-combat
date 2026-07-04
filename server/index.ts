@@ -163,6 +163,17 @@ export function createServer(port: number): { close: () => Promise<void> } {
         return;
       }
 
+      // ── setName ───────────────────────────────────────────────────────────
+      if (msg.type === "setName") {
+        try {
+          rooms.setName(room.code, conn.playerId, msg.name);
+          broadcast(room.code, rosterMsg(room));
+        } catch (e) {
+          send(ws, { type: "error", code: "set-name-failed", message: (e as Error).message });
+        }
+        return;
+      }
+
       // ── rerollArena ───────────────────────────────────────────────────────
       if (msg.type === "rerollArena") {
         try {

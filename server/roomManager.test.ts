@@ -235,4 +235,13 @@ describe("RoomManager NvN (ADR-0002)", () => {
     expect(s1.planets).toEqual(s2.planets);
     void w2; void b2;
   });
+
+  it("setName updates the player and ignores blank", () => {
+    const m = new RoomManager();
+    const { room, playerId } = m.join("WOLF", "default-1");
+    m.setName("WOLF", playerId, "Ada");
+    expect(room.players.find((p) => p.id === playerId)!.name).toBe("Ada");
+    m.setName("WOLF", playerId, "   ");
+    expect(room.players.find((p) => p.id === playerId)!.name).toBe("Ada");
+  });
 });

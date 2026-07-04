@@ -90,4 +90,9 @@ describe("protocol v2 (NvN + arena + countdown)", () => {
     });
     if (lobby.type === "lobbyState") expect(lobby.round1Seed).toBe(42);
   });
+
+  it("parses a setName client message", () => {
+    const msg = { type: "setName", name: "Ada" };
+    expect(parseClientMessage(msg)).toEqual(msg);
+  });
 });
