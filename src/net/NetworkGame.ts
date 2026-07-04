@@ -5,7 +5,23 @@ import type { GameUiPort } from "../game/GameUiPort";
 import type { MatchState, Team } from "../game/matchState";
 import { computeDamage } from "../game/hpLogic";
 import { arenaDefaults } from "../game/arenaDefaults";
-import type { MatchConfig } from "../game/matchLogic";
+import type { MatchConfig, ScatterConfig } from "../game/matchLogic";
+
+export interface LobbySnapshot {
+  players: { id: string; name: string; team: "red" | "blue" }[];
+  spectators: { id: string; name: string }[];
+  hostId: string;
+  myId: string | null;
+  config?: {
+    mode: "classic" | "hp";
+    rounds: 3 | 5;
+    noTurn: boolean;
+    turnSeconds: number;
+    map?: { width: number; height: number };
+    scatter?: ScatterConfig;
+  };
+  round1Seed?: number;
+}
 
 const SESSION_KEY = "graphwar-session";
 
@@ -22,6 +38,8 @@ export class NetworkGame {
   private readonly boundClose = () => this.close();
   private config: MatchConfig;
   private myBusy = false;
+  private lobbyCallback: ((s: LobbySnapshot) => void) | null = null;
+  private matchStartingCallback: ((startAt: number) => void) | null = null;
 
   constructor(
     private client: ServerClient,
@@ -64,6 +82,22 @@ export class NetworkGame {
         this.ui.setStatus(`${modeLabel} · ${m.config.rounds} rounds · ${m.config.turnSeconds}s${noTurnLabel}`);
       }
       this.maybeShowStartButton();
+      // Phase 3 event surface — build snapshot and fire callback
+      if (this.lobbyCallback) {
+        const snapshot: LobbySnapshot = {
+          players: m.players,
+          spectators: m.spectators,
+          hostId: m.ownerId,
+          myId: this.myId,
+          config: m.config as LobbySnapshot["config"],
+          round1Seed: m.round1Seed,
+        };
+        this.lobbyCallback(snapshot);
+      }
+    });
+    this.client.on("matchStarting", (m) => {
+      if (m.type !== "matchStarting") return;
+      this.matchStartingCallback?.(m.startAt);
     });
     this.client.on("shotPlayback", (m) => {
       if (m.type !== "shotPlayback") return;
@@ -117,6 +151,46 @@ export class NetworkGame {
     } else {
       this.client.send({ type: "join", room: this.room, name: this.name });
     }
+  }
+
+  // ── Phase 3 event surface ────────────────────────────────────────────────────
+  onLobby(cb: (s: LobbySnapshot) => void): void {
+    this.lobbyCallback = cb;
+  }
+
+  onMatchStarting(cb: (startAt: number) => void): void {
+    this.matchStartingCallback = cb;
+  }
+
+  sendConfigure(partial: {
+    mode: "classic" | "hp";
+    rounds: 3 | 5;
+    noTurn: boolean;
+    turnSeconds: number;
+    map?: { width: number; height: number };
+    scatter?: ScatterConfig;
+  }): void {
+    this.client.send({
+      type: "configureRoom",
+      mode: partial.mode,
+      rounds: partial.rounds,
+      noTurn: partial.noTurn,
+      turnSeconds: partial.turnSeconds,
+      ...(partial.map ? { map: partial.map } : {}),
+      ...(partial.scatter ? { scatter: partial.scatter } : {}),
+    });
+  }
+
+  sendSwitchTeam(team: "red" | "blue"): void {
+    this.client.send({ type: "switchTeam", team });
+  }
+
+  sendReroll(): void {
+    this.client.send({ type: "rerollArena" });
+  }
+
+  requestStart(): void {
+    this.client.send({ type: "startMatch" });
   }
 
   close(): void {

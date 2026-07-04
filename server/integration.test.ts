@@ -204,19 +204,221 @@ describe("server integration (Phase 2)", () => {
   });
 });
 
+describe("server integration (Phase 4 — lobby terrain, teams, countdown)", () => {
+  it("lobbyState carries round1Seed and config.map.width", async () => {
+    const port = 3950 + Math.floor(Math.random() * 50);
+    const server = createServer(port);
+    const a = await open(port), b = await open(port);
+
+    // Register listener on B before B sends join so we capture the broadcast
+    a.send(encode({ type: "join", room: "TERR", name: "Ann" }));
+    const aJoinedP = next(a, "joined");
+    const aLobbyP = next(a, "lobbyState"); // from B's join broadcast
+    await aJoinedP;
+
+    const bJoinedP = next(b, "joined");
+    const bLobbyP = next(b, "lobbyState");
+    b.send(encode({ type: "join", room: "TERR", name: "Bo" }));
+    const [, lobby] = await Promise.all([bJoinedP, bLobbyP, aLobbyP]);
+
+    expect(typeof (lobby as any).round1Seed).toBe("number");
+    expect((lobby as any).config?.map?.width).toBe(24);
+
+    a.close(); b.close();
+    await server.close();
+  });
+
+  it("switchTeam rebroadcasts lobbyState with updated team assignment", async () => {
+    const port = 4000 + Math.floor(Math.random() * 50);
+    const server = createServer(port);
+    const a = await open(port), b = await open(port);
+
+    // Join both players — register lobbyState listeners BEFORE sends to avoid races
+    const aJoinedP = next(a, "joined");
+    const aLobby1P = next(a, "lobbyState"); // A's own join
+    a.send(encode({ type: "join", room: "TEAM", name: "Ann" }));
+    await aJoinedP;
+    await aLobby1P;
+
+    const bJoinedP = next(b, "joined");
+    const aLobby2P = next(a, "lobbyState"); // B's join broadcast to A
+    const bLobby2P = next(b, "lobbyState"); // B's join broadcast to B
+    b.send(encode({ type: "join", room: "TEAM", name: "Bo" }));
+    const [bJoined] = await Promise.all([bJoinedP, aLobby2P, bLobby2P]);
+    const bId = (bJoined as any).playerId;
+
+    // Now switchTeam — register listeners before sending
+    const aRosterP = next(a, "lobbyState");
+    const bRosterP = next(b, "lobbyState");
+    b.send(encode({ type: "switchTeam", team: "red" }));
+
+    const [aRoster, bRoster] = await Promise.all([aRosterP, bRosterP]);
+    const bInA = (aRoster as any).players.find((p: any) => p.id === bId);
+    const bInB = (bRoster as any).players.find((p: any) => p.id === bId);
+    expect(bInA?.team).toBe("red");
+    expect(bInB?.team).toBe("red");
+
+    a.close(); b.close();
+    await server.close();
+  });
+
+  it("rerollArena: host changes seed; non-host gets reroll-failed error", async () => {
+    const port = 4050 + Math.floor(Math.random() * 50);
+    const server = createServer(port);
+    const a = await open(port), b = await open(port);
+
+    // Join A — capture A's own lobbyState
+    const aJoinedP = next(a, "joined");
+    const aLobby1P = next(a, "lobbyState");
+    a.send(encode({ type: "join", room: "ROLL", name: "Ann" }));
+    await aJoinedP;
+    await aLobby1P;
+
+    // Join B — capture lobbyState broadcast from B's join (goes to both A and B)
+    const bJoinedP = next(b, "joined");
+    const aLobby2P = next(a, "lobbyState");
+    const bLobby2P = next(b, "lobbyState");
+    b.send(encode({ type: "join", room: "ROLL", name: "Bo" }));
+    const [, firstLobbyFromA] = await Promise.all([bJoinedP, aLobby2P, bLobby2P]);
+    const s0 = (firstLobbyFromA as any).round1Seed as number;
+
+    // Host rerolls — both get updated lobbyState
+    const aNewP = next(a, "lobbyState");
+    const bNewP = next(b, "lobbyState");
+    a.send(encode({ type: "rerollArena" }));
+    const [aNew] = await Promise.all([aNewP, bNewP]);
+    expect((aNew as any).round1Seed).not.toBe(s0);
+
+    // Non-host rerolls — gets error
+    b.send(encode({ type: "rerollArena" }));
+    const err = await next(b, "error");
+    expect((err as any).code).toBe("reroll-failed");
+
+    a.close(); b.close();
+    await server.close();
+  });
+
+  it("startMatch is a countdown: matchStarting arrives before matchState", async () => {
+    const port = 4100 + Math.floor(Math.random() * 50);
+    const server = createServer(port);
+    const a = await open(port), b = await open(port);
+
+    // Join A
+    const aJoinedP = next(a, "joined");
+    const aLobby1P = next(a, "lobbyState");
+    a.send(encode({ type: "join", room: "CDN", name: "Ann" }));
+    await aJoinedP;
+    await aLobby1P;
+
+    // Join B — capture lobbyState with round1Seed from BOTH sockets
+    const bJoinedP = next(b, "joined");
+    const aLobby2P = next(a, "lobbyState");
+    const bLobby2P = next(b, "lobbyState");
+    b.send(encode({ type: "join", room: "CDN", name: "Bo" }));
+    const [, finalLobby] = await Promise.all([bJoinedP, aLobby2P, bLobby2P]);
+    const round1Seed = (finalLobby as any).round1Seed as number;
+
+    // Register matchStarting listeners before sending startMatch
+    const beforeStart = Date.now();
+    const aStartingP = next(a, "matchStarting");
+    const bStartingP = next(b, "matchStarting");
+    a.send(encode({ type: "startMatch" }));
+
+    const [aStarting, bStarting] = await Promise.all([aStartingP, bStartingP]);
+    const startAt = (aStarting as any).startAt as number;
+    expect(startAt).toBeGreaterThanOrEqual(beforeStart + 2500);
+    expect(startAt).toBeLessThanOrEqual(beforeStart + 3500);
+    void bStarting;
+
+    // Wait for matchState (real 3s countdown) — register listeners before countdown fires
+    const aMatchP = next(a, "matchState");
+    const bMatchP = next(b, "matchState");
+    const [aMatch, bMatch] = await Promise.all([aMatchP, bMatchP]);
+    expect((aMatch as any).state.phase).toBe("play");
+    void bMatch;
+
+    // Verify planets match generatePlanets(round1Seed, ...)
+    const { generatePlanets, computeSpawns, boundsFromMap } = await import("../src/sim/planetScatter");
+    const { DEFAULT_MAP, DEFAULT_SCATTER } = await import("../src/game/arenaDefaults");
+    const bounds = boundsFromMap(DEFAULT_MAP);
+    const spawns = computeSpawns(DEFAULT_MAP, 1);
+    const expectedPlanets = generatePlanets(round1Seed, bounds, spawns, DEFAULT_SCATTER);
+    expect((aMatch as any).state.planets).toEqual(expectedPlanets);
+
+    a.close(); b.close();
+    await server.close();
+  }, 8000);
+
+  it("late joiner during countdown becomes spectator (no asSpectator flag)", async () => {
+    const port = 4150 + Math.floor(Math.random() * 50);
+    const server = createServer(port);
+    const a = await open(port), b = await open(port);
+
+    // Join A
+    const aJoinedP = next(a, "joined");
+    const aLobby1P = next(a, "lobbyState");
+    a.send(encode({ type: "join", room: "LATE", name: "Ann" }));
+    await aJoinedP;
+    await aLobby1P;
+
+    // Join B
+    const bJoinedP = next(b, "joined");
+    const aLobby2P = next(a, "lobbyState");
+    const bLobby2P = next(b, "lobbyState");
+    b.send(encode({ type: "join", room: "LATE", name: "Bo" }));
+    await Promise.all([bJoinedP, aLobby2P, bLobby2P]);
+
+    // Start match — register matchStarting listeners first
+    const aStartingP = next(a, "matchStarting");
+    a.send(encode({ type: "startMatch" }));
+    await aStartingP;
+
+    // Third client joins with no asSpectator — should become spectator
+    const c = await open(port);
+    const cJoinedP = next(c, "joined");
+    const cLobbyP = next(c, "lobbyState");
+    c.send(encode({ type: "join", room: "LATE", name: "Eve" }));
+    const [cJoined, roster] = await Promise.all([cJoinedP, cLobbyP]);
+
+    expect((cJoined as any).playerId).toBeTruthy();
+    const spectIds = (roster as any).spectators.map((s: any) => s.id);
+    const playerIds = (roster as any).players.map((p: any) => p.id);
+    expect(spectIds).toContain((cJoined as any).playerId);
+    expect(playerIds).not.toContain((cJoined as any).playerId);
+
+    a.close(); b.close(); c.close();
+    await server.close();
+  });
+});
+
 describe("server integration (Phase 3)", () => {
   it("no-turn: both players can fire concurrently without mid-animation rejection", async () => {
     const port = 3850 + Math.floor(Math.random() * 100);
     const server = createServer(port);
     const a = await open(port), b = await open(port);
 
+    // Join A — drain A's own join lobbyState
+    const aJoinedP = next(a, "joined");
+    const aLobby1P = next(a, "lobbyState");
     a.send(encode({ type: "join", room: "NOTURN", name: "Ann" }));
-    await next(a, "joined");
+    await aJoinedP;
+    await aLobby1P;
+
+    // Join B — drain join broadcast lobbyStates
+    const bJoinedP = next(b, "joined");
+    const aLobby2P = next(a, "lobbyState");
+    const bLobby2P = next(b, "lobbyState");
     b.send(encode({ type: "join", room: "NOTURN", name: "Bo" }));
-    await next(b, "joined");
+    await Promise.all([bJoinedP, aLobby2P, bLobby2P]);
 
     // configureRoom then startMatch sent in order — server processes them sequentially
+    // configureRoom broadcasts lobbyState; drain it before waiting for matchState
+    const aConfigLobbyP = next(a, "lobbyState");
+    const bConfigLobbyP = next(b, "lobbyState");
     a.send(encode({ type: "configureRoom", mode: "classic", rounds: 3, noTurn: true, turnSeconds: 60 }));
+    await Promise.all([aConfigLobbyP, bConfigLobbyP]);
+
+    // Register matchState listeners before startMatch so we don't miss matchStarting
     const aStartP = next(a, "matchState");
     const bStartP = next(b, "matchState");
     a.send(encode({ type: "startMatch" }));
@@ -253,5 +455,5 @@ describe("server integration (Phase 3)", () => {
 
     a.close(); b.close();
     await server.close();
-  });
+  }, 10000);
 });

@@ -2,7 +2,7 @@
 import { timingSafeEqual, randomUUID } from "crypto";
 import { MatchEngine, type RoomPlayer } from "./matchEngine";
 import { arenaDefaults } from "../src/game/arenaDefaults";
-import type { MatchConfig } from "../src/game/matchLogic";
+import type { MatchConfig, MapConfig, ScatterConfig } from "../src/game/matchLogic";
 import type { MatchState, Team } from "../src/game/matchState";
 
 export interface Room {
@@ -15,12 +15,19 @@ export interface Room {
   graceTimers: Map<string, ReturnType<typeof setTimeout>>;
   ttlTimer: ReturnType<typeof setTimeout> | null;
   spectators: Array<{ id: string; name: string }>;
+  locked: boolean;
+  round1Seed: number;
 }
 
 let counter = 0;
 const nextId = () => `p${++counter}`;
 const TTL_MS = 10 * 60 * 1000;
 const GRACE_MS = 30 * 1000;
+const TEAM_CAP = 5;
+
+function mintSeed(): number {
+  return (Math.random() * 0xffffffff) >>> 0;
+}
 
 function safeEq(a: string, b: string): boolean {
   const ba = Buffer.from(a), bb = Buffer.from(b);
@@ -44,7 +51,6 @@ export class RoomManager {
 
   join(code: string, name: string): { room: Room; playerId: string; token: string } {
     const existing = this.rooms.get(code);
-    if (existing && existing.players.length >= 2) throw new Error("room full");
     let room = existing;
     const id = nextId();
     if (!room) {
@@ -54,14 +60,35 @@ export class RoomManager {
         engine: null,
         rejoinTokens: new Map(), graceTimers: new Map(),
         ttlTimer: null, spectators: [],
+        locked: false,
+        round1Seed: mintSeed(),
       };
       this.rooms.set(code, room);
     }
-    const team: Team = room.players.some((p) => p.team === "red") ? "blue" : "red";
+    // Guard: locked or engine running
+    if (room.locked || room.engine !== null) throw new Error("room locked");
+    // Guard: full (both teams at cap)
+    const redCount = room.players.filter((p) => p.team === "red").length;
+    const blueCount = room.players.filter((p) => p.team === "blue").length;
+    const smallerTeamCount = Math.min(redCount, blueCount);
+    if (smallerTeamCount >= TEAM_CAP) throw new Error("room full");
+    // Auto-place onto smaller team; red on tie
+    const team: Team = redCount <= blueCount ? "red" : "blue";
     room.players.push({ id, name, team });
     const token = randomUUID();
     room.rejoinTokens.set(id, token);
     return { room, playerId: id, token };
+  }
+
+  switchTeam(code: string, playerId: string, team: Team): void {
+    const room = this.rooms.get(code);
+    if (!room) throw new Error("no such room");
+    if (room.locked) throw new Error("room locked");
+    const player = room.players.find((p) => p.id === playerId);
+    if (!player) throw new Error("unknown player");
+    const targetCount = room.players.filter((p) => p.team === team).length;
+    if (targetCount >= TEAM_CAP) throw new Error("team full");
+    player.team = team;
   }
 
   startTTL(code: string, onExpire: () => void): void {
@@ -114,13 +141,50 @@ export class RoomManager {
   setConfig(
     code: string,
     byPlayerId: string,
-    partial: { mode: "classic" | "hp"; rounds: 3 | 5; noTurn: boolean; turnSeconds: number },
+    partial: {
+      mode: "classic" | "hp";
+      rounds: 3 | 5;
+      noTurn: boolean;
+      turnSeconds: number;
+      map?: MapConfig;
+      scatter?: ScatterConfig;
+    },
   ): void {
     const room = this.rooms.get(code);
     if (!room) throw new Error("no such room");
     if (room.ownerId !== byPlayerId) throw new Error("only the owner can configure");
+    if (room.locked) throw new Error("room locked");
     if (room.engine !== null) throw new Error("cannot configure after match starts");
+    const hadMap = "map" in partial;
+    const hadScatter = "scatter" in partial;
     room.config = { ...room.config, ...partial };
+    if (hadMap || hadScatter) {
+      room.round1Seed = mintSeed();
+    }
+  }
+
+  reroll(code: string, byPlayerId: string): number {
+    const room = this.rooms.get(code);
+    if (!room) throw new Error("no such room");
+    if (room.ownerId !== byPlayerId) throw new Error("only the host can reroll");
+    if (room.locked) throw new Error("room locked");
+    if (room.engine !== null) throw new Error("cannot reroll after match starts");
+    room.round1Seed = mintSeed();
+    return room.round1Seed;
+  }
+
+  lock(code: string): void {
+    const room = this.rooms.get(code);
+    if (!room) throw new Error("no such room");
+    room.locked = true;
+  }
+
+  canStart(code: string): boolean {
+    const room = this.rooms.get(code);
+    if (!room) return false;
+    const redCount = room.players.filter((p) => p.team === "red").length;
+    const blueCount = room.players.filter((p) => p.team === "blue").length;
+    return redCount >= 1 && blueCount >= 1;
   }
 
   start(code: string, byPlayerId: string): MatchState {
@@ -128,7 +192,21 @@ export class RoomManager {
     if (!room) throw new Error("no such room");
     if (room.ownerId !== byPlayerId) throw new Error("only the owner can start");
     if (room.engine !== null) throw new Error("match already in progress");
-    room.engine = new MatchEngine(room.config, room.players);
+    // Set teamSize to fit the larger team before building the engine
+    const redCount = room.players.filter((p) => p.team === "red").length;
+    const blueCount = room.players.filter((p) => p.team === "blue").length;
+    room.config.teamSize = Math.min(5, Math.max(redCount, blueCount)) as 1 | 2 | 3 | 4 | 5;
+    // Build seedFn: first call returns round1Seed, subsequent calls use random
+    let first: number | null = room.round1Seed;
+    const seedFn = (): number => {
+      if (first !== null) {
+        const s = first;
+        first = null as never;
+        return s;
+      }
+      return (Math.random() * 0xffffffff) >>> 0;
+    };
+    room.engine = new MatchEngine(room.config, room.players, seedFn);
     return room.engine.snapshot();
   }
 }
