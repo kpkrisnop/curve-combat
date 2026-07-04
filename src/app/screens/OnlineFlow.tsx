@@ -135,32 +135,10 @@ export function OnlineFlow({ code }: Props) {
     const unwire = bindNetworkGame(net, () => netLobbyStore.get().myId);
     unwireRef.current = unwire;
 
-    // Phase flip: matchState arrival → "play" (server-authoritative)
-    // NetworkGame.render() drives the visuals; we just flip the store phase.
-    // We hook into the "matchState" event via the client's on() before start().
-    // But NetworkGame doesn't expose that directly; instead we patch after start.
-    // The cleanest seam: onLobby/onMatchStarting are registered by bindNetworkGame.
-    // For matchState→play we attach a store flip inside start() via a wrapper.
-    // Since NetworkGame doesn't expose onMatchState, we use a getter from netLobbyStore.
-    // We flip in a requestAnimationFrame after NetworkGame renders.
-
-    void net.start(code, getNickname()).then(() => {
-      // After start, the "matchState" messages are handled by NetworkGame internally.
-      // We need to flip the store to "play" when the first matchState arrives.
-      // NetworkGame already calls render(); we need to also set the store phase.
-      // We inject a second "matchState" listener on the same client via a hack-free path:
-      // NetworkGame's client is private. Instead, we poll: once lastState is non-null,
-      // flip phase. But that's fragile.
-      //
-      // Best approach: patch netLobbyStore from within NetworkGame by registering an
-      // onMatchStarting-style hook. But NetworkGame doesn't have onMatchState exposed.
-      //
-      // We'll use the store's countdown→play flip by subscribing to the store phase.
-      // Phase flips to "play" from NetworkGame's "matchState" handler via a small
-      // store.set call we add there (done in NetworkGame.ts modification below).
-      // This comment documents the contract: NetworkGame.ts matchState handler also
-      // calls netLobbyStore.set({ phase: "play" }).
-    });
+    // The store phase flips to "play" on the first matchState — that flip lives in
+    // NetworkGame's matchState handler (netLobbyStore.set({ phase: "play" })), so it's
+    // server-authoritative and needs nothing wired here.
+    void net.start(code, getNickname());
 
     // Initial preview with current store state
     const { config: cfg, round1Seed: seed, players: pls, phase: ph } = netLobbyStore.get();
