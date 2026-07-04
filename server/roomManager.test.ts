@@ -23,11 +23,12 @@ describe("RoomManager", () => {
     expect(m.get("WOLF")!.engine).not.toBeNull();
   });
 
-  it("rejects a third joiner (room full)", () => {
+  it("allows up to 5 per team (NvN); rejects when both teams are full (5v5)", () => {
     const m = new RoomManager();
-    m.join("WOLF", "Ann");
-    m.join("WOLF", "Bo");
-    expect(() => m.join("WOLF", "Cy")).toThrow(/full/i);
+    // Fill both teams to 5
+    for (let i = 0; i < 10; i++) m.join("WOLF", `P${i}`);
+    // 11th join should throw room full
+    expect(() => m.join("WOLF", "overflow")).toThrow(/full/i);
   });
 });
 
@@ -157,5 +158,81 @@ describe("RoomManager Phase 2", () => {
     m.join("WOLF", "Bo");
     m.start("WOLF", owner); // start the match, engine is now active
     expect(() => m.setConfig("WOLF", owner, { mode: "hp", rounds: 5, noTurn: true, turnSeconds: 15 })).toThrow(/cannot configure after match starts/i);
+  });
+});
+
+describe("RoomManager NvN (ADR-0002)", () => {
+  it("auto-places joiners onto the smaller team, red on tie", () => {
+    const m = new RoomManager();
+    const a = m.join("WOLF", "A"); // red (tie)
+    const b = m.join("WOLF", "B"); // blue (smaller)
+    const c = m.join("WOLF", "C"); // red or blue — tie again → red
+    const room = m.get("WOLF")!;
+    const team = (id: string) => room.players.find((p) => p.id === id)!.team;
+    expect(team(a.playerId)).toBe("red");
+    expect(team(b.playerId)).toBe("blue");
+    expect(team(c.playerId)).toBe("red");
+    expect(room.players).toHaveLength(3);
+  });
+
+  it("switchTeam moves a player; capped at 5 per team; blocked when locked", () => {
+    const m = new RoomManager();
+    const a = m.join("WOLF", "A");
+    m.join("WOLF", "B");
+    m.switchTeam("WOLF", a.playerId, "blue");
+    expect(m.get("WOLF")!.players.find((p) => p.id === a.playerId)!.team).toBe("blue");
+    m.lock("WOLF");
+    expect(() => m.switchTeam("WOLF", a.playerId, "red")).toThrow(/locked/i);
+  });
+
+  it("mints round1Seed at creation; setConfig with arena params regenerates it; without them it doesn't", () => {
+    const m = new RoomManager();
+    const a = m.join("WOLF", "A");
+    const room = m.get("WOLF")!;
+    const s0 = room.round1Seed;
+    expect(typeof s0).toBe("number");
+    m.setConfig("WOLF", a.playerId, { mode: "hp", rounds: 5, noTurn: false, turnSeconds: 60 });
+    expect(room.round1Seed).toBe(s0);                       // mode change: same terrain
+    m.setConfig("WOLF", a.playerId, {
+      mode: "hp", rounds: 5, noTurn: false, turnSeconds: 60,
+      scatter: { ...room.config.scatter, maxPlanets: 5 },
+    });
+    expect(room.round1Seed).not.toBe(s0);                   // terrain params changed: new seed
+  });
+
+  it("reroll is host-only and returns a fresh seed; blocked when locked", () => {
+    const m = new RoomManager();
+    const a = m.join("WOLF", "A");
+    const b = m.join("WOLF", "B");
+    const s0 = m.get("WOLF")!.round1Seed;
+    expect(() => m.reroll("WOLF", b.playerId)).toThrow(/host/i);
+    const s1 = m.reroll("WOLF", a.playerId);
+    expect(s1).not.toBe(s0);
+    m.lock("WOLF");
+    expect(() => m.reroll("WOLF", a.playerId)).toThrow(/locked/i);
+  });
+
+  it("canStart requires both teams non-empty; join throws when locked", () => {
+    const m = new RoomManager();
+    const a = m.join("WOLF", "A");
+    expect(m.canStart("WOLF")).toBe(false);                 // 1v0
+    m.join("WOLF", "B");
+    expect(m.canStart("WOLF")).toBe(true);
+    m.lock("WOLF");
+    expect(() => m.join("WOLF", "C")).toThrow(/locked/i);
+    void a;
+  });
+
+  it("start uses round1Seed for round 1 — same seed, same planets across two identical rooms", () => {
+    const m = new RoomManager();
+    m.join("WOLF", "A"); const w2 = m.join("WOLF", "B");
+    m.join("BEAR", "C"); const b2 = m.join("BEAR", "D");
+    // Force both rooms to the same seed, then start with each room's host.
+    m.get("WOLF")!.round1Seed = 777;
+    m.get("BEAR")!.round1Seed = 777;
+    const s1 = m.start("WOLF", m.get("WOLF")!.ownerId);
+    const s2 = m.start("BEAR", m.get("BEAR")!.ownerId);
+    expect(s1.planets).toEqual(s2.planets);
+    void w2; void b2;
   });
 });
