@@ -18,7 +18,7 @@ export interface RendererPort {
     world: World,
     activeTurn: Team,
     players: PlayerState[],
-    opts: { phase: "pregame" | "ingame"; mode: MatchConfig["mode"] },
+    opts: { phase: "pregame" | "ingame"; mode: MatchConfig["mode"]; activePlayerId: string | null },
   ): void;
   setNoTurnMode(enabled: boolean): void;
   playShot(result: ShotResult, player?: Team): Promise<void>;
@@ -43,6 +43,10 @@ export class LocalGame {
   preview(config: MatchConfig, seed: number): void {
     if (this.started) return;
     this.config = config;
+    // Set before renderFrom() so the H3 isPlayerActive() check (noTurnMode ||
+    // p.id === activePlayerId) sees the right no-turn flag even for the
+    // pre-start preview render (begin() re-asserts this once play starts).
+    this.renderer.setNoTurnMode(config.noTurn);
     this.renderer.setMap(config.map);
     const bounds = this.renderer.getEffectiveBounds();
     const layout = buildLocalLayout(bounds, config, seed);
@@ -77,6 +81,7 @@ export class LocalGame {
     this.renderer.setWorld(worldFor(m, viewer), viewTeam, m.players, {
       phase: this.started ? "ingame" : "pregame",
       mode: this.config.mode,
+      activePlayerId: m.activePlayerId,
     });
   }
 

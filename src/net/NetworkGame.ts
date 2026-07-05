@@ -258,11 +258,17 @@ export class NetworkGame {
     const viewTeam: Team = this.myTeam ?? "red";
     const viewer = state.players.find((p) => p.team === viewTeam && p.alive) ?? red;
     this.renderer.setMap(state.config.map);
+    // H3 fix: the renderer's per-player glow/aim needs both the no-turn flag
+    // and the server-authoritative active PLAYER id — previously this was
+    // never set for online play, so isPlayerActive() fell back to comparing
+    // team only (highlighting an entire NvN team instead of the one shooter).
+    this.renderer.setNoTurnMode(state.config.noTurn);
     this.renderer.setWorld(
       { soldier: { pos: viewer.pos, dir: viewTeam === "red" ? 1 : -1 }, bounds: state.bounds,
         targets: state.players.filter((p) => p.team !== viewTeam && p.alive).map((p) => ({ id: p.id, pos: p.pos, radius: 0.1 })),
         planets: state.planets },
-      viewTeam, state.players, { phase: "ingame", mode: state.config.mode },
+      viewTeam, state.players,
+      { phase: "ingame", mode: state.config.mode, activePlayerId: state.activePlayerId },
     );
     const active = state.players.find((p) => p.id === state.activePlayerId);
     if (active) this.ui.setTurn(active.team);

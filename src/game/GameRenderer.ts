@@ -8,7 +8,15 @@ import { fitContain, boundaryRectPx } from "../sim/fitRect";
 import { X_VELOCITY_WORLD } from "../sim/timing";
 import type { PlayerState } from "./matchState";
 import { HP_MAX } from "./hpLogic";
-import { badgeText, badgeSize, hpFraction, showHpBar, type BadgePhase, type MatchMode } from "./badge";
+import {
+  badgeText,
+  badgeSize,
+  hpFraction,
+  showHpBar,
+  isPlayerActive,
+  type BadgePhase,
+  type MatchMode,
+} from "./badge";
 
 const COLORS = {
   bg: 0x0f141a,
@@ -55,6 +63,13 @@ export class GameRenderer {
   private world!: World;
   private activeTurn: "red" | "blue" = "red";
   private noTurnMode = false;
+  /**
+   * The single player whose turn it is (turn-based mode); null in no-turn
+   * mode or before any turn has been assigned. Drives per-player glow/aim —
+   * see isPlayerActive() in ./badge and its use in drawField(). This is the
+   * H3 fix: activity is a PLAYER identity, not a TEAM one.
+   */
+  private activePlayerId: string | null = null;
   /** Full soldier roster for the current round — drives both dots and badges. */
   private players: PlayerState[] = [];
   private badgePhase: BadgePhase = "pregame";
@@ -125,18 +140,25 @@ export class GameRenderer {
    * @param players Full soldier roster for the round (any NvN size) — every
    *   alive entry gets a dot + name badge; `opts.phase`/`opts.mode` control
    *   badge size and whether the HP bar shows (see src/game/badge.ts).
+   * @param opts.activePlayerId The single player whose turn it is (turn-based
+   *   mode), or null in no-turn mode / before a turn is assigned. Drives
+   *   which one player glows + shows an aim barrel (H3 fix — see
+   *   isPlayerActive() in ./badge). `activeTurn` above is kept only for
+   *   team-colored trail/fx bookkeeping in playShot(); it no longer decides
+   *   who is highlighted.
    */
   setWorld(
     world: World,
     activeTurn: "red" | "blue",
     players: PlayerState[],
-    opts: { phase: BadgePhase; mode: MatchMode },
+    opts: { phase: BadgePhase; mode: MatchMode; activePlayerId: string | null },
   ) {
     this.world = world;
     this.activeTurn = activeTurn;
     this.players = players;
     this.badgePhase = opts.phase;
     this.badgeMode = opts.mode;
+    this.activePlayerId = opts.activePlayerId;
     this.recomputeEffectiveBounds();
     this.trailLayerRed.clear();
     this.trailLayerBlue.clear();
@@ -292,7 +314,7 @@ export class GameRenderer {
     for (const p of this.players) {
       if (!p.alive) continue;
       const color = p.team === "red" ? COLORS.red : COLORS.blue;
-      const isActive = this.noTurnMode || this.activeTurn === p.team;
+      const isActive = isPlayerActive(p.id, this.activePlayerId, this.noTurnMode);
       const s = this.toScreen(p.pos);
 
       if (isActive) {

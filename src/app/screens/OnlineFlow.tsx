@@ -102,6 +102,10 @@ export function OnlineFlow({ code }: Props) {
     pls: typeof players,
   ) => {
     if (seed === null) return;
+    // H3 fix: pregame preview needs the same no-turn flag the live match uses
+    // so isPlayerActive() (src/game/badge.ts) glows the right dot(s) before
+    // any real turn has been assigned.
+    renderer.setNoTurnMode(cfg.noTurn);
     renderer.setMap(cfg.map);
     const bounds = renderer.getEffectiveBounds();
     const counts = {
@@ -124,6 +128,11 @@ export function OnlineFlow({ code }: Props) {
       return real ? { ...p, id: real.id, name: real.name } : p;
     });
 
+    // Pregame preview has no real turn yet — highlight only the first red
+    // player (mirrors round 1 always firing red-first) rather than the whole
+    // red team (see H3 fix in src/game/badge.ts:isPlayerActive).
+    const previewActivePlayerId = namedPlayers.find((p) => p.team === "red")?.id ?? null;
+
     renderer.setWorld(
       {
         soldier: { pos: redPlayer.pos, dir: 1 },
@@ -133,7 +142,7 @@ export function OnlineFlow({ code }: Props) {
       },
       "red",
       namedPlayers,
-      { phase: "pregame", mode: cfg.mode },
+      { phase: "pregame", mode: cfg.mode, activePlayerId: previewActivePlayerId },
     );
   }, []);
 

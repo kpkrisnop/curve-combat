@@ -5,7 +5,7 @@
 // what a badge shows and how big it is.
 
 import { describe, it, expect } from "vitest";
-import { badgeText, badgeSize, hpFraction, showHpBar } from "./badge";
+import { badgeText, badgeSize, hpFraction, showHpBar, isPlayerActive } from "./badge";
 
 describe("badgeText", () => {
   it("returns the trimmed name unchanged", () => {
@@ -47,5 +47,26 @@ describe("showHpBar", () => {
   it("shows only in HP mode, never in Classic", () => {
     expect(showHpBar("hp")).toBe(true);
     expect(showHpBar("classic")).toBe(false);
+  });
+});
+
+// ── H3 regression: highlight the single active player, not the whole team ──
+describe("isPlayerActive", () => {
+  it("no-turn mode: every player is active regardless of id", () => {
+    expect(isPlayerActive("p1", null, true)).toBe(true);
+    expect(isPlayerActive("p2", "p1", true)).toBe(true);
+  });
+
+  it("turn-based: only the matching active player id is active", () => {
+    expect(isPlayerActive("p1", "p1", false)).toBe(true);
+  });
+
+  it("turn-based: a teammate sharing the active team is NOT active (the H3 bug)", () => {
+    // p2 is on the same team as the active player p1, but it isn't p2's turn.
+    expect(isPlayerActive("p2", "p1", false)).toBe(false);
+  });
+
+  it("turn-based: no active player (null) means nobody is active", () => {
+    expect(isPlayerActive("p1", null, false)).toBe(false);
   });
 });

@@ -33,3 +33,20 @@ export function hpFraction(hp: number, maxHp: number): number {
 export function showHpBar(mode: MatchMode): boolean {
   return mode === "hp";
 }
+
+/**
+ * Whether a single player should render as "active" (glow + aim barrel).
+ *
+ * H3 fix: in turn-based NvN, activity is a PLAYER identity, not a TEAM one —
+ * exactly one player fires at a time, so a teammate sharing the active team
+ * must NOT glow just because their team is up. In no-turn mode every live
+ * player is simultaneously active. `activePlayerId` may be null (no turn
+ * assigned yet / match hasn't started), in which case nobody is active.
+ */
+export function isPlayerActive(
+  playerId: string,
+  activePlayerId: string | null,
+  noTurnMode: boolean,
+): boolean {
+  return noTurnMode || playerId === activePlayerId;
+}
