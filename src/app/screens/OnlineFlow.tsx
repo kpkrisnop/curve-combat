@@ -52,7 +52,10 @@ export function OnlineFlow({ code }: Props) {
   const matchPlayers = useStore(netLobbyStore, (s) => s.matchPlayers);
 
   // ── Config flash ref (for toggling CSS class) ─────────────────────────────
-  const configFlashRef = useRef<HTMLDivElement | null>(null);
+  // L2 fix: attached to the always-rendered gear button (not the
+  // conditionally-rendered .side-panel) so the cue fires even with the
+  // settings panel collapsed — see the gear button below.
+  const configFlashRef = useRef<HTMLButtonElement | null>(null);
   const prevFlashRef = useRef(0);
 
   // ── Team counts ────────────────────────────────────────────────────────────
@@ -119,13 +122,19 @@ export function OnlineFlow({ code }: Props) {
     // buildArenaPreview deals synthetic placeholder names/ids ("RED"/"r1"…) onto
     // spawn slots in team order (mirrors the server's left/right dealing) — swap
     // in the real roster names so pregame badges show actual player names.
+    //
+    // L1 fix: `counts` above is max(actual, 1) so spawn POSITIONS exist for a
+    // future joiner even when a side is empty — but a spawn slot with no real
+    // roster player must not render a dot/badge (per spec §7, only an actual
+    // joined player gets a soldier dot). Drop any layout player that has no
+    // matching roster entry instead of falling back to the placeholder.
     const redRoster = pls.filter((p) => p.team === "red");
     const blueRoster = pls.filter((p) => p.team === "blue");
     let ri = 0;
     let bi = 0;
-    const namedPlayers = layout.players.map((p) => {
+    const namedPlayers = layout.players.flatMap((p) => {
       const real = p.team === "red" ? redRoster[ri++] : blueRoster[bi++];
-      return real ? { ...p, id: real.id, name: real.name } : p;
+      return real ? [{ ...p, id: real.id, name: real.name }] : [];
     });
 
     // Pregame preview has no real turn yet — highlight only the first red
@@ -281,7 +290,7 @@ export function OnlineFlow({ code }: Props) {
 
           {/* SIDE PANEL — arena settings, second grid column when open */}
           {settingsOpen && (
-            <div className="comp side-panel" ref={configFlashRef}>
+            <div className="comp side-panel">
               {amHost ? (
                 <>
                   <ConfigPanel
@@ -306,10 +315,16 @@ export function OnlineFlow({ code }: Props) {
             </div>
           )}
 
-          {/* Fixed config gear — constant top-right position, pre-game only */}
+          {/* Fixed config gear — constant top-right position, pre-game only.
+              L2 fix: configFlashRef lives HERE (not on the conditionally-
+              rendered .comp.side-panel) so the config-change cue still fires
+              for a client with the settings panel collapsed — this button is
+              always in the DOM whenever isLobby is true, regardless of
+              settingsOpen. */}
           <button
             type="button"
             className="gear"
+            ref={configFlashRef}
             aria-label={settingsOpen ? "Close settings" : "Open settings"}
             onClick={() => setSettingsOpen((v) => !v)}
           >

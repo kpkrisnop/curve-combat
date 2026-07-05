@@ -37,6 +37,39 @@ const MIN_SHOT_MS = 200;
 const PLAYER_RADIUS_WORLD = 0.2;
 const BARREL_PX = 18;
 
+/**
+ * Detach and destroy every child of a Pixi layer (M4 fix). `removeChildren()`
+ * alone only detaches — it never frees the child's GPU-side resources
+ * (Text's rendered-glyph texture, Graphics' geometry context) — so a layer
+ * whose children are freshly `new Text()`/`new Graphics()`'d on every draw
+ * (badgeLayer's per-soldier badge groups, labelLayer's grid-label Text) leaks
+ * GPU memory over a long match if only `removeChildren()` is called.
+ *
+ * `textureSource: false` is deliberate, not an oversight: Pixi's text render
+ * pipe (node_modules/pixi.js CanvasTextPipe.js) pools/ref-counts the
+ * underlying canvas texture by a (text content + style) key via
+ * `canvasText.getManagedTexture()` — two Text objects with identical
+ * content+style (e.g. two same-named players) can share one GPU texture
+ * source. Forcing `textureSource: true` here would destroy that shared
+ * resource out from under any other live Text still using the same key.
+ * Destroying the object's own `texture` wrapper plus all children
+ * (`children: true` — Graphics.destroy() always frees its own owned
+ * geometry context regardless of these flags) releases everything this draw
+ * call exclusively owns, without touching anything shared/pooled.
+ *
+ * Never call this on a layer holding long-lived shared Graphics singletons
+ * that are only ever `.clear()`ed and redrawn in place (gridLayer,
+ * axisLayer, boundaryLayer, fieldLayer, trail/fx layers) — those must not be
+ * destroyed, only cleared.
+ */
+export function destroyLayerChildren(layer: {
+  removeChildren(): Array<{ destroy(options?: unknown): void }>;
+}): void {
+  for (const child of layer.removeChildren()) {
+    child.destroy({ children: true, texture: true, textureSource: false });
+  }
+}
+
 export class GameRenderer {
   readonly app = new Application();
   private camera!: Camera;
@@ -189,7 +222,7 @@ export class GameRenderer {
     const a = this.axisLayer;
     g.clear();
     a.clear();
-    this.labelLayer.removeChildren();
+    destroyLayerChildren(this.labelLayer);
 
     // The spacetime grid is ambient and paints the entire viewport — it is not
     // clipped to the world/play bounds. The play boundary is drawn separately
@@ -307,7 +340,7 @@ export class GameRenderer {
     const g = this.fieldLayer;
     const cam = this.camera;
     g.clear();
-    this.badgeLayer.removeChildren();
+    destroyLayerChildren(this.badgeLayer);
 
     const rPx = PLAYER_RADIUS_WORLD * cam.scale;
 
