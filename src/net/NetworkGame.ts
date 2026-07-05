@@ -87,14 +87,14 @@ export class NetworkGame {
     this.client.on("shotPlayback", (m) => {
       if (m.type !== "shotPlayback") return;
       void (async () => {
-        await this.renderer.playShot(m.shot);
+        const firer = this.lastState?.players.find((p) => p.id === m.firerId);
+        await this.renderer.playShot(m.shot, firer?.team);
         if (
           this.lastState?.config.mode === "hp" &&
           m.shot.hit.kind === "target" &&
           m.shot.hit.at
         ) {
           const dmg = computeDamage(m.shot.impactSlope);
-          const firer = this.lastState.players.find((p) => p.id === m.firerId);
           if (firer) {
             const targetTeam: Team = firer.team === "red" ? "blue" : "red";
             this.renderer.showFloatingDamage(m.shot.hit.at, dmg, targetTeam);
