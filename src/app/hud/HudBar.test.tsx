@@ -20,10 +20,11 @@ describe("HudBar", () => {
   beforeEach(() => hudStore.set(initialHudState()));
   afterEach(() => cleanup());
 
-  it("shows the scoreboard from store state", () => {
+  it("no longer shows a scoreboard inline (relocated to the top-center round-status overlay)", () => {
     render(<HudBar makeInput={makeInput} />);
     act(() => hudController.updateScoreboard(2, 1, 3, 5));
-    expect(screen.getByText(/Round 3\/5/)).toBeTruthy();
+    expect(document.querySelector(".scoreboard")).toBeNull();
+    expect(screen.queryByTestId("round-status")).toBeNull();
   });
 
   it("disables the inactive side's Fire button in turn-based mode", () => {
@@ -91,6 +92,16 @@ describe("HudBar — singleTeam prop", () => {
 describe("HudOverlays", () => {
   beforeEach(() => hudStore.set(initialHudState()));
   afterEach(() => cleanup());
+
+  it("renders a standalone top-center round-status element with round/best-of/score text", () => {
+    render(<HudOverlays />);
+    act(() => hudController.updateScoreboard(2, 1, 3, 5));
+    const el = screen.getByTestId("round-status");
+    expect(el.textContent).toContain("Round 3");
+    expect(el.textContent).toContain("Best of 5");
+    expect(el.textContent).toContain("2");
+    expect(el.textContent).toContain("1");
+  });
 
   it("win banner renders winner and Back to Lobby resets", () => {
     const reset = vi.fn();

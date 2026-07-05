@@ -33,28 +33,14 @@ function PlayerPanel({ team, makeInput }: { team: Team; makeInput?: () => any })
   );
 }
 
-function Scoreboard() {
-  const score = useStore(hudStore, (s) => s.score);
-  return (
-    <div className="scoreboard">
-      <span className="s-red">RED {score.red}</span> — <span className="s-blue">BLUE {score.blue}</span>
-      {" · "}Round {score.round}/{score.totalRounds}
-    </div>
-  );
-}
-
 export function HudBar({ makeInput, singleTeam }: { makeInput?: () => any; singleTeam?: Team }) {
   return (
     <div className="hud-bar">
       {singleTeam ? (
-        <>
-          <PlayerPanel team={singleTeam} makeInput={makeInput} />
-          <Scoreboard />
-        </>
+        <PlayerPanel team={singleTeam} makeInput={makeInput} />
       ) : (
         <>
           <PlayerPanel team="red" makeInput={makeInput} />
-          <Scoreboard />
           <PlayerPanel team="blue" makeInput={makeInput} />
         </>
       )}

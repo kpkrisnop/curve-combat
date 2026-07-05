@@ -57,4 +57,9 @@ describe("LocalFlow arena shell", () => {
     fireEvent.click(gear);
     expect(document.querySelector(".comp.side-panel")).toBeTruthy();
   });
+
+  it("does not render the top-center round-status element before the match starts (config phase)", () => {
+    render(<LocalFlow initial={initial} />);
+    expect(screen.queryByTestId("round-status")).toBeNull();
+  });
 });

@@ -1,6 +1,20 @@
 import { useStore } from "../store";
 import { hudStore, hudController } from "./hudStore";
 
+// Standalone top-center round/score readout (arena-shell-redesign D3, spec §9).
+// Relocated out of HudBar (was the in-flow `.scoreboard` inside the footer)
+// to a standalone element that floats top-center over the map. Rendered only
+// while HudOverlays is mounted, which callers (LocalFlow/OnlineFlow) already
+// gate to the in-game phase — never shown pre-game.
+function RoundStatus() {
+  const score = useStore(hudStore, (s) => s.score);
+  return (
+    <div className="round-status" data-testid="round-status">
+      Round {score.round} · Best of {score.totalRounds} — {score.red} : {score.blue}
+    </div>
+  );
+}
+
 function HpBars() {
   const hp = useStore(hudStore, (s) => s.hp);
   if (!hp.visible) return null;
@@ -60,5 +74,5 @@ function TutorialOverlay() {
 }
 
 export function HudOverlays() {
-  return (<><HpBars /><WinBanner /><RoundSplash /><TutorialOverlay /></>);
+  return (<><RoundStatus /><HpBars /><WinBanner /><RoundSplash /><TutorialOverlay /></>);
 }

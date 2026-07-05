@@ -1,7 +1,7 @@
 /* Embedded inside the FOOTER card (arena-shell-redesign C3) — in-flow, not an
    absolute viewport overlay, so the footer row can grow for tall equations. */
 .hud-bar {
-  display: grid; grid-template-columns: 1fr auto 1fr; gap: var(--gw-space-3);
+  display: grid; grid-template-columns: 1fr 1fr; gap: var(--gw-space-3);
   align-items: center; width: 100%;
 }
 .player-panel {
@@ -22,11 +22,16 @@
 .hud-timer.warn { color: #ffb020; }
 .hud-timer.crit { color: var(--gw-red); animation: gw-pulse 0.6s infinite alternate; }
 @keyframes gw-pulse { from { opacity: 1; } to { opacity: 0.4; } }
-.scoreboard { align-self: end; background: var(--gw-surface); border: 1px solid var(--gw-border);
-  border-radius: 999px; padding: 8px 18px; font-weight: 800; white-space: nowrap; }
-.scoreboard .s-red { color: var(--gw-red); } .scoreboard .s-blue { color: var(--gw-blue); }
-
 /* Overlays */
+/* Standalone top-center round/score readout (arena-shell-redesign D3, spec §9).
+   Floats over the MAP card — positioned relative to the arena shell (the
+   nearest positioned ancestor of HudOverlays' contents), which in-game spans
+   only the map column (no side panel), so top-center here == top-center of
+   the map. Not a bar: a single self-contained pill, in-game only. */
+.round-status { position: absolute; top: var(--gw-gap); left: 50%; transform: translateX(-50%);
+  z-index: 6; background: var(--gw-surface); border: 1px solid var(--gw-border);
+  border-radius: 999px; padding: 8px 18px; font-weight: 800; white-space: nowrap;
+  pointer-events: none; }
 .hp-overlay { position: absolute; top: 0; left: 0; right: 0; z-index: 5;
   display: flex; justify-content: space-between; pointer-events: none; }
 .hp-wrap { position: relative; width: 34%; height: 22px; background: var(--gw-surface-2);
