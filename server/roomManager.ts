@@ -4,6 +4,7 @@ import { MatchEngine, type RoomPlayer } from "./matchEngine";
 import { arenaDefaults } from "../src/game/arenaDefaults";
 import type { MatchConfig, MapConfig, ScatterConfig } from "../src/game/matchLogic";
 import type { MatchState, Team } from "../src/game/matchState";
+import { uniqueName } from "./uniqueName";
 
 export interface Room {
   code: string;
@@ -39,6 +40,14 @@ export class RoomManager {
   private rooms = new Map<string, Room>();
 
   get(code: string): Room | undefined { return this.rooms.get(code); }
+
+  /** Names already in use in a room (players + spectators), optionally excluding one player (for self-rename). */
+  private takenNames(room: Room, excludePlayerId?: string): string[] {
+    return [
+      ...room.players.filter((p) => p.id !== excludePlayerId).map((p) => p.name),
+      ...room.spectators.map((s) => s.name),
+    ];
+  }
 
   roundSeed(code: string): number {
     const room = this.rooms.get(code);
@@ -80,7 +89,8 @@ export class RoomManager {
     if (smallerTeamCount >= TEAM_CAP) throw new Error("room full");
     // Auto-place onto smaller team; red on tie
     const team: Team = redCount <= blueCount ? "red" : "blue";
-    room.players.push({ id, name, team });
+    const dedupedName = uniqueName(name, this.takenNames(room));
+    room.players.push({ id, name: dedupedName, team });
     const token = randomUUID();
     room.rejoinTokens.set(id, token);
     this.relayout(code);
@@ -115,7 +125,10 @@ export class RoomManager {
     const player = room.players.find((p) => p.id === playerId);
     if (!player) throw new Error("unknown player");
     const trimmed = name.trim();
-    if (trimmed.length > 0) player.name = trimmed.slice(0, 24);
+    if (trimmed.length === 0) return;
+    // takenNames excludes this player's own entry, so renaming to your own
+    // current name (or a case variant of it) never collides against yourself.
+    player.name = uniqueName(trimmed, this.takenNames(room, playerId));
   }
 
   startTTL(code: string, onExpire: () => void): void {
