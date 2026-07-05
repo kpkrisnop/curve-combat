@@ -193,6 +193,10 @@ export class NetworkGame {
     this.client.send({ type: "rerollArena" });
   }
 
+  sendSetName(name: string): void {
+    this.client.send({ type: "setName", name });
+  }
+
   requestStart(): void {
     this.client.send({ type: "startMatch" });
   }

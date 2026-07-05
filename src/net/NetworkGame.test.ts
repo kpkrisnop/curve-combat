@@ -249,4 +249,10 @@ describe("NetworkGame send helpers", () => {
     game.requestStart();
     expect(client.sent.at(-1)).toEqual({ type: "startMatch" });
   });
+
+  it("sendSetName sends { type: 'setName', name }", async () => {
+    const { game, client } = await makeGame();
+    game.sendSetName("NewName");
+    expect(client.sent.at(-1)).toEqual({ type: "setName", name: "NewName" });
+  });
 });

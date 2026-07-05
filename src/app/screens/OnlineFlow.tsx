@@ -32,6 +32,7 @@ export function OnlineFlow({ code }: Props) {
   const rendererRef = useRef<GameRenderer | null>(null);
   const unwireRef = useRef<(() => void) | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const nameDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startedRef = useRef(false);
 
   // ── Settings panel open/close state (fixed gear toggles this) ─────────────
@@ -74,6 +75,7 @@ export function OnlineFlow({ code }: Props) {
       netRef.current?.close();
       netRef.current = null;
       if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (nameDebounceRef.current) clearTimeout(nameDebounceRef.current);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code]);
@@ -199,6 +201,17 @@ export function OnlineFlow({ code }: Props) {
     netRef.current?.requestStart();
   }, []);
 
+  // Footer's Name input fires on every keystroke — debounce the setName
+  // dispatch so we don't flood the server with a message per character.
+  const onFooterNameChange = useCallback((name: string) => {
+    const net = netRef.current;
+    if (!net) return;
+    if (nameDebounceRef.current) clearTimeout(nameDebounceRef.current);
+    nameDebounceRef.current = setTimeout(() => {
+      net.sendSetName(name);
+    }, 300);
+  }, []);
+
   // Footer's "⇄ Switch side" toggles to whichever team I'm not currently on.
   // Reuses the existing sendSwitchTeam dispatch (already wired) — the actual
   // setName/switchTeam re-preview coupling to A2's relayout is E2/E3's job;
@@ -282,7 +295,7 @@ export function OnlineFlow({ code }: Props) {
             onStart={onStart}
             startDisabled={!bothTeamsFilled}
             name={myName}
-            onNameChange={() => { /* seam: setName dispatch lands here (E2) */ }}
+            onNameChange={onFooterNameChange}
             onSwitchSide={onFooterSwitchSide}
             roomCode={roomCode}
           />

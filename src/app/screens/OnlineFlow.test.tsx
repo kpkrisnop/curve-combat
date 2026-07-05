@@ -30,6 +30,7 @@ const mockNet = {
   sendConfigure: vi.fn(),
   sendSwitchTeam: vi.fn(),
   sendReroll: vi.fn(),
+  sendSetName: vi.fn(),
   requestStart: vi.fn(),
   onLobby: vi.fn(),
   onMatchStarting: vi.fn(),
@@ -236,5 +237,46 @@ describe("OnlineFlow", () => {
     expect(document.querySelector(".comp.side-panel")).toBeNull();
     expect(shell.className).not.toContain("arena-shell--open");
     expect(gear.className).toBe(gearClassBefore);
+  });
+
+  it("joins with the default nickname from getNickname()", async () => {
+    await act(async () => {
+      render(<OnlineFlow code="ROOM1" />);
+    });
+    expect(mockNet.start).toHaveBeenCalledWith("ROOM1", "TestPlayer");
+  });
+
+  it("debounces footer name changes before calling sendSetName", async () => {
+    vi.useFakeTimers();
+    render(<OnlineFlow code="ROOM1" />);
+    act(() => {
+      setLobbyState({
+        phase: "lobby",
+        roomCode: "ROOM1",
+        players: BASE_PLAYERS,
+        myId: "r1",
+        hostId: "r1",
+        amHost: true,
+        amSpectator: false,
+      });
+    });
+
+    const nameInput = document.querySelector(".footer-name-input") as HTMLInputElement;
+    expect(nameInput).toBeTruthy();
+
+    fireEvent.change(nameInput, { target: { value: "Alicia" } });
+    expect(mockNet.sendSetName).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(299);
+    });
+    expect(mockNet.sendSetName).not.toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(1);
+    });
+    expect(mockNet.sendSetName).toHaveBeenCalledWith("Alicia");
+
+    vi.useRealTimers();
   });
 });
