@@ -40,7 +40,7 @@ export interface RoundLayout {
 }
 
 /** Collision + draw radius for a player-as-target, world units. */
-export const PLAYER_RADIUS = 0.1;
+export const PLAYER_RADIUS = 0.2;
 /** Radius of the crater carved into a planet on impact, world units. */
 export const CRATER_RADIUS = 0.8;
 

@@ -6,7 +6,7 @@ import { DEFAULT_MAP } from "./arenaDefaults";
 import { boundsFromMap } from "../sim/planetScatter";
 import { fitContain, boundaryRectPx } from "../sim/fitRect";
 import { X_VELOCITY_WORLD } from "../sim/timing";
-import type { PlayerState } from "./matchState";
+import { PLAYER_RADIUS, type PlayerState } from "./matchState";
 import { HP_MAX } from "./hpLogic";
 import {
   badgeText,
@@ -34,7 +34,6 @@ const COLORS = {
 
 /** Minimum animation duration in ms — prevents instant flicker on zero-length shots. */
 const MIN_SHOT_MS = 200;
-const PLAYER_RADIUS_WORLD = 0.2;
 const BARREL_PX = 18;
 
 /**
@@ -342,7 +341,7 @@ export class GameRenderer {
     g.clear();
     destroyLayerChildren(this.badgeLayer);
 
-    const rPx = PLAYER_RADIUS_WORLD * cam.scale;
+    const rPx = PLAYER_RADIUS * cam.scale;
 
     for (const p of this.players) {
       if (!p.alive) continue;

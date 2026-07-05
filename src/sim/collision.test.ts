@@ -61,6 +61,21 @@ describe("detectCollision — first hit over the sample stream", () => {
     expect(hit.kind).toBe("expired"); // muzzle-adjacent target is not detonated
   });
 
+  it("hits a target grazed at 0.15 off-center — within the player's 0.2 hitbox but outside the old 0.1 one", () => {
+    // Regression pin for the dot/hitbox unification: PLAYER_RADIUS grew from 0.1
+    // to 0.2 to match the drawn dot, so a graze in (0.1, 0.2] now registers.
+    const samples = line([[0, 0], [2, 0], [4, 0], [6, 0], [8, 0], [10, 0]]);
+    const grazed = { id: "b1", pos: { x: 5, y: 0.15 }, radius: 0.2 };
+    const hit = detectCollision(samples, world([grazed]));
+    expect(hit.kind).toBe("target");
+    expect(hit.targetId).toBe("b1");
+
+    // Same graze distance would have missed under the old, undersized radius.
+    const oldRadius = { ...grazed, radius: 0.1 };
+    const missed = detectCollision(samples, world([oldRadius]));
+    expect(missed.kind).toBe("expired");
+  });
+
   it("does not connect a hit across a gap in the path", () => {
     const samples = line(
       [[0, 0], [1, 0], [2, 0]],
