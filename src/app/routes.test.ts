@@ -25,8 +25,8 @@ describe("parseRoute", () => {
   it("#room= with empty code → landing", () => {
     expect(parseRoute("#room=").screen).toBe("landing");
   });
-  it("#online → online", () => {
-    expect(parseRoute("#online").screen).toBe("online");
+  it("#online → landing with online panel open", () => {
+    expect(parseRoute("#online")).toEqual({ screen: "landing", onlinePanelOpen: true });
   });
   it("#join → join", () => {
     expect(parseRoute("#join").screen).toBe("join");
