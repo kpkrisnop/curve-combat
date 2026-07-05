@@ -116,7 +116,9 @@ export class LocalGame {
         this.match = skipTurn(this.match);
         const viewTeam: Team = this.match.activePlayerId
           ? playerById(this.match, this.match.activePlayerId)!.team : "red";
-        this.ui.setTurn(viewTeam, "");
+        // Don't wipe the timed-out player's equation — like a normal fire, they
+        // keep what they typed so they can resume aiming next turn (see onFire).
+        this.ui.setTurn(viewTeam);
         this.armTimer();
       } else {
         this.cancelTimer();

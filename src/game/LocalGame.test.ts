@@ -95,13 +95,15 @@ describe("LocalGame", () => {
     g.dispose();
   });
 
-  it("timer expiry skips the turn to the other player", () => {
+  it("timer expiry skips the turn to the other player without wiping their input", () => {
     const r = fakeRenderer(); const ui = fakeUi();
     const g = new LocalGame(r as never, ui);
     g.preview({ ...cfg, turnSeconds: 15 }, 42);
     g.begin();
+    ui.inputs.red = "x^2"; // red was mid-typing when the clock ran out
     vi.advanceTimersByTime(15_000);
-    expect(ui.setTurn).toHaveBeenLastCalledWith("blue", "");
+    expect(ui.setTurn).toHaveBeenLastCalledWith("blue"); // no wiping "" arg
+    expect(ui.inputs.red).toBe("x^2"); // timed-out player keeps their equation
     g.dispose();
   });
 
