@@ -279,4 +279,85 @@ describe("OnlineFlow", () => {
 
     vi.useRealTimers();
   });
+
+  // ── E3 regression: footer Switch side dispatch ────────────────────────────
+
+  it("footer Switch side dispatches sendSwitchTeam for the opposite team", async () => {
+    await act(async () => {
+      render(<OnlineFlow code="ROOM1" />);
+    });
+    act(() => {
+      setLobbyState({
+        phase: "lobby",
+        roomCode: "ROOM1",
+        players: BASE_PLAYERS,
+        myId: "r1", // r1 is on "red"
+        hostId: "r1",
+        amHost: true,
+        amSpectator: false,
+      });
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Switch side/i }));
+    expect(mockNet.sendSwitchTeam).toHaveBeenCalledWith("blue");
+  });
+
+  it("switching is allowed even when it would empty the source side (no min-side guard)", async () => {
+    await act(async () => {
+      render(<OnlineFlow code="ROOM1" />);
+    });
+    act(() => {
+      // Sole red player — switching would leave "red" empty. Per §8 this must
+      // still be allowed client-side.
+      setLobbyState({
+        phase: "lobby",
+        roomCode: "ROOM1",
+        players: [{ id: "r1", name: "Alice", team: "red" }],
+        myId: "r1",
+        hostId: "r1",
+        amHost: true,
+        amSpectator: false,
+      });
+    });
+
+    const switchBtn = screen.getByRole("button", { name: /Switch side/i });
+    expect((switchBtn as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(switchBtn);
+    expect(mockNet.sendSwitchTeam).toHaveBeenCalledWith("blue");
+  });
+
+  // ── E3 regression: re-preview on reroll seed change ───────────────────────
+
+  it("a lobbyState with a changed round1Seed (same players) rebuilds the arena preview", async () => {
+    await act(async () => {
+      render(<OnlineFlow code="ROOM1" />);
+    });
+    act(() => {
+      setLobbyState({
+        phase: "lobby",
+        roomCode: "ROOM1",
+        players: BASE_PLAYERS,
+        myId: "r1",
+        hostId: "r1",
+        amHost: true,
+        amSpectator: false,
+        round1Seed: 111,
+      });
+    });
+
+    const callsBefore = fakeRenderer.setWorld.mock.calls.length;
+    expect(callsBefore).toBeGreaterThan(0);
+    const firstWorld = fakeRenderer.setWorld.mock.calls[callsBefore - 1][0];
+
+    // Simulate the server broadcasting a relayout'd lobbyState after ANY
+    // roster change (join/leave/switchTeam) — same roster, new seed only.
+    act(() => {
+      netLobbyStore.set({ round1Seed: 222 });
+    });
+
+    expect(fakeRenderer.setWorld.mock.calls.length).toBe(callsBefore + 1);
+    const secondWorld = fakeRenderer.setWorld.mock.calls[callsBefore][0];
+    // Terrain (planets) is reseeded — the new preview must not be a stale copy.
+    expect(secondWorld.planets).not.toEqual(firstWorld.planets);
+  });
 });
