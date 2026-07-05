@@ -268,7 +268,12 @@ export class NetworkGame {
         targets: state.players.filter((p) => p.team !== viewTeam && p.alive).map((p) => ({ id: p.id, pos: p.pos, radius: 0.1 })),
         planets: state.planets },
       viewTeam, state.players,
-      { phase: "ingame", mode: state.config.mode, activePlayerId: state.activePlayerId },
+      {
+        phase: "ingame",
+        mode: state.config.mode,
+        activePlayerId: state.activePlayerId,
+        scatter: state.config.scatter,
+      },
     );
     const active = state.players.find((p) => p.id === state.activePlayerId);
     if (active) this.ui.setTurn(active.team);

@@ -22,6 +22,33 @@ export function boundsFromMap(map: MapConfig): Bounds {
   return { minX: -map.width / 2, maxX: map.width / 2, minY: -map.height / 2, maxY: map.height / 2 };
 }
 
+/** One side's spawn-zone rectangle, in world coordinates (sign < 0 = left/red, sign > 0 = right/blue). */
+export interface SpawnZoneRect {
+  sign: -1 | 1;
+  xLo: number;
+  xHi: number;
+  yLo: number;
+  yHi: number;
+}
+
+/**
+ * Per-side spawn-zone rectangles derived from map bounds + the four spawn params
+ * on `scatter` (spawnEdgeGap, spawnBandX, spawnYMargin) — the same rectangle
+ * `computeSpawns` rejection-samples inside, exposed separately (pure, no PRNG)
+ * so the pre-game margin-guide overlay (GameRenderer.drawGuides) can draw it
+ * without duplicating computeSpawns' sampling logic.
+ */
+export function spawnZoneRects(bounds: Bounds, scatter: ScatterConfig): SpawnZoneRect[] {
+  const xHiMag = bounds.maxX - scatter.spawnEdgeGap;
+  const xLoMag = Math.max(0, xHiMag - scatter.spawnBandX);
+  const yLo = bounds.minY + scatter.spawnYMargin;
+  const yHi = bounds.maxY - scatter.spawnYMargin;
+  return [
+    { sign: -1, xLo: -xHiMag, xHi: -xLoMag, yLo, yHi },
+    { sign: 1, xLo: xLoMag, xHi: xHiMag, yLo, yHi },
+  ];
+}
+
 /**
  * Seed-driven, always mirror-symmetric player spawns. Per side, rejection-samples
  * `teamSize` points inside a rectangular zone derived from the map bounds and the

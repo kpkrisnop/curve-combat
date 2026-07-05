@@ -5,6 +5,7 @@ import {
   computeSpawns,
   generatePlanets,
   generatePlanetsWithStats,
+  spawnZoneRects,
 } from "./planetScatter";
 import { DEFAULT_MAP, DEFAULT_SCATTER } from "../game/arenaDefaults";
 import type { Vec2 } from "./types";
@@ -97,6 +98,38 @@ describe("computeSpawns — seeded, in-zone, mirror-symmetric", () => {
     const s = computeSpawns(DEFAULT_MAP, 5, tight, 5);
     expect(s.filter((p) => p.x < 0)).toHaveLength(5);
     expect(s.filter((p) => p.x > 0)).toHaveLength(5);
+  });
+});
+
+describe("spawnZoneRects — geometry backing the pre-game margin guides", () => {
+  it("matches the same xLo/xHi/yLo/yHi computeSpawns samples inside", () => {
+    const map = DEFAULT_MAP;
+    const scatter = DEFAULT_SCATTER;
+    const b = boundsFromMap(map);
+    const xHiMag = b.maxX - scatter.spawnEdgeGap;
+    const xLoMag = Math.max(0, xHiMag - scatter.spawnBandX);
+    const yLo = b.minY + scatter.spawnYMargin;
+    const yHi = b.maxY - scatter.spawnYMargin;
+
+    const [left, right] = spawnZoneRects(b, scatter);
+    expect(left).toEqual({ sign: -1, xLo: -xHiMag, xHi: -xLoMag, yLo, yHi });
+    expect(right).toEqual({ sign: 1, xLo: xLoMag, xHi: xHiMag, yLo, yHi });
+  });
+
+  it("mirrors left and right around x=0", () => {
+    const b = boundsFromMap(DEFAULT_MAP);
+    const [left, right] = spawnZoneRects(b, DEFAULT_SCATTER);
+    expect(right.xLo).toBeCloseTo(-left.xHi, 9);
+    expect(right.xHi).toBeCloseTo(-left.xLo, 9);
+    expect(right.yLo).toBe(left.yLo);
+    expect(right.yHi).toBe(left.yHi);
+  });
+
+  it("clamps the inner edge (xLo magnitude) at 0 when bandX overruns the outer edge", () => {
+    const b = boundsFromMap(DEFAULT_MAP);
+    const wide = { ...DEFAULT_SCATTER, spawnBandX: 999 };
+    const [, right] = spawnZoneRects(b, wide);
+    expect(right.xLo).toBe(0);
   });
 });
 

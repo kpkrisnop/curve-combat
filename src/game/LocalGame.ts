@@ -1,6 +1,6 @@
 // src/game/LocalGame.ts
 import type { GameUiPort } from "./GameUiPort";
-import type { MatchConfig, MapConfig } from "./matchLogic";
+import type { MatchConfig, MapConfig, ScatterConfig } from "./matchLogic";
 import { firstShooterNextRound } from "./matchLogic";
 import {
   createMatch, beginRound, worldFor, playerById, skipTurn,
@@ -18,7 +18,12 @@ export interface RendererPort {
     world: World,
     activeTurn: Team,
     players: PlayerState[],
-    opts: { phase: "pregame" | "ingame"; mode: MatchConfig["mode"]; activePlayerId: string | null },
+    opts: {
+      phase: "pregame" | "ingame";
+      mode: MatchConfig["mode"];
+      activePlayerId: string | null;
+      scatter?: ScatterConfig;
+    },
   ): void;
   setNoTurnMode(enabled: boolean): void;
   playShot(result: ShotResult, player?: Team): Promise<void>;
@@ -60,6 +65,13 @@ export class LocalGame {
     this.started = true;
     this.renderer.setNoTurnMode(this.config.noTurn);
     if (this.config.noTurn) this.ui.setNoTurnMode(true);
+    // Re-render now that `started` flipped: setWorld's phase (badgeSize +
+    // the S3 pre-game margin guides) is otherwise stale until the first
+    // onFire()/renderFrom() call after countdown, which briefly left large
+    // badges and the guide overlay visible into the live match.
+    const viewTeam: Team = this.match.activePlayerId
+      ? playerById(this.match, this.match.activePlayerId)!.team : "red";
+    this.renderFrom(this.match, viewTeam);
     this.initRoundHud();
     if (localStorage.getItem("graphwar.tutorialDone") !== "1") this.runTutorial();
     else this.ui.focus();
@@ -82,6 +94,7 @@ export class LocalGame {
       phase: this.started ? "ingame" : "pregame",
       mode: this.config.mode,
       activePlayerId: m.activePlayerId,
+      scatter: this.config.scatter,
     });
   }
 

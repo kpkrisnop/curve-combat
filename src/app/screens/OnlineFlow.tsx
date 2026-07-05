@@ -151,7 +151,7 @@ export function OnlineFlow({ code }: Props) {
       },
       "red",
       namedPlayers,
-      { phase: "pregame", mode: cfg.mode, activePlayerId: previewActivePlayerId },
+      { phase: "pregame", mode: cfg.mode, activePlayerId: previewActivePlayerId, scatter: cfg.scatter },
     );
   }, []);
 

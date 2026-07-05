@@ -1,9 +1,9 @@
 import { Application, Container, Graphics, RenderTexture, Sprite, Text } from "pixi.js";
 import { Camera } from "../graph/Camera";
 import type { Bounds, ShotResult, Vec2, World } from "../sim/types";
-import type { MapConfig } from "./matchLogic";
+import type { MapConfig, ScatterConfig } from "./matchLogic";
 import { DEFAULT_MAP } from "./arenaDefaults";
-import { boundsFromMap } from "../sim/planetScatter";
+import { boundsFromMap, spawnZoneRects } from "../sim/planetScatter";
 import { fitContain, boundaryRectPx } from "../sim/fitRect";
 import { X_VELOCITY_WORLD } from "../sim/timing";
 import { PLAYER_RADIUS, type PlayerState } from "./matchState";
@@ -30,6 +30,14 @@ const COLORS = {
   boom: 0xffc24d,
   planet: 0x3a4250,
   dust: 0xb59a78,
+};
+
+/** Colors for the pre-game margin guides that aren't team-tinted (Task S3). */
+const GUIDE_COLORS = {
+  /** Field-margin box — grey. */
+  margin: 0x96aacd,
+  /** Spawn separation ring — whitish. */
+  separation: 0xdce4f5,
 };
 
 /** Minimum animation duration in ms — prevents instant flicker on zero-length shots. */
@@ -77,6 +85,14 @@ export class GameRenderer {
   private axisLayer = new Graphics();
   private labelLayer = new Container();
   private boundaryLayer = new Graphics();
+  /**
+   * Ambient pre-game "margin guide" overlay (Task S3) — spawn zone rects,
+   * spawn clearance/separation rings, and the field-margin box. Wordless,
+   * only ever drawn while `badgePhase === "pregame"` (see drawGuides());
+   * cleared and left empty once the match starts. Sits behind planetLayer
+   * so planets can visually overlap the guides, same as the prototype.
+   */
+  private guideLayer = new Graphics();
   private planetLayer = new Container();
   private planetTextures: RenderTexture[] = [];
   private fieldLayer = new Graphics();
@@ -106,6 +122,8 @@ export class GameRenderer {
   private players: PlayerState[] = [];
   private badgePhase: BadgePhase = "pregame";
   private badgeMode: MatchMode = "classic";
+  /** Live scatter config for the pre-game margin guides (undefined ⇒ guides stay hidden). */
+  private arenaScatter: ScatterConfig | undefined;
 
   /**
    * The logical playfield rectangle (world units). Set from MatchConfig via
@@ -132,6 +150,7 @@ export class GameRenderer {
       this.axisLayer,
       this.labelLayer,
       this.boundaryLayer,
+      this.guideLayer,
       this.planetLayer,
       this.fieldLayer,
       this.trailLayerRed,
@@ -178,12 +197,16 @@ export class GameRenderer {
    *   isPlayerActive() in ./badge). `activeTurn` above is kept only for
    *   team-colored trail/fx bookkeeping in playShot(); it no longer decides
    *   who is highlighted.
+   * @param opts.scatter Live scatter config, used to draw the pre-game
+   *   margin guides (Task S3 — see drawGuides()). Optional: omit (or pass
+   *   undefined) for in-match render paths where the guides never show
+   *   anyway (badgePhase !== "pregame" already hides them).
    */
   setWorld(
     world: World,
     activeTurn: "red" | "blue",
     players: PlayerState[],
-    opts: { phase: BadgePhase; mode: MatchMode; activePlayerId: string | null },
+    opts: { phase: BadgePhase; mode: MatchMode; activePlayerId: string | null; scatter?: ScatterConfig },
   ) {
     this.world = world;
     this.activeTurn = activeTurn;
@@ -191,6 +214,7 @@ export class GameRenderer {
     this.badgePhase = opts.phase;
     this.badgeMode = opts.mode;
     this.activePlayerId = opts.activePlayerId;
+    this.arenaScatter = opts.scatter;
     this.recomputeEffectiveBounds();
     this.trailLayerRed.clear();
     this.trailLayerBlue.clear();
@@ -336,6 +360,7 @@ export class GameRenderer {
    * this whole method reruns on every resize (see the "resize" handler above).
    */
   private drawField() {
+    this.drawGuides();
     const g = this.fieldLayer;
     const cam = this.camera;
     g.clear();
@@ -360,6 +385,114 @@ export class GameRenderer {
 
       this.drawBadge(p, s, color, rPx);
     }
+  }
+
+  /**
+   * Ambient, wordless "margin guide" overlay (Task S3) — spawn zone rects,
+   * spawn clearance/separation rings, and the field-margin box. Drawn ONLY
+   * during the pre-game/config phase (see `this.badgePhase`); cleared and
+   * left empty in-match, matching `prototypes/spawn-randomizer.ts` render().
+   * Rings are centered on each live player's CURRENT position, which in
+   * pre-game is exactly their spawn.
+   */
+  private drawGuides(): void {
+    const g = this.guideLayer;
+    g.clear();
+    if (this.badgePhase !== "pregame" || !this.arenaScatter) return;
+
+    const cam = this.camera;
+    const scatter = this.arenaScatter;
+    const b = this.effectiveBounds;
+
+    // Field-margin box — grey dashed rectangle, bounds inset by fieldMargin.
+    const fm = scatter.fieldMargin;
+    const marginTopLeft = this.toScreen({ x: b.minX + fm, y: b.maxY - fm });
+    this.strokeDashedRect(
+      g,
+      marginTopLeft,
+      (b.maxX - b.minX - 2 * fm) * cam.scale,
+      (b.maxY - b.minY - 2 * fm) * cam.scale,
+      7,
+      5,
+      GUIDE_COLORS.margin,
+      0.3,
+    );
+
+    // Spawn zone rects — one per side, team-tinted fill + stroke (solid, no dash).
+    for (const zone of spawnZoneRects(b, scatter)) {
+      const topLeft = this.toScreen({ x: Math.min(zone.xLo, zone.xHi), y: zone.yHi });
+      const w = Math.abs(zone.xHi - zone.xLo) * cam.scale;
+      const h = (zone.yHi - zone.yLo) * cam.scale;
+      const color = zone.sign < 0 ? COLORS.red : COLORS.blue;
+      g.rect(topLeft.x, topLeft.y, w, h)
+        .fill({ color, alpha: 0.1 })
+        .stroke({ width: 1, color, alpha: 0.4 });
+    }
+
+    // Spawn clearance (team-colored) + spawn separation (whitish) rings,
+    // centered on each live soldier's current (= spawn) position.
+    for (const p of this.players) {
+      if (!p.alive) continue;
+      const center = this.toScreen(p.pos);
+      const color = p.team === "red" ? COLORS.red : COLORS.blue;
+      this.strokeDashedCircle(g, center, scatter.spawnClearance * cam.scale, 5, 4, color, 0.28);
+      this.strokeDashedCircle(
+        g,
+        center,
+        (scatter.spawnSeparation / 2) * cam.scale,
+        1,
+        4,
+        GUIDE_COLORS.separation,
+        0.35,
+      );
+    }
+  }
+
+  /** Draws a dashed circle outline onto `g` (Pixi v8 Graphics has no native line-dash support). */
+  private strokeDashedCircle(
+    g: Graphics,
+    center: Vec2,
+    r: number,
+    dash: number,
+    gap: number,
+    color: number,
+    alpha: number,
+  ): void {
+    if (r <= 0) return;
+    for (const [start, end] of dashRanges(2 * Math.PI * r, dash, gap)) {
+      const steps = Math.max(1, Math.ceil((end - start) / 3));
+      for (let i = 0; i <= steps; i++) {
+        const t = start + ((end - start) * i) / steps;
+        const p = circlePoint(center.x, center.y, r, t);
+        if (i === 0) g.moveTo(p.x, p.y);
+        else g.lineTo(p.x, p.y);
+      }
+    }
+    g.stroke({ width: 1, color, alpha });
+  }
+
+  /** Draws a dashed rectangle outline onto `g`, top-left `topLeft`, size `w`×`h` (screen px). */
+  private strokeDashedRect(
+    g: Graphics,
+    topLeft: Vec2,
+    w: number,
+    h: number,
+    dash: number,
+    gap: number,
+    color: number,
+    alpha: number,
+  ): void {
+    if (w <= 0 || h <= 0) return;
+    for (const [start, end] of dashRanges(2 * (w + h), dash, gap)) {
+      const steps = Math.max(1, Math.ceil((end - start) / 3));
+      for (let i = 0; i <= steps; i++) {
+        const t = start + ((end - start) * i) / steps;
+        const p = rectPerimeterPoint(topLeft.x, topLeft.y, w, h, t);
+        if (i === 0) g.moveTo(p.x, p.y);
+        else g.lineTo(p.x, p.y);
+      }
+    }
+    g.stroke({ width: 1, color, alpha });
   }
 
   /**
@@ -582,4 +715,46 @@ function clamp(v: number, lo: number, hi: number): number {
 
 function fmt(n: number): string {
   return String(Math.round(n * 1e6) / 1e6);
+}
+
+/**
+ * Splits a closed contour of length `totalLen` into alternating dash/gap
+ * ranges `[start, end)` (arc length from the contour's origin), each no
+ * longer than `dash`. Pure — extracted so the dash pattern itself is
+ * unit-testable without a real Pixi Graphics/canvas (jsdom has none). Used by
+ * GameRenderer.strokeDashedCircle/strokeDashedRect to fake Pixi v8's Graphics,
+ * which has no native line-dash support.
+ */
+export function dashRanges(totalLen: number, dash: number, gap: number): Array<[number, number]> {
+  if (totalLen <= 0 || dash <= 0) return [];
+  const ranges: Array<[number, number]> = [];
+  const period = dash + gap;
+  for (let start = 0; start < totalLen; start += period) {
+    ranges.push([start, Math.min(start + dash, totalLen)]);
+  }
+  return ranges;
+}
+
+/** Point at arc length `t` around a circle centered at (cx, cy) with radius `r`. Pure. */
+export function circlePoint(cx: number, cy: number, r: number, t: number): Vec2 {
+  const angle = t / r;
+  return { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
+}
+
+/**
+ * Point at perimeter distance `t` around a rectangle (top-left `x`,`y`, size
+ * `w`×`h`), walking clockwise from the top-left corner: right along the top
+ * edge, down the right edge, left along the bottom edge, up the left edge.
+ * Pure — `t` is clamped into [0, perimeter).
+ */
+export function rectPerimeterPoint(x: number, y: number, w: number, h: number, t: number): Vec2 {
+  const perimeter = 2 * (w + h);
+  let d = ((t % perimeter) + perimeter) % perimeter;
+  if (d <= w) return { x: x + d, y };
+  d -= w;
+  if (d <= h) return { x: x + w, y: y + d };
+  d -= h;
+  if (d <= w) return { x: x + w - d, y: y + h };
+  d -= w;
+  return { x, y: y + h - d };
 }
