@@ -41,14 +41,27 @@ function fakeRenderer() {
   };
 }
 
-function fakeUi(): GameUiPort & { fire?: (p: "red" | "blue", l: string) => void } {
-  const ui: any = { fire: undefined };
+function fakeUi(): GameUiPort & {
+  fire?: (p: "red" | "blue", l: string) => void;
+  inputs: Record<"red" | "blue", string>;
+} {
+  const ui: any = { fire: undefined, inputs: { red: "", blue: "" } };
   for (const m of [
-    "onReset","setTurn","setBusy","setNoTurnMode","focus","setStatus","showWin",
-    "resetInputs","hideWin","updateScoreboard","showSplash","hideSplash",
+    "onReset","setBusy","setNoTurnMode","focus","setStatus","showWin",
+    "hideWin","updateScoreboard","showSplash","hideSplash",
     "showTutorialStep","hideTutorial","setTimer",
   ]) ui[m] = vi.fn();
   ui.onFire = (cb: any) => { ui.fire = cb; };
+  // Mirror HudController.setTurn: when a lastEquation is given, it's written
+  // into the now-inactive (just-fired) player's tracked input.
+  ui.setTurn = vi.fn((turn: "red" | "blue", lastEquation?: string) => {
+    if (lastEquation !== undefined) {
+      const opponent = turn === "red" ? "blue" : "red";
+      ui.inputs[opponent] = lastEquation;
+    }
+  });
+  // Mirror HudController.resetInputs: clears both tracked inputs.
+  ui.resetInputs = vi.fn(() => { ui.inputs.red = ""; ui.inputs.blue = ""; });
   return ui;
 }
 
@@ -100,6 +113,22 @@ describe("LocalGame", () => {
     g.begin();
     await (ui as any).fire("red", "0");
     expect(ui.showSplash).toHaveBeenCalled();
+    g.dispose();
+  });
+
+  it("keeps the shooter's typed equation in their input after a turn-based miss", async () => {
+    const r = fakeRenderer(); const ui = fakeUi();
+    const g = new LocalGame(r as never, ui);
+    // Empty field; "x^2" arcs off the top of the field → guaranteed miss,
+    // so the round continues and the turn passes to blue.
+    g.preview({ ...cfg, scatter: { ...cfg.scatter, maxPlanets: 0 } }, 42);
+    g.begin();
+    ui.inputs.red = "x^2"; // what red typed before firing
+    await (ui as any).fire("red", "x^2");
+    // Red just fired and should stay red's own turn view — but the equation
+    // must survive so red can tweak their aim next turn.
+    expect(ui.inputs.red).toBe("x^2");
+    expect(ui.setTurn).toHaveBeenLastCalledWith("blue");
     g.dispose();
   });
 });

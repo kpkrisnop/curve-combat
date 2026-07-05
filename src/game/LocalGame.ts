@@ -166,7 +166,7 @@ export class LocalGame {
       ? playerById(this.match, this.match.activePlayerId)!.team : player;
     this.renderFrom(this.match, viewTeam);
     if (!this.config.noTurn) {
-      this.ui.setTurn(viewTeam, "");
+      this.ui.setTurn(viewTeam);
       this.armTimer();
     }
     this.ui.setStatus();
