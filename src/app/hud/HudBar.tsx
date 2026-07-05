@@ -35,7 +35,7 @@ function PlayerPanel({ team, makeInput }: { team: Team; makeInput?: () => any })
 
 export function HudBar({ makeInput, singleTeam }: { makeInput?: () => any; singleTeam?: Team }) {
   return (
-    <div className="hud-bar">
+    <div className={singleTeam ? "hud-bar hud-bar--single" : "hud-bar"}>
       {singleTeam ? (
         <PlayerPanel team={singleTeam} makeInput={makeInput} />
       ) : (

@@ -82,7 +82,7 @@
      ONE shared gutter token reused as BOTH the grid `gap` and the shell
      `padding` — every gap (card-to-card, card-to-screen-edge) is equal. */
   --gw-gap: 18px;
-  --gw-panel-w: 300px;
+  --gw-panel-w: 340px;
   --gw-footer-min: 78px;
 }
 

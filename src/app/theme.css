@@ -151,8 +151,13 @@ body { font-family: var(--gw-font-sans); overflow: hidden; }
 .cfg-opt small { color: var(--gw-text-faint); font-weight: 400; }
 .cfg-toggle, .cfg-timer { display: flex; align-items: center; gap: var(--gw-space-2); margin: var(--gw-space-2) 0; }
 .cfg-arena { display: flex; flex-direction: column; gap: 6px; }
-.cfg-slider { display: grid; grid-template-columns: 130px 1fr; align-items: center; gap: 8px;
+.cfg-slider { display: grid; grid-template-columns: 130px minmax(0, 1fr); align-items: center; gap: 8px;
   font-size: var(--gw-fs-xs); color: var(--gw-text-muted); }
+/* Range inputs bring their own UA-default intrinsic width, which is wider
+   than a 1fr grid track's default `auto` minimum — that mismatch is what
+   forced the panel to overflow horizontally (M1). Pin the input to its
+   track instead of its intrinsic content size. */
+.cfg-slider input[type="range"] { width: 100%; min-width: 0; }
 .cfg-seed { display: flex; align-items: center; justify-content: space-between; margin-top: var(--gw-space-2);
   font-family: var(--gw-font-mono); color: var(--gw-text-code); }
 .gw-countdown { z-index: 20; background: rgba(0, 0, 0, 0.35); }

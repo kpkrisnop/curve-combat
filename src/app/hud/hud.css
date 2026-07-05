@@ -4,6 +4,17 @@
   display: grid; grid-template-columns: 1fr 1fr; gap: var(--gw-space-3);
   align-items: center; width: 100%;
 }
+/* Single-team (online) in-game layout: one player panel, no second grid
+   track (M3/L4) — a fixed-column grid instead of 1fr 1fr collapses the
+   dangling empty column the scoreboard used to occupy, and capping the
+   width below the footer's full width lets the footer's
+   `justify-content: center` actually center the panel instead of being a
+   no-op against a 100%-wide child. */
+.hud-bar--single {
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+  max-width: 640px;
+}
 .player-panel {
   background: var(--gw-surface-2); border: 1px solid var(--gw-border);
   border-radius: var(--gw-radius-lg); padding: var(--gw-space-3);

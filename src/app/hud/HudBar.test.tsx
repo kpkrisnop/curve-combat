@@ -87,6 +87,25 @@ describe("HudBar — singleTeam prop", () => {
     expect(document.querySelector(".player-panel.is-red")).toBeTruthy();
     expect(document.querySelector(".player-panel.is-blue")).toBeTruthy();
   });
+
+  // M3/L4 — singleTeam (online in-game) gets a modifier class that drops
+  // the hud-bar to a single grid track and caps its width (hud.css), so
+  // there's no dangling empty second column and the footer's
+  // `justify-content: center` can actually center it. The dual (local)
+  // layout must keep the plain two-column class untouched.
+  it("singleTeam mode adds the hud-bar--single modifier (single grid track, capped width)", () => {
+    render(<HudBar makeInput={makeInput} singleTeam="blue" />);
+    const bar = document.querySelector(".hud-bar");
+    expect(bar).toBeTruthy();
+    expect(bar!.classList.contains("hud-bar--single")).toBe(true);
+  });
+
+  it("dual (local) layout does NOT get the single-column modifier", () => {
+    render(<HudBar makeInput={makeInput} />);
+    const bar = document.querySelector(".hud-bar");
+    expect(bar).toBeTruthy();
+    expect(bar!.classList.contains("hud-bar--single")).toBe(false);
+  });
 });
 
 describe("HudOverlays", () => {

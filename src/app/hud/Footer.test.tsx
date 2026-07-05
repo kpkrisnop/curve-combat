@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
-import { Footer } from "./Footer";
+import { Footer, roomLink } from "./Footer";
 import { hudStore, initialHudState } from "./hudStore";
 
 const makeInput = () => {
@@ -64,6 +64,26 @@ describe("Footer", () => {
     expect(writeText).toHaveBeenCalledWith("WXYZ");
     fireEvent.click(screen.getByRole("button", { name: /Copy link/i }));
     expect(writeText).toHaveBeenCalledWith(expect.stringContaining("WXYZ"));
+  });
+
+  it("roomLink (L3) preserves a sub-path base instead of hardcoding the bare origin", () => {
+    expect(roomLink("ABCD", "https://example.com/graph-war/")).toBe(
+      "https://example.com/graph-war/#room=ABCD",
+    );
+    // Root-path base still works.
+    expect(roomLink("ABCD", "https://example.com/")).toBe("https://example.com/#room=ABCD");
+    // Defensively strips any pre-existing hash on the base.
+    expect(roomLink("ABCD", "https://example.com/app/#old")).toBe(
+      "https://example.com/app/#room=ABCD",
+    );
+  });
+
+  it("copy link uses location.origin + location.pathname (sub-path safe)", () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    Object.assign(navigator, { clipboard: { writeText } });
+    render(<Footer mode="pregame-online" isHost roomCode="WXYZ" />);
+    fireEvent.click(screen.getByRole("button", { name: /Copy link/i }));
+    expect(writeText).toHaveBeenCalledWith(`${location.origin}${location.pathname}#room=WXYZ`);
   });
 
   it("name input + switch button call the seam props (dispatch wiring is a later task)", () => {

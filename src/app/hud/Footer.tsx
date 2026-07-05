@@ -22,6 +22,16 @@ import type { Team } from "./hudStore";
 
 export type FooterMode = "pregame-local" | "pregame-online" | "ingame";
 
+// L3 — pure helper so the sub-path-preserving logic is unit-testable without
+// touching `location`. `base` is expected to be `origin + pathname` (no
+// hash); any existing hash on `base` is stripped defensively so callers
+// can't accidentally double up on `#room=`.
+export function roomLink(roomCode: string, base: string): string {
+  const hashIndex = base.indexOf("#");
+  const cleanBase = hashIndex === -1 ? base : base.slice(0, hashIndex);
+  return `${cleanBase}#room=${roomCode}`;
+}
+
 interface FooterProps {
   mode: FooterMode;
 
@@ -72,7 +82,7 @@ export function Footer(props: FooterProps) {
   };
   const copyLink = () => {
     if (props.roomCode) {
-      void navigator.clipboard.writeText(`${location.origin}/#room=${props.roomCode}`);
+      void navigator.clipboard.writeText(roomLink(props.roomCode, location.origin + location.pathname));
     }
   };
 
