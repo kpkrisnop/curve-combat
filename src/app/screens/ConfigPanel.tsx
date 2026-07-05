@@ -14,6 +14,10 @@ const ARENA_SPECS: [ArenaPath, string, number, number, number][] = [
   ["scatter.gapMin", "gap min", 0, 6, 0.1],
   ["scatter.gapMax", "gap max", 0, 6, 0.1],
   ["scatter.spawnClearance", "spawn clearance", 0, 5, 0.1],
+  ["scatter.spawnEdgeGap", "spawn edge gap", 0, 6, 0.1],
+  ["scatter.spawnBandX", "spawn band X", 0, 8, 0.2],
+  ["scatter.spawnYMargin", "spawn Y margin", 0, 5, 0.1],
+  ["scatter.spawnSeparation", "spawn min separation", 0, 6, 0.1],
   ["scatter.fieldMargin", "field margin", 0, 3, 0.1],
   ["scatter.maxPlanets", "planet count", 1, 24, 1],
 ];
