@@ -244,6 +244,24 @@ describe("RoomManager NvN (ADR-0002)", () => {
     m.setName("WOLF", playerId, "   ");
     expect(room.players.find((p) => p.id === playerId)!.name).toBe("Ada");
   });
+
+  it("setName is a safe no-op once the room is locked (H1 regression: no mid-match roster churn)", () => {
+    const m = new RoomManager();
+    const { playerId } = m.join("WOLF", "Ann");
+    m.join("WOLF", "Bo");
+    m.lock("WOLF");
+    expect(() => m.setName("WOLF", playerId, "Zed")).not.toThrow();
+    expect(m.get("WOLF")!.players.find((p) => p.id === playerId)!.name).toBe("Ann");
+  });
+
+  it("setName is a safe no-op once the match has started (engine running)", () => {
+    const m = new RoomManager();
+    const { playerId } = m.join("WOLF", "Ann");
+    m.join("WOLF", "Bo");
+    m.start("WOLF", playerId);
+    expect(() => m.setName("WOLF", playerId, "Zed")).not.toThrow();
+    expect(m.get("WOLF")!.players.find((p) => p.id === playerId)!.name).toBe("Ann");
+  });
 });
 
 describe("RoomManager relayout (A2)", () => {

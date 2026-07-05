@@ -167,6 +167,68 @@ describe("bindNetworkGame — LobbySnapshot", () => {
   });
 });
 
+describe("bindNetworkGame — late lobbyState must not eject from an in-progress match (H1 regression)", () => {
+  beforeEach(() => {
+    netLobbyStore.set(initialNetLobbyState("TEST"));
+  });
+
+  it("a lobbyState delivered while phase='play' does not regress phase to 'lobby'", () => {
+    const net = makeStubNet();
+    const unsub = bindNetworkGame(net as never, () => "p2");
+
+    // Establish the lobby, then simulate the match having progressed to 'play'
+    // (this normally happens via NetworkGame's matchState handler, not onLobby).
+    net.emitLobby(BASE_SNAPSHOT);
+    netLobbyStore.set({ phase: "play" });
+
+    // A late setName-triggered lobbyState arrives mid-match (e.g. a debounced
+    // rename fired just after the host pressed Start).
+    net.emitLobby({ ...BASE_SNAPSHOT, players: [{ id: "p1", name: "Alice2", team: "red" }, { id: "p2", name: "Bob", team: "blue" }] });
+
+    expect(netLobbyStore.get().phase).toBe("play");
+    unsub();
+  });
+
+  it("a lobbyState delivered while phase='countdown' does not regress phase to 'lobby'", () => {
+    const net = makeStubNet();
+    const unsub = bindNetworkGame(net as never, () => "p2");
+
+    net.emitLobby(BASE_SNAPSHOT);
+    net.emitMatchStarting(Date.now() + 3000);
+    expect(netLobbyStore.get().phase).toBe("countdown");
+
+    net.emitLobby({ ...BASE_SNAPSHOT });
+
+    expect(netLobbyStore.get().phase).toBe("countdown");
+    unsub();
+  });
+
+  it("still updates roster/config even while phase is 'play' (only phase is protected)", () => {
+    const net = makeStubNet();
+    const unsub = bindNetworkGame(net as never, () => "p2");
+
+    net.emitLobby(BASE_SNAPSHOT);
+    netLobbyStore.set({ phase: "play" });
+
+    const renamed = [{ id: "p1", name: "Alice2", team: "red" as const }, { id: "p2", name: "Bob", team: "blue" as const }];
+    net.emitLobby({ ...BASE_SNAPSHOT, players: renamed });
+
+    expect(netLobbyStore.get().players).toEqual(renamed);
+    expect(netLobbyStore.get().phase).toBe("play");
+    unsub();
+  });
+
+  it("a lobbyState delivered while phase='lobby' still sets phase='lobby' (existing behavior preserved)", () => {
+    const net = makeStubNet();
+    const unsub = bindNetworkGame(net as never, () => "p2");
+
+    net.emitLobby(BASE_SNAPSHOT);
+
+    expect(netLobbyStore.get().phase).toBe("lobby");
+    unsub();
+  });
+});
+
 describe("bindNetworkGame — matchStarting", () => {
   beforeEach(() => {
     netLobbyStore.set(initialNetLobbyState("TEST"));

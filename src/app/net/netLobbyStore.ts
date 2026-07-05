@@ -134,8 +134,16 @@ export function bindNetworkGame(
       const amHost = myId !== null && myId === hostId;
       const amSpectator = myId !== null && snap.spectators.some((sp) => sp.id === myId);
 
+      // INVARIANT: a lobbyState must never move a client OUT of an in-progress
+      // match. Phase is server-authoritative via matchStarting ('countdown')
+      // and the first matchState ('play') — a late lobbyState (e.g. triggered
+      // by a debounced setName that fires after the host already started the
+      // match) must not regress phase back to 'lobby'. Roster/config/seed
+      // still update normally regardless of phase.
+      const phase = s.phase === "countdown" || s.phase === "play" ? s.phase : "lobby";
+
       return {
-        phase: "lobby",
+        phase,
         players: snap.players,
         spectators: snap.spectators,
         hostId,

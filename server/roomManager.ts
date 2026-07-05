@@ -99,9 +99,19 @@ export class RoomManager {
     this.relayout(code);
   }
 
+  /**
+   * H1 defense-in-depth: once the room is locked or the match has started,
+   * setName is a safe no-op — it neither throws nor mutates the roster. A
+   * late/debounced setName arriving mid-match must not churn the roster (which
+   * would trigger a lobbyState broadcast a stray client could act on). Unlike
+   * join/switchTeam/reroll, which throw when locked, we deliberately swallow
+   * this one: a rename attempt racing the start of a match isn't an error
+   * worth surfacing to the sender, it's just too late to apply.
+   */
   setName(code: string, playerId: string, name: string): void {
     const room = this.rooms.get(code);
     if (!room) throw new Error("no such room");
+    if (room.locked || room.engine !== null) return;
     const player = room.players.find((p) => p.id === playerId);
     if (!player) throw new Error("unknown player");
     const trimmed = name.trim();

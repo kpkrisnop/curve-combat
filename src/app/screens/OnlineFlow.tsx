@@ -203,14 +203,33 @@ export function OnlineFlow({ code }: Props) {
 
   // Footer's Name input fires on every keystroke — debounce the setName
   // dispatch so we don't flood the server with a message per character.
+  //
+  // H1 fix (layer 2): the Name input only renders during the lobby phase, but
+  // a keystroke right before the host presses Start can leave this debounce
+  // pending when the phase flips to 'countdown'/'play'. Guard the fire so a
+  // stale send can't reach the server mid-match (belt-and-suspenders on top
+  // of netLobbyStore's phase-regression guard and roomManager's locked guard).
   const onFooterNameChange = useCallback((name: string) => {
     const net = netRef.current;
     if (!net) return;
     if (nameDebounceRef.current) clearTimeout(nameDebounceRef.current);
     nameDebounceRef.current = setTimeout(() => {
+      nameDebounceRef.current = null;
+      if (netLobbyStore.get().phase !== "lobby") return;
       net.sendSetName(name);
     }, 300);
   }, []);
+
+  // Cancel any pending debounced name send the moment we leave the lobby
+  // phase (host pressed Start) — don't wait for unmount, which happens much
+  // later (or never, if the component stays mounted through countdown/play).
+  useEffect(() => {
+    if (phase === "lobby") return;
+    if (nameDebounceRef.current) {
+      clearTimeout(nameDebounceRef.current);
+      nameDebounceRef.current = null;
+    }
+  }, [phase]);
 
   // Footer's "⇄ Switch side" toggles to whichever team I'm not currently on.
   // Reuses the existing sendSwitchTeam dispatch (already wired) — the actual
