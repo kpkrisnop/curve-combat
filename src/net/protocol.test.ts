@@ -77,7 +77,10 @@ describe("protocol v2 (NvN + arena + countdown)", () => {
     const withArena = {
       ...old,
       map: { width: 24, height: 14 },
-      scatter: { rMin: 0.8, rMax: 2, gapMin: 0.5, gapMax: 2, spawnClearance: 2, fieldMargin: 0.5, maxPlanets: 12 },
+      scatter: {
+        rMin: 0.8, rMax: 2, gapMin: 0.5, gapMax: 2, spawnClearance: 2, fieldMargin: 0.5, maxPlanets: 12,
+        spawnEdgeGap: 1, spawnBandX: 3, spawnYMargin: 1.5, spawnSeparation: 2,
+      },
     };
     const parsed = parseClientMessage(withArena);
     if (parsed.type === "configureRoom") expect(parsed.map?.width).toBe(24);

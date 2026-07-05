@@ -5,6 +5,8 @@
 import { describe, it, expect } from "vitest";
 import { buildArenaPreview } from "./arenaPreview";
 import { DEFAULT_MAP, DEFAULT_SCATTER } from "../../game/arenaDefaults";
+import { MatchEngine, type RoomPlayer } from "../../../server/matchEngine";
+import type { MatchConfig } from "../../game/matchLogic";
 
 const CFG = { map: { ...DEFAULT_MAP }, scatter: { ...DEFAULT_SCATTER } };
 const SEED = 0xdeadbeef;
@@ -61,5 +63,52 @@ describe("buildArenaPreview — team split", () => {
     const blue = players.filter((p) => p.team === "blue");
     expect(red.map((p) => p.id)).toEqual(["r1", "r2"]);
     expect(blue.map((p) => p.id)).toEqual(["b1", "b2"]);
+  });
+});
+
+describe("buildArenaPreview — parity with MatchEngine.layout", () => {
+  // PARITY CONTRACT (see file header): the lobby preview must be byte-identical to
+  // the server's authoritative round-1 layout for the same seed + config + roster.
+  function parityConfig(teamSize: 1 | 2 | 3 | 4 | 5): MatchConfig {
+    return { mode: "classic", rounds: 3, noTurn: false, ...CFG, teamSize };
+  }
+
+  it("1v1: preview planets and player positions match MatchEngine.layout", () => {
+    const players: RoomPlayer[] = [
+      { id: "r1", name: "Red1", team: "red" },
+      { id: "b1", name: "Blue1", team: "blue" },
+    ];
+    const engine = new MatchEngine(parityConfig(1), players, () => SEED);
+    const server = engine.snapshot();
+
+    const preview = buildArenaPreview(CFG, SEED, { red: 1, blue: 1 });
+
+    expect(preview.planets).toEqual(server.planets);
+    const serverR1 = server.players.find((p) => p.id === "r1")!;
+    const serverB1 = server.players.find((p) => p.id === "b1")!;
+    const previewR1 = preview.players.find((p) => p.id === "r1")!;
+    const previewB1 = preview.players.find((p) => p.id === "b1")!;
+    expect(previewR1.pos).toEqual(serverR1.pos);
+    expect(previewB1.pos).toEqual(serverB1.pos);
+  });
+
+  it("2v2: preview planets and player positions match MatchEngine.layout", () => {
+    const players: RoomPlayer[] = [
+      { id: "r1", name: "Red1", team: "red" },
+      { id: "r2", name: "Red2", team: "red" },
+      { id: "b1", name: "Blue1", team: "blue" },
+      { id: "b2", name: "Blue2", team: "blue" },
+    ];
+    const engine = new MatchEngine(parityConfig(2), players, () => SEED);
+    const server = engine.snapshot();
+
+    const preview = buildArenaPreview(CFG, SEED, { red: 2, blue: 2 });
+
+    expect(preview.planets).toEqual(server.planets);
+    for (const id of ["r1", "r2", "b1", "b2"]) {
+      expect(preview.players.find((p) => p.id === id)!.pos).toEqual(
+        server.players.find((p) => p.id === id)!.pos,
+      );
+    }
   });
 });

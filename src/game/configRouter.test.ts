@@ -4,7 +4,7 @@ import type { MatchConfig } from "./matchLogic";
 import { arenaDefaults } from "./arenaDefaults";
 
 const DEFAULT: MatchConfig = { mode: "classic", rounds: 3, noTurn: false, turnSeconds: 60, role: "local", ...arenaDefaults() };
-const ARENA_HASH = "&w=24&h=14&rmn=0.8&rmx=2&gmn=0.5&gmx=2&sc=2&fm=0.5&mp=12&ts=1";
+const ARENA_HASH = "&w=20&h=12&rmn=0.5&rmx=2&gmn=0.5&gmx=2&sc=1.5&fm=1&mp=15&ts=1&eg=1&bx=3&ym=1.5&sp=2";
 
 describe("configToHash", () => {
   it("encodes classic 3-round default config with arena fields", () => {
@@ -23,7 +23,7 @@ describe("parseConfigFromHash", () => {
   });
 
   it("parses custom arena fields", () => {
-    const hash = "#game?mode=hp&rounds=5&noTurn=true&w=30&h=18&rmn=1&rmx=3&gmn=1&gmx=4&sc=2.5&fm=1&mp=8&ts=3";
+    const hash = "#game?mode=hp&rounds=5&noTurn=true&w=30&h=18&rmn=1&rmx=3&gmn=1&gmx=4&sc=2.5&fm=1&mp=8&ts=3&eg=2&bx=4&ym=2&sp=3";
     expect(parseConfigFromHash(hash)).toEqual({
       mode: "hp",
       rounds: 5,
@@ -31,9 +31,20 @@ describe("parseConfigFromHash", () => {
       turnSeconds: 60,
       role: "local",
       map: { width: 30, height: 18 },
-      scatter: { rMin: 1, rMax: 3, gapMin: 1, gapMax: 4, spawnClearance: 2.5, fieldMargin: 1, maxPlanets: 8 },
+      scatter: {
+        rMin: 1, rMax: 3, gapMin: 1, gapMax: 4, spawnClearance: 2.5, fieldMargin: 1, maxPlanets: 8,
+        spawnEdgeGap: 2, spawnBandX: 4, spawnYMargin: 2, spawnSeparation: 3,
+      },
       teamSize: 3,
     });
+  });
+
+  it("round-trips the 4 new spawn-zone params", () => {
+    const cfg: MatchConfig = {
+      ...DEFAULT,
+      scatter: { ...DEFAULT.scatter, spawnEdgeGap: 2.5, spawnBandX: 5, spawnYMargin: 0.8, spawnSeparation: 3.2 },
+    };
+    expect(parseConfigFromHash(configToHash(cfg))).toEqual(cfg);
   });
 
   it("parses mode=hp correctly", () => {
@@ -58,7 +69,7 @@ describe("parseConfigFromHash", () => {
     const hash = "#game?mode=classic&rounds=3&noTurn=false&w=9999&h=abc&mp=-4&ts=99";
     const cfg = parseConfigFromHash(hash);
     expect(cfg.map.width).toBeLessThanOrEqual(60);
-    expect(cfg.map.height).toBe(14);
+    expect(cfg.map.height).toBe(12);
     expect(cfg.scatter.maxPlanets).toBeGreaterThanOrEqual(1);
     expect(cfg.teamSize).toBe(5);
   });
@@ -71,7 +82,10 @@ describe("parseConfigFromHash", () => {
       turnSeconds: 45,
       role: "local",
       map: { width: 28, height: 16 },
-      scatter: { rMin: 0.5, rMax: 2.5, gapMin: 0.2, gapMax: 3, spawnClearance: 1.5, fieldMargin: 0.8, maxPlanets: 10 },
+      scatter: {
+        rMin: 0.5, rMax: 2.5, gapMin: 0.2, gapMax: 3, spawnClearance: 1.5, fieldMargin: 0.8, maxPlanets: 10,
+        spawnEdgeGap: 1.2, spawnBandX: 2.8, spawnYMargin: 1.1, spawnSeparation: 1.8,
+      },
       teamSize: 2,
     };
     expect(parseConfigFromHash(configToHash(original))).toEqual(original);

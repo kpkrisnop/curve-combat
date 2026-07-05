@@ -27,7 +27,7 @@ export class MatchEngine {
   /** Server-authoritative round layout: mint planets from the seed, seat each RoomPlayer on a spawn column. */
   private layout(seed: number): RoundLayout {
     const bounds = boundsFromMap(this.config.map);
-    const spawns = computeSpawns(this.config.map, this.config.teamSize);
+    const spawns = computeSpawns(this.config.map, this.config.teamSize, this.config.scatter, seed);
     const planets = generatePlanets(seed, bounds, spawns, this.config.scatter);
     const left = spawns.filter((s) => s.x < 0);
     const right = spawns.filter((s) => s.x > 0);

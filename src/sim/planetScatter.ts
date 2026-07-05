@@ -2,8 +2,8 @@ import type { Bounds, Planet, Vec2 } from "./types";
 import type { MapConfig, ScatterConfig } from "../game/matchLogic";
 import { MAX_ATTEMPTS } from "../game/arenaDefaults";
 
-/** Edge inset of the spawn columns from the left/right map walls (world units). */
-export const SPAWN_INSET = 3;
+/** Decouples the spawn PRNG stream from the planet PRNG stream (both derive from `seed`). */
+const SPAWN_SEED_SALT = 0x9e3779b9;
 
 /** Deterministic 32-bit PRNG. Same seed ⇒ same uniform [0,1) stream. */
 export function mulberry32(seed: number): () => number {
@@ -22,19 +22,62 @@ export function boundsFromMap(map: MapConfig): Bounds {
   return { minX: -map.width / 2, maxX: map.width / 2, minY: -map.height / 2, maxY: map.height / 2 };
 }
 
-/** Spawn columns at x = ±(width/2 − SPAWN_INSET), `teamSize` points spread along y. */
-export function computeSpawns(map: MapConfig, teamSize: number): Vec2[] {
+/**
+ * Seed-driven, always mirror-symmetric player spawns. Per side, rejection-samples
+ * `teamSize` points inside a rectangular zone derived from the map bounds and the
+ * four spawn params on `scatter` (spawnEdgeGap, spawnBandX, spawnYMargin,
+ * spawnSeparation); falls back to even-Y spacing at the outer column if the zone
+ * is too tight to satisfy `spawnSeparation` within 200 attempts (guarantees exactly
+ * `teamSize` points per side). The LEFT side is sampled, then mirrored to the right
+ * (x → -x, same y) — there is no separate mirror toggle; spawns are always
+ * mirror-symmetric.
+ *
+ * Deterministic in (map, teamSize, scatter, seed): uses a dedicated PRNG stream
+ * (mulberry32(seed ^ salt)), decoupled from the planet generator's mulberry32(seed)
+ * stream, so the server and the client-side preview produce identical layouts from
+ * a shared seed.
+ */
+export function computeSpawns(
+  map: MapConfig,
+  teamSize: number,
+  scatter: ScatterConfig,
+  seed: number,
+): Vec2[] {
   const b = boundsFromMap(map);
-  const yLo = b.minY + 1;
-  const yHi = b.maxY - 1;
-  const x = b.maxX - SPAWN_INSET;
-  const pts: Vec2[] = [];
-  for (let i = 0; i < teamSize; i++) {
-    const t = teamSize === 1 ? 0.5 : i / (teamSize - 1);
-    const y = yLo + t * (yHi - yLo);
-    pts.push({ x: -x, y }, { x, y });
-  }
-  return pts;
+  const rng = mulberry32((seed ^ SPAWN_SEED_SALT) >>> 0);
+
+  const xHiMag = b.maxX - scatter.spawnEdgeGap;
+  const xLoMag = Math.max(0, xHiMag - scatter.spawnBandX);
+  const yLo = b.minY + scatter.spawnYMargin;
+  const yHi = b.maxY - scatter.spawnYMargin;
+
+  const sampleLeft = (): Vec2[] => {
+    const pts: Vec2[] = [];
+    for (let i = 0; i < teamSize; i++) {
+      let placed: Vec2 | null = null;
+      for (let attempt = 0; attempt < 200 && !placed; attempt++) {
+        const mag = xLoMag + rng() * (xHiMag - xLoMag);
+        const y = yLo + rng() * (yHi - yLo);
+        const cand: Vec2 = { x: -mag, y };
+        if (pts.every((p) => Math.hypot(p.x - cand.x, p.y - cand.y) >= scatter.spawnSeparation)) {
+          placed = cand;
+        }
+      }
+      // Fallback: evenly spaced y at the outer column if the zone is too tight.
+      if (!placed) {
+        const t = teamSize === 1 ? 0.5 : i / (teamSize - 1);
+        placed = { x: -xHiMag, y: yLo + t * (yHi - yLo) };
+      }
+      pts.push(placed);
+    }
+    return pts;
+  };
+
+  const left = sampleLeft();
+  const right = left.map((p) => ({ x: -p.x, y: p.y }));
+  const spawns: Vec2[] = [];
+  for (let i = 0; i < teamSize; i++) spawns.push(left[i], right[i]);
+  return spawns;
 }
 
 /**

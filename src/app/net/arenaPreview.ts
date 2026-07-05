@@ -20,7 +20,7 @@ import { generatePlanets, computeSpawns, boundsFromMap } from "../../sim/planetS
  * Algorithm (mirrors MatchEngine.layout and localLayout.buildLocalLayout):
  *   1. boundsFromMap(config.map)
  *   2. teamSize = max(counts.red, counts.blue, 1)     ← enough spawn slots for the larger side
- *   3. computeSpawns(config.map, teamSize)             ← interleaved left/right pairs
+ *   3. computeSpawns(config.map, teamSize, config.scatter, seed) ← seeded, interleaved left/right pairs
  *   4. generatePlanets(seed, bounds, spawns, config.scatter)  ← deterministic PRNG scatter
  *   5. Deal left-spawns to red players (in spawn order), right-spawns to blue players.
  *
@@ -34,7 +34,7 @@ export function buildArenaPreview(
   // Step 1-4: mirrors MatchEngine.layout / buildLocalLayout exactly
   const bounds = boundsFromMap(config.map);
   const teamSize = Math.max(counts.red, counts.blue, 1) as 1 | 2 | 3 | 4 | 5;
-  const spawns = computeSpawns(config.map, teamSize);
+  const spawns = computeSpawns(config.map, teamSize, config.scatter, seed);
   const planets = generatePlanets(seed, bounds, spawns, config.scatter);
 
   // Step 5: separate left (x<0) and right (x>0) spawn columns, then deal in order.

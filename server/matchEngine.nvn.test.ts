@@ -3,15 +3,14 @@
 // NvN verification suite — proves MatchEngine is team-generic (2v2, 2v1).
 // All tests use fixed seeds and maxPlanets: 0 where a guaranteed hit/miss is needed.
 //
-// Spawn geometry (teamSize: 2, default map 24×14):
-//   boundsFromMap → minX=-12, maxX=12, minY=-7, maxY=7
-//   computeSpawns  → yLo=-6, yHi=6; x=±9
-//   spawns = [{x:-9,y:-6},{x:9,y:-6},{x:-9,y:6},{x:9,y:6}]
-//   left=[{x:-9,y:-6},{x:-9,y:6}], right=[{x:9,y:-6},{x:9,y:6}]
-//   layout assigns: red r1→{x:-9,y:-6}, r2→{x:-9,y:6}
-//                   blue b1→{x:9,y:-6},  b2→{x:9,y:6}
+// Spawns are now seed-driven and randomized within the per-side zone (Issue 1), so
+// exact spawn coordinates are no longer hardcoded. Tests that need to "aim" at a
+// teammate's y read the ACTUAL spawn y off the live snapshot, and force
+// spawnBandX: 0 so both same-side spawns share the same x — separation is then
+// enforced purely on the y axis, guaranteeing the two teammates' y values differ
+// by at least spawnSeparation (so a flat shot at one teammate's y cannot also
+// clip the other).
 //
-// Flat shot latex:"-6" travels y=-6 → hits b1; latex:"6" → hits b2.
 // Guaranteed miss: latex:"x+999" — exits bounds immediately (no target at x+999 within field).
 // NOTE: latex:"99" is a CONSTANT y=99 but the sim evaluates it as a hit (likely wraps/resolves
 // at the muzzle position); do NOT use constant-number latex for misses.
@@ -32,6 +31,14 @@ function cfg2v(overrides: Partial<MatchConfig> = {}): MatchConfig {
     teamSize: 2,   // gives 4 spawn slots: 2 left + 2 right
     ...overrides,
   };
+}
+
+/** cfg2v, but forces same-side spawns onto a single x column so separation is purely on y. */
+function cfg2vFixedColumn(overrides: Partial<MatchConfig> = {}): MatchConfig {
+  return cfg2v({
+    ...overrides,
+    scatter: { ...arenaDefaults().scatter, spawnBandX: 0, ...(overrides.scatter ?? {}) },
+  });
 }
 
 /** 2v2 roster */
@@ -96,12 +103,13 @@ describe("MatchEngine NvN verification", () => {
 
   // ── Test 3: team elimination ends the round (2v1 classic) ─────────────────
   it("2v1: killing the lone blue ends the round (phase=between, scores.red=1)", () => {
-    // Empty field + flat shot at y=-6 (b1's y position) → guaranteed hit
-    const c = cfg2v({ scatter: { ...arenaDefaults().scatter, maxPlanets: 0 } });
+    // Empty field + flat shot at b1's actual y position → guaranteed hit
+    const c = cfg2vFixedColumn({ scatter: { ...arenaDefaults().scatter, maxPlanets: 0 } });
     const e = new MatchEngine(c, PLAYERS_2V1, () => 1);
+    const b1y = e.snapshot().players.find((p) => p.id === "b1")!.pos.y;
 
-    // r1 is active (red goes first), fires flat line through b1's y=-6
-    expect(e.fire("r1", "-6").ok).toBe(true);
+    // r1 is active (red goes first), fires flat line through b1's y
+    expect(e.fire("r1", String(b1y)).ok).toBe(true);
     const s = e.resolvePlayerShot("r1");
 
     expect(s.phase).toBe("between");
@@ -111,11 +119,13 @@ describe("MatchEngine NvN verification", () => {
 
   // ── Test 4: partial elimination does NOT end the round (2v2 classic) ───────
   it("2v2: killing one of two blues keeps phase=play; victim is skipped in rotation", () => {
-    const c = cfg2v({ scatter: { ...arenaDefaults().scatter, maxPlanets: 0 } });
+    const c = cfg2vFixedColumn({ scatter: { ...arenaDefaults().scatter, maxPlanets: 0 } });
     const e = new MatchEngine(c, PLAYERS_2V2, () => 1);
+    const b1y = e.snapshot().players.find((p) => p.id === "b1")!.pos.y;
 
-    // r1 fires flat shot at y=-6 → hits b1 (at {x:9,y:-6}), misses b2 (at {x:9,y:6})
-    expect(e.fire("r1", "-6").ok).toBe(true);
+    // r1 fires flat shot at b1's y → hits b1, misses b2 (fixed-column spawns ⇒ b2's y
+    // differs from b1's by at least spawnSeparation)
+    expect(e.fire("r1", String(b1y)).ok).toBe(true);
     const s = e.resolvePlayerShot("r1");
 
     // Round must still be in play — b2 is still alive
@@ -143,14 +153,15 @@ describe("MatchEngine NvN verification", () => {
 
   // ── Test 5: HP mode per-player pools ──────────────────────────────────────
   it("2v2 hp: hitting b1 reduces b1.hp but leaves b2.hp unchanged at 100", () => {
-    const c = cfg2v({
+    const c = cfg2vFixedColumn({
       mode: "hp",
       scatter: { ...arenaDefaults().scatter, maxPlanets: 0 },
     });
     const e = new MatchEngine(c, PLAYERS_2V2, () => 1);
+    const b1y = e.snapshot().players.find((p) => p.id === "b1")!.pos.y;
 
-    // r1 fires at y=-6 → hits b1 (at {x:9,y:-6})
-    expect(e.fire("r1", "-6").ok).toBe(true);
+    // r1 fires at b1's actual y → hits b1
+    expect(e.fire("r1", String(b1y)).ok).toBe(true);
     const s = e.resolvePlayerShot("r1");
 
     const b1 = s.players.find((p) => p.id === "b1")!;

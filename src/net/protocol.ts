@@ -10,6 +10,8 @@ const scatterShape = z.object({
   gapMin: z.number().min(0).max(6), gapMax: z.number().min(0).max(6),
   spawnClearance: z.number().min(0).max(5), fieldMargin: z.number().min(0).max(3),
   maxPlanets: z.number().int().min(1).max(24),
+  spawnEdgeGap: z.number().min(0).max(6), spawnBandX: z.number().min(0).max(8),
+  spawnYMargin: z.number().min(0).max(5), spawnSeparation: z.number().min(0).max(6),
 });
 
 // ── Client → Server ──────────────────────────────────────────────────────────

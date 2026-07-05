@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { WebSocket } from "ws";
 import { createServer } from "./index";
 import { encode, parseServerMessage, type ServerMessage } from "../src/net/protocol";
+import { DEFAULT_MAP } from "../src/game/arenaDefaults";
 
 function open(port: number): Promise<WebSocket> {
   const ws = new WebSocket(`ws://localhost:${port}`);
@@ -222,7 +223,7 @@ describe("server integration (Phase 4 — lobby terrain, teams, countdown)", () 
     const [, lobby] = await Promise.all([bJoinedP, bLobbyP, aLobbyP]);
 
     expect(typeof (lobby as any).round1Seed).toBe("number");
-    expect((lobby as any).config?.map?.width).toBe(24);
+    expect((lobby as any).config?.map?.width).toBe(DEFAULT_MAP.width);
 
     a.close(); b.close();
     await server.close();
@@ -341,7 +342,7 @@ describe("server integration (Phase 4 — lobby terrain, teams, countdown)", () 
     const { generatePlanets, computeSpawns, boundsFromMap } = await import("../src/sim/planetScatter");
     const { DEFAULT_MAP, DEFAULT_SCATTER } = await import("../src/game/arenaDefaults");
     const bounds = boundsFromMap(DEFAULT_MAP);
-    const spawns = computeSpawns(DEFAULT_MAP, 1);
+    const spawns = computeSpawns(DEFAULT_MAP, 1, DEFAULT_SCATTER, round1Seed);
     const expectedPlanets = generatePlanets(round1Seed, bounds, spawns, DEFAULT_SCATTER);
     expect((aMatch as any).state.planets).toEqual(expectedPlanets);
 

@@ -76,6 +76,7 @@ const lobbyMsg: ServerMessage = {
     scatter: {
       rMin: 0.5, rMax: 2.0, gapMin: 1, gapMax: 3,
       spawnClearance: 2, fieldMargin: 1, maxPlanets: 8,
+      spawnEdgeGap: 1, spawnBandX: 3, spawnYMargin: 1.5, spawnSeparation: 2,
     },
   },
 };
@@ -276,7 +277,10 @@ describe("NetworkGame send helpers", () => {
   it("sendConfigure passes optional map and scatter through", async () => {
     const { game, client } = await makeGame();
     const map = { width: 24, height: 18 };
-    const scatter = { rMin: 0.5, rMax: 2, gapMin: 1, gapMax: 3, spawnClearance: 2, fieldMargin: 1, maxPlanets: 10 };
+    const scatter = {
+      rMin: 0.5, rMax: 2, gapMin: 1, gapMax: 3, spawnClearance: 2, fieldMargin: 1, maxPlanets: 10,
+      spawnEdgeGap: 1, spawnBandX: 3, spawnYMargin: 1.5, spawnSeparation: 2,
+    };
     game.sendConfigure({ mode: "classic", rounds: 3, noTurn: false, turnSeconds: 60, map, scatter });
     const last = client.sent.at(-1) as unknown as { map: unknown; scatter: unknown };
     expect(last.map).toEqual(map);
