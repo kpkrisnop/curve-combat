@@ -46,7 +46,7 @@ function fakeUi(): GameUiPort & { fire?: (p: "red" | "blue", l: string) => void 
   for (const m of [
     "onReset","setTurn","setBusy","setNoTurnMode","focus","setStatus","showWin",
     "resetInputs","hideWin","updateScoreboard","showSplash","hideSplash",
-    "showTutorialStep","hideTutorial","showHpBars","updateHp","setTimer",
+    "showTutorialStep","hideTutorial","setTimer",
   ]) ui[m] = vi.fn();
   ui.onFire = (cb: any) => { ui.fire = cb; };
   return ui;

@@ -121,4 +121,10 @@ describe("HudOverlays", () => {
     fireEvent.click(screen.getByRole("button", { name: "OK" }));
     expect(onNext).toHaveBeenCalled();
   });
+
+  it("never renders a top HP overlay — the on-dot badge is the single HP display", () => {
+    render(<HudOverlays />);
+    act(() => hudController.updateScoreboard(2, 1, 3, 5));
+    expect(document.querySelector(".hp-overlay")).toBeNull();
+  });
 });

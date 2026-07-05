@@ -71,7 +71,6 @@ export class LocalGame {
   // ── internals (ported from src/game/main.ts) ─────────────────────────────
 
   private redOf(m: MatchState): PlayerState { return m.players.find((p) => p.team === "red")!; }
-  private blueOf(m: MatchState): PlayerState { return m.players.find((p) => p.team === "blue")!; }
 
   private renderFrom(m: MatchState, viewTeam: Team): void {
     const viewer = m.players.find((p) => p.team === viewTeam && p.alive) ?? this.redOf(m);
@@ -90,8 +89,6 @@ export class LocalGame {
     this.ui.hideWin();
     this.ui.hideSplash();
     this.ui.updateScoreboard(m.scores.red, m.scores.blue, m.round, this.config.rounds);
-    this.ui.showHpBars(this.config.mode === "hp");
-    this.ui.updateHp(this.redOf(m).hp, this.blueOf(m).hp);
     this.ui.setStatus();
   }
 
@@ -156,7 +153,6 @@ export class LocalGame {
 
     if (commit.roundEnded) {
       this.renderFrom(this.match, player);
-      if (this.config.mode === "hp") this.ui.updateHp(this.redOf(this.match).hp, this.blueOf(this.match).hp);
       this.handleRoundEnd(commit.roundLoser!);
       return;
     }
@@ -164,7 +160,6 @@ export class LocalGame {
     const viewTeam: Team = this.match.activePlayerId
       ? playerById(this.match, this.match.activePlayerId)!.team : player;
     this.renderFrom(this.match, viewTeam);
-    if (this.config.mode === "hp") this.ui.updateHp(this.redOf(this.match).hp, this.blueOf(this.match).hp);
     if (!this.config.noTurn) {
       this.ui.setTurn(viewTeam, "");
       this.armTimer();
@@ -201,7 +196,6 @@ export class LocalGame {
       this.armTimer();
       this.ui.setNoTurnMode(this.config.noTurn);
       this.ui.updateScoreboard(this.match.scores.red, this.match.scores.blue, this.match.round, this.config.rounds);
-      if (this.config.mode === "hp") this.ui.updateHp(this.redOf(this.match).hp, this.blueOf(this.match).hp);
       this.ui.setStatus();
       this.ui.focus();
     }, SPLASH_MS);

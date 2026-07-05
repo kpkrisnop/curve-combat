@@ -21,7 +21,6 @@ const makeUi = () => ({
   setTurn: vi.fn(),
   setNoTurnMode: vi.fn(),
   updateScoreboard: vi.fn(),
-  updateHp: vi.fn(),
   showWin: vi.fn(),
   onFire: vi.fn(),
 });

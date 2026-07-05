@@ -15,21 +15,6 @@ function RoundStatus() {
   );
 }
 
-function HpBars() {
-  const hp = useStore(hudStore, (s) => s.hp);
-  if (!hp.visible) return null;
-  return (
-    <div className="hp-overlay">
-      {(["red", "blue"] as const).map((t) => (
-        <div key={t} className={`hp-wrap is-${t}`}>
-          <div className="hp-fill" style={{ width: `${Math.max(0, Math.min(100, hp[t]))}%` }} />
-          <span className="hp-label">{hp[t]} HP</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function WinBanner() {
   const win = useStore(hudStore, (s) => s.win);
   if (!win) return null;
@@ -74,5 +59,5 @@ function TutorialOverlay() {
 }
 
 export function HudOverlays() {
-  return (<><RoundStatus /><HpBars /><WinBanner /><RoundSplash /><TutorialOverlay /></>);
+  return (<><RoundStatus /><WinBanner /><RoundSplash /><TutorialOverlay /></>);
 }

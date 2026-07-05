@@ -8,7 +8,6 @@ export interface HudState {
   noTurn: boolean;
   busy: { red: boolean; blue: boolean };
   score: { red: number; blue: number; round: number; totalRounds: number };
-  hp: { red: number; blue: number; visible: boolean };
   status: string;
   timer: number | null;
   win: { winner: Team; detail: string } | null;
@@ -22,7 +21,6 @@ export function initialHudState(): HudState {
     noTurn: false,
     busy: { red: false, blue: false },
     score: { red: 0, blue: 0, round: 1, totalRounds: 3 },
-    hp: { red: 100, blue: 100, visible: false },
     status: "",
     timer: null,
     win: null,
@@ -100,12 +98,6 @@ export class HudController implements GameUiPort {
     this.store.set({ tutorial: { text } });
   }
   hideTutorial(): void { this.store.set({ tutorial: null }); }
-  showHpBars(visible: boolean): void {
-    this.store.set((s) => ({ hp: { ...s.hp, visible } }));
-  }
-  updateHp(redHp: number, blueHp: number): void {
-    this.store.set((s) => ({ hp: { ...s.hp, red: redHp, blue: blueHp } }));
-  }
   setTimer(seconds: number | null): void { this.store.set({ timer: seconds }); }
 }
 

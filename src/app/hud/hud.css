@@ -32,17 +32,6 @@
   z-index: 6; background: var(--gw-surface); border: 1px solid var(--gw-border);
   border-radius: 999px; padding: 8px 18px; font-weight: 800; white-space: nowrap;
   pointer-events: none; }
-.hp-overlay { position: absolute; top: 0; left: 0; right: 0; z-index: 5;
-  display: flex; justify-content: space-between; pointer-events: none; }
-.hp-wrap { position: relative; width: 34%; height: 22px; background: var(--gw-surface-2);
-  border: 1px solid var(--gw-border); overflow: hidden; }
-.hp-fill { height: 100%; transition: width 250ms ease; }
-.hp-wrap.is-red .hp-fill { background: var(--gw-red); }
-.hp-wrap.is-blue .hp-fill { background: var(--gw-blue); margin-left: auto; }
-.hp-label { position: absolute; top: 50%; transform: translateY(-50%);
-  font-size: 12px; font-weight: 800; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
-.hp-wrap.is-red .hp-label { right: 9px; } .hp-wrap.is-blue .hp-label { left: 9px; }
-
 .gw-overlay-center { position: absolute; inset: 0; z-index: 10;
   display: flex; align-items: center; justify-content: center; }
 .win-banner, .round-splash, .tutorial-box {

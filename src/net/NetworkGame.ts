@@ -255,7 +255,6 @@ export class NetworkGame {
     }
     // --- rest of render (unchanged below) ---
     const red = state.players.find((p) => p.team === "red")!;
-    const blue = state.players.find((p) => p.team === "blue")!;
     const viewTeam: Team = this.myTeam ?? "red";
     const viewer = state.players.find((p) => p.team === viewTeam && p.alive) ?? red;
     this.renderer.setMap(state.config.map);
@@ -269,10 +268,6 @@ export class NetworkGame {
     if (active) this.ui.setTurn(active.team);
     else this.ui.setNoTurnMode(true);
     this.ui.updateScoreboard(state.scores.red, state.scores.blue, state.round, state.config.rounds);
-
-    if (state.config.mode === "hp") {
-      this.ui.updateHp(red.hp, blue.hp);
-    }
 
     if (state.phase === "over" && state.winner) {
       const detail = state.config.mode === "hp" ? "Out of HP." : "Direct hit.";
