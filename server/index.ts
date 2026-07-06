@@ -1,6 +1,6 @@
 // server/index.ts
 import { WebSocketServer, WebSocket } from "ws";
-import { RoomManager, type Room } from "./roomManager";
+import { RoomManager, LOBBY_GRACE_MS, type Room } from "./roomManager";
 import { parseClientMessage, encode, type ServerMessage } from "../src/net/protocol";
 import type { MatchState } from "../src/game/matchState";
 import { MatchEngine } from "./matchEngine";
@@ -269,15 +269,20 @@ export function createServer(port: number): { close: () => Promise<void> } {
 
       const code = conn.room;
 
-      // ── Lobby (no match yet): remove immediately, transfer owner, drop empty room (Bug B).
+      // ── Lobby (no match yet): short grace so a momentary blip keeps the
+      // player's id/team/ownership; on expiry, remove + transfer owner + drop
+      // empty room (Bug B). Reconnect within the grace cancels this via rejoin().
       if (room.engine === null) {
-        const { roomGone } = rooms.removeFromLobby(code, conn.playerId!);
-        if (roomGone) {
-          for (const c of conns) if (c.room === code) c.ws.terminate();
-        } else {
-          const updated = rooms.get(code);
-          if (updated) broadcast(code, rosterMsg(updated));
-        }
+        const pid = conn.playerId!;
+        rooms.startGrace(code, pid, () => {
+          const { roomGone } = rooms.removeFromLobby(code, pid);
+          if (roomGone) {
+            for (const c of conns) if (c.room === code) c.ws.terminate();
+          } else {
+            const updated = rooms.get(code);
+            if (updated) broadcast(code, rosterMsg(updated));
+          }
+        }, LOBBY_GRACE_MS);
         return;
       }
 

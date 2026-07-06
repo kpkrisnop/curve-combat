@@ -24,6 +24,7 @@ let counter = 0;
 const nextId = () => `p${++counter}`;
 const TTL_MS = 10 * 60 * 1000;
 const GRACE_MS = 30 * 1000;
+export const LOBBY_GRACE_MS = 3000;
 const TEAM_CAP = 5;
 
 function mintSeed(): number {
@@ -141,14 +142,14 @@ export class RoomManager {
     }, TTL_MS);
   }
 
-  startGrace(code: string, playerId: string, onExpire: () => void): void {
+  startGrace(code: string, playerId: string, onExpire: () => void, ms: number = GRACE_MS): void {
     const room = this.rooms.get(code);
     if (!room) return;
     const handle = setTimeout(() => {
       room.graceTimers.delete(playerId);
       room.rejoinTokens.delete(playerId);
       onExpire();
-    }, GRACE_MS);
+    }, ms);
     room.graceTimers.set(playerId, handle);
   }
 
