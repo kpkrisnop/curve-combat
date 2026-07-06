@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, act, fireEvent } from "@testing-library/react";
 import { netLobbyStore, initialNetLobbyState } from "../net/netLobbyStore";
 import type { NetLobbyState } from "../net/netLobbyStore";
+import { setNickname } from "../net/nickname";
 import { OnlineFlow } from "./OnlineFlow";
 
 // ── Mock ArenaStage: immediately calls onReady with a fake renderer ────────
@@ -47,6 +48,7 @@ vi.mock("../../net/ServerClient", () => ({
 
 vi.mock("../net/nickname", () => ({
   getNickname: vi.fn(() => "TestPlayer"),
+  setNickname: vi.fn(),
 }));
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -278,6 +280,26 @@ describe("OnlineFlow", () => {
     expect(mockNet.sendSetName).toHaveBeenCalledWith("Alicia");
 
     vi.useRealTimers();
+  });
+
+  it("persists the nickname to localStorage when the footer Name input changes", async () => {
+    await act(async () => {
+      render(<OnlineFlow code="ROOM1" />);
+    });
+    act(() => {
+      setLobbyState({
+        phase: "lobby",
+        roomCode: "ROOM1",
+        players: BASE_PLAYERS,
+        myId: "r1",
+        hostId: "r1",
+        amHost: true,
+        amSpectator: false,
+      });
+    });
+    const input = screen.getByLabelText(/name/i);
+    fireEvent.change(input, { target: { value: "Zed" } });
+    expect(setNickname).toHaveBeenCalledWith("Zed");
   });
 
   // ── E3 regression: footer Switch side dispatch ────────────────────────────

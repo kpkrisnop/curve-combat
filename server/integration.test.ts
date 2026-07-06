@@ -458,3 +458,57 @@ describe("server integration (Phase 3)", () => {
     await server.close();
   }, 10000);
 });
+
+describe("server integration — lobby disconnect grace (Bug B + blip resilience)", () => {
+  beforeEach(() => { vi.useFakeTimers({ shouldAdvanceTime: true }); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it("host leaving the lobby is removed only after the grace, then ownership transfers", async () => {
+    const port = 3620 + Math.floor(Math.random() * 150);
+    const server = createServer(port);
+    const a = await open(port), b = await open(port);
+    a.send(encode({ type: "join", room: "LOBBY", name: "Ann" })); await next(a, "joined");
+    b.send(encode({ type: "join", room: "LOBBY", name: "Bo" }));
+    const bId = ((await next(b, "joined")) as any).playerId;
+
+    const rosterP = next(b, "lobbyState");
+    a.close();
+    await vi.advanceTimersByTimeAsync(3100); // past the lobby grace
+    const roster = (await rosterP) as any;
+    expect(roster.players).toHaveLength(1);
+    expect(roster.players[0].id).toBe(bId);
+    expect(roster.ownerId).toBe(bId);
+
+    b.close();
+    await server.close();
+  });
+
+  it("a lobby blip: reconnecting within the grace keeps the player's id, team, and ownership", async () => {
+    const port = 3620 + Math.floor(Math.random() * 150);
+    const server = createServer(port);
+    const a = await open(port), b = await open(port);
+    a.send(encode({ type: "join", room: "LOBBY", name: "Ann" })); // owner
+    const aJoined = (await next(a, "joined")) as any;
+    const aId = aJoined.playerId, aTok = aJoined.token;
+    b.send(encode({ type: "join", room: "LOBBY", name: "Bo" }));
+    const bId = ((await next(b, "joined")) as any).playerId;
+
+    a.close();
+    const a2 = await open(port); // reconnect on a fresh socket, within the grace
+    a2.send(encode({ type: "reconnect", room: "LOBBY", playerId: aId, token: aTok }));
+    const reJoined = (await next(a2, "joined")) as any;
+    expect(reJoined.playerId).toBe(aId);
+    expect(reJoined.ownerId).toBe(aId); // ownership retained through the blip
+
+    await vi.advanceTimersByTimeAsync(3100); // grace was cancelled — nothing removed
+    a2.send(encode({ type: "setName", name: "Ann2" }));
+    const roster = (await next(b, "lobbyState")) as any;
+    expect(roster.players.map((p: any) => p.id).sort()).toEqual([aId, bId].sort());
+    expect(roster.ownerId).toBe(aId);
+    // team preserved through the blip: first joiner is seated red
+    expect(roster.players.find((p: any) => p.id === aId).team).toBe("red");
+
+    a2.close(); b.close();
+    await server.close();
+  });
+});

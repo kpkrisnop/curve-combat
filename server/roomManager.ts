@@ -24,6 +24,7 @@ let counter = 0;
 const nextId = () => `p${++counter}`;
 const TTL_MS = 10 * 60 * 1000;
 const GRACE_MS = 30 * 1000;
+export const LOBBY_GRACE_MS = 3000;
 const TEAM_CAP = 5;
 
 function mintSeed(): number {
@@ -141,14 +142,14 @@ export class RoomManager {
     }, TTL_MS);
   }
 
-  startGrace(code: string, playerId: string, onExpire: () => void): void {
+  startGrace(code: string, playerId: string, onExpire: () => void, ms: number = GRACE_MS): void {
     const room = this.rooms.get(code);
     if (!room) return;
     const handle = setTimeout(() => {
       room.graceTimers.delete(playerId);
       room.rejoinTokens.delete(playerId);
       onExpire();
-    }, GRACE_MS);
+    }, ms);
     room.graceTimers.set(playerId, handle);
   }
 
@@ -157,6 +158,32 @@ export class RoomManager {
     if (!room) return;
     const h = room.graceTimers.get(playerId);
     if (h !== undefined) { clearTimeout(h); room.graceTimers.delete(playerId); }
+  }
+
+  /**
+   * Pre-match player removal (Bug B). In the lobby a disconnect is immediate:
+   * the player leaves `room.players`, their grace timer + rejoin token are
+   * cleared, ownership transfers to the next player in roster order if they
+   * were the owner, and the room is torn down if it becomes empty. Returns
+   * `{ roomGone }` so the socket layer can re-broadcast the roster or terminate
+   * the dead room's sockets. No-op (`roomGone:false`) once a match has started
+   * (`engine !== null`) — in-match disconnects keep the grace/reconnect path.
+   */
+  removeFromLobby(code: string, playerId: string): { roomGone: boolean } {
+    const room = this.rooms.get(code);
+    if (!room) return { roomGone: false };
+    if (room.engine !== null) return { roomGone: false };
+    this.cancelGrace(code, playerId);
+    room.rejoinTokens.delete(playerId);
+    const wasOwner = room.ownerId === playerId;
+    room.players = room.players.filter((p) => p.id !== playerId);
+    if (room.players.length === 0) {
+      this.remove(code);
+      return { roomGone: true };
+    }
+    if (wasOwner) room.ownerId = room.players[0].id;
+    this.relayout(code);
+    return { roomGone: false };
   }
 
   rejoin(code: string, playerId: string, token: string): { room: Room; token: string } | null {

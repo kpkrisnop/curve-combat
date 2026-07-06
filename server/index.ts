@@ -1,6 +1,6 @@
 // server/index.ts
 import { WebSocketServer, WebSocket } from "ws";
-import { RoomManager, type Room } from "./roomManager";
+import { RoomManager, LOBBY_GRACE_MS, type Room } from "./roomManager";
 import { parseClientMessage, encode, type ServerMessage } from "../src/net/protocol";
 import type { MatchState } from "../src/game/matchState";
 import { MatchEngine } from "./matchEngine";
@@ -261,17 +261,35 @@ export function createServer(port: number): { close: () => Promise<void> } {
         return;
       }
 
-      // If the player already reconnected on a new socket, this close is stale — skip grace.
+      // If the player already reconnected on a new socket, this close is stale — skip.
       const alreadyReconnected = [...conns].some(
         (c) => c.room === conn.room && c.playerId === conn.playerId && c.ws.readyState === WebSocket.OPEN,
       );
       if (alreadyReconnected) return;
 
+      const code = conn.room;
+
+      // ── Lobby (no match yet): short grace so a momentary blip keeps the
+      // player's id/team/ownership; on expiry, remove + transfer owner + drop
+      // empty room (Bug B). Reconnect within the grace cancels this via rejoin().
+      if (room.engine === null) {
+        const pid = conn.playerId!;
+        rooms.startGrace(code, pid, () => {
+          const { roomGone } = rooms.removeFromLobby(code, pid);
+          if (roomGone) {
+            for (const c of conns) if (c.room === code) c.ws.terminate();
+          } else {
+            const updated = rooms.get(code);
+            if (updated) broadcast(code, rosterMsg(updated));
+          }
+        }, LOBBY_GRACE_MS);
+        return;
+      }
+
+      // ── In-match: keep peerStatus + 30 s grace → teardown (unchanged).
       const player = room.players.find((p) => p.id === conn.playerId);
       const name = player?.name ?? "Player";
-      broadcast(conn.room, { type: "peerStatus", playerId: conn.playerId!, name, connected: false });
-
-      const code = conn.room;
+      broadcast(code, { type: "peerStatus", playerId: conn.playerId!, name, connected: false });
       rooms.startGrace(code, conn.playerId!, () => {
         cancelTurnTimer(code);
         const rm = rooms.get(code);
