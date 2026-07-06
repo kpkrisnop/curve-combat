@@ -13,7 +13,7 @@ import { ServerClient } from "../../net/ServerClient";
 import { netLobbyStore, initialNetLobbyState, bindNetworkGame } from "../net/netLobbyStore";
 import { ReconnectOverlays } from "../net/ReconnectOverlays";
 import { buildArenaPreview } from "../net/arenaPreview";
-import { getNickname } from "../net/nickname";
+import { getNickname, setNickname } from "../net/nickname";
 import { useStore } from "../store";
 import { ConfigPanel } from "./ConfigPanel";
 import { NetCountdown } from "./NetCountdown";
@@ -228,6 +228,7 @@ export function OnlineFlow({ code }: Props) {
   // stale send can't reach the server mid-match (belt-and-suspenders on top
   // of netLobbyStore's phase-regression guard and roomManager's locked guard).
   const onFooterNameChange = useCallback((name: string) => {
+    setNickname(name); // persist locally right away; server send stays debounced
     const net = netRef.current;
     if (!net) return;
     if (nameDebounceRef.current) clearTimeout(nameDebounceRef.current);
