@@ -99,6 +99,19 @@ describe("computeSpawns — seeded, in-zone, mirror-symmetric", () => {
     expect(s.filter((p) => p.x < 0)).toHaveLength(5);
     expect(s.filter((p) => p.x > 0)).toHaveLength(5);
   });
+
+  it("keeps each side on its own half when spawnEdgeGap exceeds the map half-width", () => {
+    // Small map (maxX = 4) + a large edge gap (6) would send xHiMag negative and
+    // flip spawns onto the wrong half without the ≥0 clamp. Left stays x ≤ 0.
+    const map = { width: 8, height: 12 };
+    const scatter = { ...DEFAULT_SCATTER, spawnEdgeGap: 6 };
+    const s = computeSpawns(map, 3, scatter, 314);
+    const left = s.filter((_, i) => i % 2 === 0); // interleaved: even = left side
+    for (const p of left) expect(p.x).toBeLessThanOrEqual(0);
+    // No red/blue overlap onto the opposite half: mins/maxs don't cross the center wrongly.
+    expect(Math.max(...s.filter((p) => p.x < 0).map((p) => p.x), -Infinity)).toBeLessThanOrEqual(0);
+    expect(Math.min(...s.filter((p) => p.x > 0).map((p) => p.x), Infinity)).toBeGreaterThanOrEqual(0);
+  });
 });
 
 describe("spawnZoneRects — geometry backing the pre-game margin guides", () => {

@@ -39,7 +39,9 @@ export interface SpawnZoneRect {
  * without duplicating computeSpawns' sampling logic.
  */
 export function spawnZoneRects(bounds: Bounds, scatter: ScatterConfig): SpawnZoneRect[] {
-  const xHiMag = bounds.maxX - scatter.spawnEdgeGap;
+  // Clamp ≥0: a spawnEdgeGap larger than the half-width would flip xHiMag negative
+  // and seat spawns on the wrong half of the map (reachable via small-map sliders).
+  const xHiMag = Math.max(0, bounds.maxX - scatter.spawnEdgeGap);
   const xLoMag = Math.max(0, xHiMag - scatter.spawnBandX);
   const yLo = bounds.minY + scatter.spawnYMargin;
   const yHi = bounds.maxY - scatter.spawnYMargin;
@@ -73,7 +75,9 @@ export function computeSpawns(
   const b = boundsFromMap(map);
   const rng = mulberry32((seed ^ SPAWN_SEED_SALT) >>> 0);
 
-  const xHiMag = b.maxX - scatter.spawnEdgeGap;
+  // Clamp ≥0 (see spawnZoneRects): keeps each side's spawns on its own half even
+  // when spawnEdgeGap exceeds the map half-width.
+  const xHiMag = Math.max(0, b.maxX - scatter.spawnEdgeGap);
   const xLoMag = Math.max(0, xHiMag - scatter.spawnBandX);
   const yLo = b.minY + scatter.spawnYMargin;
   const yHi = b.maxY - scatter.spawnYMargin;
