@@ -18,7 +18,5 @@ export interface GameUiPort {
   hideSplash(): void;
   showTutorialStep(text: string, onNext: () => void, onSkip: () => void): void;
   hideTutorial(): void;
-  showHpBars(visible: boolean): void;
-  updateHp(redHp: number, blueHp: number): void;
   setTimer(seconds: number | null): void;
 }

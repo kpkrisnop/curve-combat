@@ -18,14 +18,12 @@ describe("HudController", () => {
     hud = new HudController(store, inputs);
   });
 
-  it("setTurn/updateScoreboard/updateHp write store state", () => {
+  it("setTurn/updateScoreboard write store state", () => {
     hud.setTurn("blue");
     hud.updateScoreboard(1, 2, 3, 5);
-    hud.updateHp(74, 100);
     const s = store.get();
     expect(s.turn).toBe("blue");
     expect(s.score).toEqual({ red: 1, blue: 2, round: 3, totalRounds: 5 });
-    expect(s.hp.red).toBe(74);
   });
 
   it("requestFire is turn-gated and forwards latex", () => {

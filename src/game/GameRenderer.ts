@@ -1,17 +1,30 @@
 import { Application, Container, Graphics, RenderTexture, Sprite, Text } from "pixi.js";
 import { Camera } from "../graph/Camera";
 import type { Bounds, ShotResult, Vec2, World } from "../sim/types";
-import type { MapConfig } from "./matchLogic";
+import type { MapConfig, ScatterConfig } from "./matchLogic";
 import { DEFAULT_MAP } from "./arenaDefaults";
-import { boundsFromMap } from "../sim/planetScatter";
-import { fitContain } from "../sim/fitRect";
+import { boundsFromMap, spawnZoneRects } from "../sim/planetScatter";
+import { fitContain, boundaryRectPx } from "../sim/fitRect";
 import { X_VELOCITY_WORLD } from "../sim/timing";
+import { cumulativeArcLength, pointAtLength, bangTravelProgress } from "../sim/playback";
+import { PLAYER_RADIUS, type PlayerState } from "./matchState";
+import { HP_MAX } from "./hpLogic";
+import {
+  badgeText,
+  badgeSize,
+  hpFraction,
+  showHpBar,
+  isPlayerActive,
+  type BadgePhase,
+  type MatchMode,
+} from "./badge";
 
 const COLORS = {
   bg: 0x0f141a,
   grid: 0x1d2935,
   axis: 0x3b4f60,
   label: 0x5b7185,
+  boundary: 0x5b7185,
   red: 0xff4444,
   blue: 0x4488ff,
   projectile: 0xffffff,
@@ -20,10 +33,55 @@ const COLORS = {
   dust: 0xb59a78,
 };
 
+/** Colors for the pre-game margin guides that aren't team-tinted (Task S3). */
+const GUIDE_COLORS = {
+  /** Field-margin box — grey. */
+  margin: 0x96aacd,
+  /** Spawn separation ring — whitish. */
+  separation: 0xdce4f5,
+};
+
 /** Minimum animation duration in ms — prevents instant flicker on zero-length shots. */
 const MIN_SHOT_MS = 200;
-const PLAYER_RADIUS_WORLD = 0.2;
+// Bang→travel projectile pacing (Issue 5, ADR-0004): the head starts at `c×` cruise
+// speed and decays at rate `a` toward cruise (b=1 baseline). Front-loads speed within
+// the shot's fixed duration; only the ratio c/b shapes the curve.
+const BANG_DECAY_RATE = 1; // a
+const BANG_SPEED_MULTIPLIER = 3; // c
 const BARREL_PX = 18;
+
+/**
+ * Detach and destroy every child of a Pixi layer (M4 fix). `removeChildren()`
+ * alone only detaches — it never frees the child's GPU-side resources
+ * (Text's rendered-glyph texture, Graphics' geometry context) — so a layer
+ * whose children are freshly `new Text()`/`new Graphics()`'d on every draw
+ * (badgeLayer's per-soldier badge groups, labelLayer's grid-label Text) leaks
+ * GPU memory over a long match if only `removeChildren()` is called.
+ *
+ * `textureSource: false` is deliberate, not an oversight: Pixi's text render
+ * pipe (node_modules/pixi.js CanvasTextPipe.js) pools/ref-counts the
+ * underlying canvas texture by a (text content + style) key via
+ * `canvasText.getManagedTexture()` — two Text objects with identical
+ * content+style (e.g. two same-named players) can share one GPU texture
+ * source. Forcing `textureSource: true` here would destroy that shared
+ * resource out from under any other live Text still using the same key.
+ * Destroying the object's own `texture` wrapper plus all children
+ * (`children: true` — Graphics.destroy() always frees its own owned
+ * geometry context regardless of these flags) releases everything this draw
+ * call exclusively owns, without touching anything shared/pooled.
+ *
+ * Never call this on a layer holding long-lived shared Graphics singletons
+ * that are only ever `.clear()`ed and redrawn in place (gridLayer,
+ * axisLayer, boundaryLayer, fieldLayer, trail/fx layers) — those must not be
+ * destroyed, only cleared.
+ */
+export function destroyLayerChildren(layer: {
+  removeChildren(): Array<{ destroy(options?: unknown): void }>;
+}): void {
+  for (const child of layer.removeChildren()) {
+    child.destroy({ children: true, texture: true, textureSource: false });
+  }
+}
 
 export class GameRenderer {
   readonly app = new Application();
@@ -32,18 +90,46 @@ export class GameRenderer {
   private gridLayer = new Graphics();
   private axisLayer = new Graphics();
   private labelLayer = new Container();
+  private boundaryLayer = new Graphics();
+  /**
+   * Ambient pre-game "margin guide" overlay (Task S3) — spawn zone rects,
+   * spawn clearance/separation rings, and the field-margin box. Wordless,
+   * only ever drawn while `badgePhase === "pregame"` (see drawGuides());
+   * cleared and left empty once the match starts. Sits behind planetLayer
+   * so planets can visually overlap the guides, same as the prototype.
+   */
+  private guideLayer = new Graphics();
   private planetLayer = new Container();
   private planetTextures: RenderTexture[] = [];
   private fieldLayer = new Graphics();
   private trailLayerRed = new Graphics();
   private trailLayerBlue = new Graphics();
   private fxLayer = new Graphics();
+  /**
+   * Name badges anchored to each soldier dot (Task D1+D2). A plain Pixi layer —
+   * Text/Graphics here never receive pointer events (nothing in this app enables
+   * `eventMode`), and the sim's hit detection resolves purely against
+   * `world.targets` (position + PLAYER_RADIUS), so badges are excluded from the
+   * hitbox by construction, not by an extra check.
+   */
+  private badgeLayer = new Container();
 
   private world!: World;
   private activeTurn: "red" | "blue" = "red";
   private noTurnMode = false;
-  private redPos: Vec2 = { x: -9, y: 0 };
-  private bluePos: Vec2 = { x: 9, y: 0 };
+  /**
+   * The single player whose turn it is (turn-based mode); null in no-turn
+   * mode or before any turn has been assigned. Drives per-player glow/aim —
+   * see isPlayerActive() in ./badge and its use in drawField(). This is the
+   * H3 fix: activity is a PLAYER identity, not a TEAM one.
+   */
+  private activePlayerId: string | null = null;
+  /** Full soldier roster for the current round — drives both dots and badges. */
+  private players: PlayerState[] = [];
+  private badgePhase: BadgePhase = "pregame";
+  private badgeMode: MatchMode = "classic";
+  /** Live scatter config for the pre-game margin guides (undefined ⇒ guides stay hidden). */
+  private arenaScatter: ScatterConfig | undefined;
 
   /**
    * The logical playfield rectangle (world units). Set from MatchConfig via
@@ -69,11 +155,14 @@ export class GameRenderer {
       this.gridLayer,
       this.axisLayer,
       this.labelLayer,
+      this.boundaryLayer,
+      this.guideLayer,
       this.planetLayer,
       this.fieldLayer,
       this.trailLayerRed,
       this.trailLayerBlue,
       this.fxLayer,
+      this.badgeLayer,
     );
 
     // Pre-compute before setWorld is called so main.ts can read bounds immediately.
@@ -104,11 +193,34 @@ export class GameRenderer {
     if (this.camera) this.recomputeEffectiveBounds();
   }
 
-  setWorld(world: World, activeTurn: "red" | "blue", redPos: Vec2, bluePos: Vec2) {
+  /**
+   * @param players Full soldier roster for the round (any NvN size) — every
+   *   alive entry gets a dot + name badge; `opts.phase`/`opts.mode` control
+   *   badge size and whether the HP bar shows (see src/game/badge.ts).
+   * @param opts.activePlayerId The single player whose turn it is (turn-based
+   *   mode), or null in no-turn mode / before a turn is assigned. Drives
+   *   which one player glows + shows an aim barrel (H3 fix — see
+   *   isPlayerActive() in ./badge). `activeTurn` above is kept only for
+   *   team-colored trail/fx bookkeeping in playShot(); it no longer decides
+   *   who is highlighted.
+   * @param opts.scatter Live scatter config, used to draw the pre-game
+   *   margin guides (Task S3 — see drawGuides()). Optional: omit (or pass
+   *   undefined) for in-match render paths where the guides never show
+   *   anyway (badgePhase !== "pregame" already hides them).
+   */
+  setWorld(
+    world: World,
+    activeTurn: "red" | "blue",
+    players: PlayerState[],
+    opts: { phase: BadgePhase; mode: MatchMode; activePlayerId: string | null; scatter?: ScatterConfig },
+  ) {
     this.world = world;
     this.activeTurn = activeTurn;
-    this.redPos = redPos;
-    this.bluePos = bluePos;
+    this.players = players;
+    this.badgePhase = opts.phase;
+    this.badgeMode = opts.mode;
+    this.activePlayerId = opts.activePlayerId;
+    this.arenaScatter = opts.scatter;
     this.recomputeEffectiveBounds();
     this.trailLayerRed.clear();
     this.trailLayerBlue.clear();
@@ -139,19 +251,25 @@ export class GameRenderer {
     const a = this.axisLayer;
     g.clear();
     a.clear();
-    this.labelLayer.removeChildren();
+    destroyLayerChildren(this.labelLayer);
 
-    const eb = this.effectiveBounds;
+    // The spacetime grid is ambient and paints the entire viewport — it is not
+    // clipped to the world/play bounds. The play boundary is drawn separately
+    // (drawBoundary()) as an explicit rect at the sim's collision bounds.
     const step = niceStep(45 / cam.scale);
+    const left = cam.screenToWorldX(0);
+    const right = cam.screenToWorldX(w);
+    const top = cam.screenToWorldY(0);
+    const bottom = cam.screenToWorldY(h);
     const axisX = clamp(cam.worldToScreenX(0), 0, w);
     const axisY = clamp(cam.worldToScreenY(0), 0, h);
 
-    for (let x = Math.ceil(eb.minX / step) * step; x <= eb.maxX; x += step) {
+    for (let x = Math.ceil(left / step) * step; x <= right; x += step) {
       const sx = cam.worldToScreenX(x);
       g.moveTo(sx, 0).lineTo(sx, h);
       if (Math.abs(x) > 1e-9) this.addLabel(fmt(x), sx + 3, clamp(axisY, 2, h - 14));
     }
-    for (let y = Math.ceil(eb.minY / step) * step; y <= eb.maxY; y += step) {
+    for (let y = Math.ceil(bottom / step) * step; y <= top; y += step) {
       const sy = cam.worldToScreenY(y);
       g.moveTo(0, sy).lineTo(w, sy);
       if (Math.abs(y) > 1e-9) this.addLabel(fmt(y), clamp(axisX + 3, 2, w - 30), sy + 2);
@@ -161,6 +279,23 @@ export class GameRenderer {
     a.moveTo(0, cam.worldToScreenY(0)).lineTo(w, cam.worldToScreenY(0));
     a.moveTo(cam.worldToScreenX(0), 0).lineTo(cam.worldToScreenX(0), h);
     a.stroke({ width: 1.5, color: COLORS.axis });
+
+    this.drawBoundary();
+  }
+
+  /**
+   * Draws the visible play-boundary rectangle — the same `bounds` the sim
+   * collides bullets against (`detectCollision` in src/sim/collision.ts),
+   * derived here via the shared pure `boundaryRectPx()` (src/sim/fitRect.ts).
+   * Never a separate constant: single source of truth is `boundsFromMap(map)`.
+   */
+  private drawBoundary() {
+    const cam = this.camera;
+    const rect = boundaryRectPx(this.map, cam.width, cam.height);
+    this.boundaryLayer.clear();
+    this.boundaryLayer
+      .rect(rect.x, rect.y, rect.w, rect.h)
+      .stroke({ width: 2, color: COLORS.boundary, alpha: 0.6 });
   }
 
   private addLabel(text: string, x: number, y: number) {
@@ -223,33 +358,195 @@ export class GameRenderer {
     this.noTurnMode = enabled;
   }
 
+  /**
+   * Draws every alive soldier as a dot (full brightness on the active team,
+   * dimmed otherwise) plus its anchored name badge. Runs for any NvN roster
+   * size, not just one red + one blue — badges track camera scale/pan because
+   * they're positioned from the same `toScreen()` used for the dot itself, and
+   * this whole method reruns on every resize (see the "resize" handler above).
+   */
   private drawField() {
+    this.drawGuides();
     const g = this.fieldLayer;
     const cam = this.camera;
     g.clear();
+    destroyLayerChildren(this.badgeLayer);
 
-    const rPx = PLAYER_RADIUS_WORLD * cam.scale;
+    const rPx = PLAYER_RADIUS * cam.scale;
 
-    // RED — full brightness when active, dimmed when waiting.
-    const rs = this.toScreen(this.redPos);
-    const isRedActive = this.noTurnMode || this.activeTurn === "red";
-    if (isRedActive) {
-      g.circle(rs.x, rs.y, rPx + 6).stroke({ width: 2.5, color: COLORS.red, alpha: 0.35 });
+    for (const p of this.players) {
+      if (!p.alive) continue;
+      const color = p.team === "red" ? COLORS.red : COLORS.blue;
+      const isActive = isPlayerActive(p.id, this.activePlayerId, this.noTurnMode);
+      const s = this.toScreen(p.pos);
+
+      if (isActive) {
+        g.circle(s.x, s.y, rPx + 6).stroke({ width: 2.5, color, alpha: 0.35 });
+      }
+      g.circle(s.x, s.y, rPx).fill({ color, alpha: isActive ? 1.0 : 0.4 });
+      if (isActive) {
+        const dir = p.team === "red" ? 1 : -1;
+        g.moveTo(s.x, s.y).lineTo(s.x + dir * BARREL_PX, s.y).stroke({ width: 3, color });
+      }
+
+      this.drawBadge(p, s, color, rPx);
     }
-    g.circle(rs.x, rs.y, rPx).fill({ color: COLORS.red, alpha: isRedActive ? 1.0 : 0.4 });
-    if (isRedActive) {
-      g.moveTo(rs.x, rs.y).lineTo(rs.x + BARREL_PX, rs.y).stroke({ width: 3, color: COLORS.red });
+  }
+
+  /**
+   * Ambient, wordless "margin guide" overlay (Task S3) — spawn zone rects,
+   * spawn clearance/separation rings, and the field-margin box. Drawn ONLY
+   * during the pre-game/config phase (see `this.badgePhase`); cleared and
+   * left empty in-match, matching `prototypes/spawn-randomizer.ts` render().
+   * Rings are centered on each live player's CURRENT position, which in
+   * pre-game is exactly their spawn.
+   */
+  private drawGuides(): void {
+    const g = this.guideLayer;
+    g.clear();
+    if (this.badgePhase !== "pregame" || !this.arenaScatter) return;
+
+    const cam = this.camera;
+    const scatter = this.arenaScatter;
+    const b = this.effectiveBounds;
+
+    // Field-margin box — grey dashed rectangle, bounds inset by fieldMargin.
+    const fm = scatter.fieldMargin;
+    const marginTopLeft = this.toScreen({ x: b.minX + fm, y: b.maxY - fm });
+    this.strokeDashedRect(
+      g,
+      marginTopLeft,
+      (b.maxX - b.minX - 2 * fm) * cam.scale,
+      (b.maxY - b.minY - 2 * fm) * cam.scale,
+      7,
+      5,
+      GUIDE_COLORS.margin,
+      0.3,
+    );
+
+    // Spawn zone rects — one per side, team-tinted fill + stroke (solid, no dash).
+    for (const zone of spawnZoneRects(b, scatter)) {
+      const topLeft = this.toScreen({ x: Math.min(zone.xLo, zone.xHi), y: zone.yHi });
+      const w = Math.abs(zone.xHi - zone.xLo) * cam.scale;
+      const h = (zone.yHi - zone.yLo) * cam.scale;
+      const color = zone.sign < 0 ? COLORS.red : COLORS.blue;
+      g.rect(topLeft.x, topLeft.y, w, h)
+        .fill({ color, alpha: 0.1 })
+        .stroke({ width: 1, color, alpha: 0.4 });
     }
 
-    const bs = this.toScreen(this.bluePos);
-    const isBlueActive = this.noTurnMode || this.activeTurn === "blue";
-    if (isBlueActive) {
-      g.circle(bs.x, bs.y, rPx + 6).stroke({ width: 2.5, color: COLORS.blue, alpha: 0.35 });
+    // Spawn clearance (team-colored) + spawn separation (whitish) rings,
+    // centered on each live soldier's current (= spawn) position.
+    for (const p of this.players) {
+      if (!p.alive) continue;
+      const center = this.toScreen(p.pos);
+      const color = p.team === "red" ? COLORS.red : COLORS.blue;
+      this.strokeDashedCircle(g, center, scatter.spawnClearance * cam.scale, 5, 4, color, 0.28);
+      this.strokeDashedCircle(
+        g,
+        center,
+        (scatter.spawnSeparation / 2) * cam.scale,
+        1,
+        4,
+        GUIDE_COLORS.separation,
+        0.35,
+      );
     }
-    g.circle(bs.x, bs.y, rPx).fill({ color: COLORS.blue, alpha: isBlueActive ? 1.0 : 0.4 });
-    if (isBlueActive) {
-      g.moveTo(bs.x, bs.y).lineTo(bs.x - BARREL_PX, bs.y).stroke({ width: 3, color: COLORS.blue });
+  }
+
+  /** Draws a dashed circle outline onto `g` (Pixi v8 Graphics has no native line-dash support). */
+  private strokeDashedCircle(
+    g: Graphics,
+    center: Vec2,
+    r: number,
+    dash: number,
+    gap: number,
+    color: number,
+    alpha: number,
+  ): void {
+    if (r <= 0) return;
+    for (const [start, end] of dashRanges(2 * Math.PI * r, dash, gap)) {
+      const steps = Math.max(1, Math.ceil((end - start) / 3));
+      for (let i = 0; i <= steps; i++) {
+        const t = start + ((end - start) * i) / steps;
+        const p = circlePoint(center.x, center.y, r, t);
+        if (i === 0) g.moveTo(p.x, p.y);
+        else g.lineTo(p.x, p.y);
+      }
     }
+    g.stroke({ width: 1, color, alpha });
+  }
+
+  /** Draws a dashed rectangle outline onto `g`, top-left `topLeft`, size `w`×`h` (screen px). */
+  private strokeDashedRect(
+    g: Graphics,
+    topLeft: Vec2,
+    w: number,
+    h: number,
+    dash: number,
+    gap: number,
+    color: number,
+    alpha: number,
+  ): void {
+    if (w <= 0 || h <= 0) return;
+    for (const [start, end] of dashRanges(2 * (w + h), dash, gap)) {
+      const steps = Math.max(1, Math.ceil((end - start) / 3));
+      for (let i = 0; i <= steps; i++) {
+        const t = start + ((end - start) * i) / steps;
+        const p = rectPerimeterPoint(topLeft.x, topLeft.y, w, h, t);
+        if (i === 0) g.moveTo(p.x, p.y);
+        else g.lineTo(p.x, p.y);
+      }
+    }
+    g.stroke({ width: 1, color, alpha });
+  }
+
+  /**
+   * One name badge, anchored above its soldier dot. `size="lg"` pre-game,
+   * `size="sm"` in-game (badge.ts:badgeSize); HP mode additionally shows a
+   * mini fill bar + the numeric HP (badge.ts:showHpBar/hpFraction) — Classic
+   * mode shows only the name. Never interactive, so never part of the hitbox.
+   */
+  private drawBadge(p: PlayerState, dotScreenPos: Vec2, color: number, dotRadiusPx: number): void {
+    const big = badgeSize(this.badgePhase) === "lg";
+    const withHp = showHpBar(this.badgeMode);
+    const fontSize = big ? 12 : 9;
+    const barW = big ? 36 : 26;
+    const barH = 5;
+
+    const group = new Container();
+
+    const nameText = new Text({
+      text: badgeText(p.name),
+      style: { fill: color, fontSize, fontFamily: "monospace", fontWeight: "600" },
+    });
+    nameText.anchor.set(0.5, 1);
+    nameText.position.set(0, withHp ? -(barH + 6) : 0);
+    group.addChild(nameText);
+
+    if (withHp) {
+      const frac = hpFraction(p.hp, HP_MAX);
+      const barX = -barW / 2;
+      const barY = -barH;
+      group.addChild(
+        new Graphics()
+          .roundRect(barX, barY, barW, barH, 2)
+          .fill({ color: 0x0b0e15 })
+          .stroke({ width: 1, color }),
+        new Graphics().roundRect(barX, barY, Math.max(1, barW * frac), barH, 2).fill({ color }),
+      );
+
+      const hpText = new Text({
+        text: `${Math.round(p.hp)}`,
+        style: { fill: color, fontSize: Math.max(8, fontSize - 2), fontFamily: "monospace" },
+      });
+      hpText.anchor.set(0, 0.5);
+      hpText.position.set(barW / 2 + 4, barY + barH / 2);
+      group.addChild(hpText);
+    }
+
+    group.position.set(dotScreenPos.x, dotScreenPos.y - dotRadiusPx - (big ? 12 : 8));
+    this.badgeLayer.addChild(group);
   }
 
   playShot(result: ShotResult, player?: "red" | "blue"): Promise<void> {
@@ -275,14 +572,20 @@ export class GameRenderer {
           xLength += Math.abs(samples[i + 1].x - samples[i].x);
         }
       }
+      // Duration stays x-based ("same time" — ADR-0002): flights are bounded no
+      // matter how wiggly the function is.
       const shotDurationMs = Math.max(MIN_SHOT_MS, (xLength / X_VELOCITY_WORLD) * 1000);
+
+      // Drive the head by cumulative ARC LENGTH, not sample index, so on-screen
+      // speed is constant despite curvature-adaptive sampling (ADR-0004).
+      const arcLen = cumulativeArcLength(samples);
+      const totalArc = arcLen[arcLen.length - 1];
 
       const start = performance.now();
       const tick = () => {
         const progress = Math.min(1, (performance.now() - start) / shotDurationMs);
-        const headF = progress * (samples.length - 1);
-        const headIdx = Math.floor(headF);
-        const frac = headF - headIdx;
+        const paced = bangTravelProgress(progress, BANG_DECAY_RATE, BANG_SPEED_MULTIPLIER);
+        const { idx: headIdx, frac } = pointAtLength(arcLen, paced * totalArc);
 
         const g = trailLayer;
         g.clear();
@@ -424,4 +727,46 @@ function clamp(v: number, lo: number, hi: number): number {
 
 function fmt(n: number): string {
   return String(Math.round(n * 1e6) / 1e6);
+}
+
+/**
+ * Splits a closed contour of length `totalLen` into alternating dash/gap
+ * ranges `[start, end)` (arc length from the contour's origin), each no
+ * longer than `dash`. Pure — extracted so the dash pattern itself is
+ * unit-testable without a real Pixi Graphics/canvas (jsdom has none). Used by
+ * GameRenderer.strokeDashedCircle/strokeDashedRect to fake Pixi v8's Graphics,
+ * which has no native line-dash support.
+ */
+export function dashRanges(totalLen: number, dash: number, gap: number): Array<[number, number]> {
+  if (totalLen <= 0 || dash <= 0) return [];
+  const ranges: Array<[number, number]> = [];
+  const period = dash + gap;
+  for (let start = 0; start < totalLen; start += period) {
+    ranges.push([start, Math.min(start + dash, totalLen)]);
+  }
+  return ranges;
+}
+
+/** Point at arc length `t` around a circle centered at (cx, cy) with radius `r`. Pure. */
+export function circlePoint(cx: number, cy: number, r: number, t: number): Vec2 {
+  const angle = t / r;
+  return { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
+}
+
+/**
+ * Point at perimeter distance `t` around a rectangle (top-left `x`,`y`, size
+ * `w`×`h`), walking clockwise from the top-left corner: right along the top
+ * edge, down the right edge, left along the bottom edge, up the left edge.
+ * Pure — `t` is clamped into [0, perimeter).
+ */
+export function rectPerimeterPoint(x: number, y: number, w: number, h: number, t: number): Vec2 {
+  const perimeter = 2 * (w + h);
+  let d = ((t % perimeter) + perimeter) % perimeter;
+  if (d <= w) return { x: x + d, y };
+  d -= w;
+  if (d <= h) return { x: x + w, y: y + d };
+  d -= h;
+  if (d <= w) return { x: x + w - d, y: y + h };
+  d -= w;
+  return { x, y: y + h - d };
 }

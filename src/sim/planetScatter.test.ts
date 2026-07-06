@@ -5,7 +5,7 @@ import {
   computeSpawns,
   generatePlanets,
   generatePlanetsWithStats,
-  SPAWN_INSET,
+  spawnZoneRects,
 } from "./planetScatter";
 import { DEFAULT_MAP, DEFAULT_SCATTER } from "../game/arenaDefaults";
 import type { Vec2 } from "./types";
@@ -34,26 +34,122 @@ describe("boundsFromMap", () => {
   });
 });
 
-describe("computeSpawns", () => {
-  it("places one spawn per side at the center for teamSize 1", () => {
-    const s = computeSpawns({ width: 24, height: 14 }, 1);
-    expect(s).toHaveLength(2);
-    expect(s).toContainEqual({ x: -(12 - SPAWN_INSET), y: 0 });
-    expect(s).toContainEqual({ x: 12 - SPAWN_INSET, y: 0 });
+describe("computeSpawns — seeded, in-zone, mirror-symmetric", () => {
+  it("is deterministic: same seed ⇒ identical spawns", () => {
+    const a = computeSpawns(DEFAULT_MAP, 2, DEFAULT_SCATTER, 123);
+    const b = computeSpawns(DEFAULT_MAP, 2, DEFAULT_SCATTER, 123);
+    expect(a).toEqual(b);
   });
-  it("places teamSize spawns per side spread along y", () => {
-    const s = computeSpawns({ width: 24, height: 14 }, 5);
-    expect(s).toHaveLength(10);
-    const leftYs = s.filter((p) => p.x < 0).map((p) => p.y);
-    expect(Math.min(...leftYs)).toBeCloseTo(-6);
-    expect(Math.max(...leftYs)).toBeCloseTo(6);
+
+  it("a different seed moves the spawns (reroll)", () => {
+    const a = computeSpawns(DEFAULT_MAP, 2, DEFAULT_SCATTER, 123);
+    const b = computeSpawns(DEFAULT_MAP, 2, DEFAULT_SCATTER, 456);
+    expect(a).not.toEqual(b);
+  });
+
+  it("returns 2 * teamSize points", () => {
+    const s = computeSpawns(DEFAULT_MAP, 3, DEFAULT_SCATTER, 1);
+    expect(s).toHaveLength(6);
+  });
+
+  it("every spawn is inside its side's zone", () => {
+    const map = DEFAULT_MAP;
+    const scatter = DEFAULT_SCATTER;
+    const b = boundsFromMap(map);
+    const xHiMag = b.maxX - scatter.spawnEdgeGap;
+    const xLoMag = Math.max(0, xHiMag - scatter.spawnBandX);
+    const yLo = b.minY + scatter.spawnYMargin;
+    const yHi = b.maxY - scatter.spawnYMargin;
+
+    const s = computeSpawns(map, 4, scatter, 999);
+    for (const p of s) {
+      expect(Math.abs(p.x)).toBeGreaterThanOrEqual(xLoMag - 1e-9);
+      expect(Math.abs(p.x)).toBeLessThanOrEqual(xHiMag + 1e-9);
+      expect(p.y).toBeGreaterThanOrEqual(yLo - 1e-9);
+      expect(p.y).toBeLessThanOrEqual(yHi + 1e-9);
+    }
+  });
+
+  it("is mirror-symmetric: right = -left, same y", () => {
+    const s = computeSpawns(DEFAULT_MAP, 3, DEFAULT_SCATTER, 77);
+    // spawns are pushed as [left0, right0, left1, right1, ...]
+    for (let i = 0; i < s.length; i += 2) {
+      const left = s[i];
+      const right = s[i + 1];
+      expect(right.x).toBeCloseTo(-left.x, 9);
+      expect(right.y).toBeCloseTo(left.y, 9);
+    }
+  });
+
+  it("honors spawnSeparation between same-side points when the zone is roomy", () => {
+    const roomy = { ...DEFAULT_SCATTER, spawnBandX: 6, spawnYMargin: 0.5, spawnSeparation: 2 };
+    const s = computeSpawns({ width: 30, height: 20 }, 4, roomy, 42);
+    const left = s.filter((p) => p.x < 0);
+    for (let i = 0; i < left.length; i++) {
+      for (let j = i + 1; j < left.length; j++) {
+        expect(dist(left[i], left[j])).toBeGreaterThanOrEqual(roomy.spawnSeparation - 1e-9);
+      }
+    }
+  });
+
+  it("tight-zone fallback still returns exactly teamSize points per side", () => {
+    // Zone far too small to fit 5 points at the requested separation → fallback kicks in.
+    const tight = { ...DEFAULT_SCATTER, spawnBandX: 0.1, spawnYMargin: 5.9, spawnSeparation: 5 };
+    const s = computeSpawns(DEFAULT_MAP, 5, tight, 5);
+    expect(s.filter((p) => p.x < 0)).toHaveLength(5);
+    expect(s.filter((p) => p.x > 0)).toHaveLength(5);
+  });
+
+  it("keeps each side on its own half when spawnEdgeGap exceeds the map half-width", () => {
+    // Small map (maxX = 4) + a large edge gap (6) would send xHiMag negative and
+    // flip spawns onto the wrong half without the ≥0 clamp. Left stays x ≤ 0.
+    const map = { width: 8, height: 12 };
+    const scatter = { ...DEFAULT_SCATTER, spawnEdgeGap: 6 };
+    const s = computeSpawns(map, 3, scatter, 314);
+    const left = s.filter((_, i) => i % 2 === 0); // interleaved: even = left side
+    for (const p of left) expect(p.x).toBeLessThanOrEqual(0);
+    // No red/blue overlap onto the opposite half: mins/maxs don't cross the center wrongly.
+    expect(Math.max(...s.filter((p) => p.x < 0).map((p) => p.x), -Infinity)).toBeLessThanOrEqual(0);
+    expect(Math.min(...s.filter((p) => p.x > 0).map((p) => p.x), Infinity)).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe("spawnZoneRects — geometry backing the pre-game margin guides", () => {
+  it("matches the same xLo/xHi/yLo/yHi computeSpawns samples inside", () => {
+    const map = DEFAULT_MAP;
+    const scatter = DEFAULT_SCATTER;
+    const b = boundsFromMap(map);
+    const xHiMag = b.maxX - scatter.spawnEdgeGap;
+    const xLoMag = Math.max(0, xHiMag - scatter.spawnBandX);
+    const yLo = b.minY + scatter.spawnYMargin;
+    const yHi = b.maxY - scatter.spawnYMargin;
+
+    const [left, right] = spawnZoneRects(b, scatter);
+    expect(left).toEqual({ sign: -1, xLo: -xHiMag, xHi: -xLoMag, yLo, yHi });
+    expect(right).toEqual({ sign: 1, xLo: xLoMag, xHi: xHiMag, yLo, yHi });
+  });
+
+  it("mirrors left and right around x=0", () => {
+    const b = boundsFromMap(DEFAULT_MAP);
+    const [left, right] = spawnZoneRects(b, DEFAULT_SCATTER);
+    expect(right.xLo).toBeCloseTo(-left.xHi, 9);
+    expect(right.xHi).toBeCloseTo(-left.xLo, 9);
+    expect(right.yLo).toBe(left.yLo);
+    expect(right.yHi).toBe(left.yHi);
+  });
+
+  it("clamps the inner edge (xLo magnitude) at 0 when bandX overruns the outer edge", () => {
+    const b = boundsFromMap(DEFAULT_MAP);
+    const wide = { ...DEFAULT_SCATTER, spawnBandX: 999 };
+    const [, right] = spawnZoneRects(b, wide);
+    expect(right.xLo).toBe(0);
   });
 });
 
 describe("generatePlanets", () => {
   const map = DEFAULT_MAP;
   const bounds = boundsFromMap(map);
-  const spawns = computeSpawns(map, 5);
+  const spawns = computeSpawns(map, 5, DEFAULT_SCATTER, 123);
 
   it("is deterministic for same seed + params", () => {
     const a = generatePlanets(123, bounds, spawns, DEFAULT_SCATTER);
@@ -87,7 +183,7 @@ describe("generatePlanetsWithStats", () => {
   it("returns attempts and matches generatePlanets", () => {
     const map = DEFAULT_MAP;
     const bounds = boundsFromMap(map);
-    const spawns = computeSpawns(map, 1);
+    const spawns = computeSpawns(map, 1, DEFAULT_SCATTER, 9);
     const { planets, attempts } = generatePlanetsWithStats(9, bounds, spawns, DEFAULT_SCATTER);
     expect(attempts).toBeGreaterThan(0);
     expect(attempts).toBeLessThanOrEqual(300);

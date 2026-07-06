@@ -3,10 +3,11 @@ import { parseConfigFromHash } from "../game/configRouter";
 import type { MatchConfig } from "../game/matchLogic";
 
 export type Route =
-  | { screen: "landing" }
+  | { screen: "landing"; onlinePanelOpen?: boolean }
   | { screen: "local" }
   | { screen: "game"; config: MatchConfig }
-  | { screen: "room"; code: string };
+  | { screen: "room"; code: string }
+  | { screen: "join" };
 
 export function parseRoute(hash: string): Route {
   if (hash.startsWith("#room=")) {
@@ -15,6 +16,10 @@ export function parseRoute(hash: string): Route {
   }
   if (hash === "#game" || hash.startsWith("#game?")) return { screen: "game", config: parseConfigFromHash(hash) };
   if (hash === "#local") return { screen: "local" };
+  // The standalone online-choice page is gone; #online now reopens the
+  // landing page with its inline Create/Join panel expanded.
+  if (hash === "#online") return { screen: "landing", onlinePanelOpen: true };
+  if (hash === "#join") return { screen: "join" };
   return { screen: "landing" };
 }
 

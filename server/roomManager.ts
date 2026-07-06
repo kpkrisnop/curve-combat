@@ -4,6 +4,7 @@ import { MatchEngine, type RoomPlayer } from "./matchEngine";
 import { arenaDefaults } from "../src/game/arenaDefaults";
 import type { MatchConfig, MapConfig, ScatterConfig } from "../src/game/matchLogic";
 import type { MatchState, Team } from "../src/game/matchState";
+import { uniqueName } from "./uniqueName";
 
 export interface Room {
   code: string;
@@ -40,6 +41,20 @@ export class RoomManager {
 
   get(code: string): Room | undefined { return this.rooms.get(code); }
 
+  /** Names already in use in a room (players + spectators), optionally excluding one player (for self-rename). */
+  private takenNames(room: Room, excludePlayerId?: string): string[] {
+    return [
+      ...room.players.filter((p) => p.id !== excludePlayerId).map((p) => p.name),
+      ...room.spectators.map((s) => s.name),
+    ];
+  }
+
+  roundSeed(code: string): number {
+    const room = this.rooms.get(code);
+    if (!room) throw new Error("no such room");
+    return room.round1Seed;
+  }
+
   remove(code: string): void {
     const room = this.rooms.get(code);
     if (room) {
@@ -74,9 +89,11 @@ export class RoomManager {
     if (smallerTeamCount >= TEAM_CAP) throw new Error("room full");
     // Auto-place onto smaller team; red on tie
     const team: Team = redCount <= blueCount ? "red" : "blue";
-    room.players.push({ id, name, team });
+    const dedupedName = uniqueName(name, this.takenNames(room));
+    room.players.push({ id, name: dedupedName, team });
     const token = randomUUID();
     room.rejoinTokens.set(id, token);
+    this.relayout(code);
     return { room, playerId: id, token };
   }
 
@@ -89,6 +106,29 @@ export class RoomManager {
     const targetCount = room.players.filter((p) => p.team === team).length;
     if (targetCount >= TEAM_CAP) throw new Error("team full");
     player.team = team;
+    this.relayout(code);
+  }
+
+  /**
+   * H1 defense-in-depth: once the room is locked or the match has started,
+   * setName is a safe no-op — it neither throws nor mutates the roster. A
+   * late/debounced setName arriving mid-match must not churn the roster (which
+   * would trigger a lobbyState broadcast a stray client could act on). Unlike
+   * join/switchTeam/reroll, which throw when locked, we deliberately swallow
+   * this one: a rename attempt racing the start of a match isn't an error
+   * worth surfacing to the sender, it's just too late to apply.
+   */
+  setName(code: string, playerId: string, name: string): void {
+    const room = this.rooms.get(code);
+    if (!room) throw new Error("no such room");
+    if (room.locked || room.engine !== null) return;
+    const player = room.players.find((p) => p.id === playerId);
+    if (!player) throw new Error("unknown player");
+    const trimmed = name.trim();
+    if (trimmed.length === 0) return;
+    // takenNames excludes this player's own entry, so renaming to your own
+    // current name (or a case variant of it) never collides against yourself.
+    player.name = uniqueName(trimmed, this.takenNames(room, playerId));
   }
 
   startTTL(code: string, onExpire: () => void): void {
@@ -163,13 +203,27 @@ export class RoomManager {
     }
   }
 
+  /**
+   * Picks a fresh round-1 seed so terrain + all player positions reroll to
+   * match the current roster. Not host-gated — called internally on every
+   * roster change (join / switchTeam / player removal). A no-op once the
+   * match has started (`room.engine !== null`), since terrain is frozen
+   * for an in-progress match.
+   */
+  relayout(code: string): void {
+    const room = this.rooms.get(code);
+    if (!room) return;
+    if (room.engine !== null) return;
+    room.round1Seed = mintSeed();
+  }
+
   reroll(code: string, byPlayerId: string): number {
     const room = this.rooms.get(code);
     if (!room) throw new Error("no such room");
     if (room.ownerId !== byPlayerId) throw new Error("only the host can reroll");
     if (room.locked) throw new Error("room locked");
     if (room.engine !== null) throw new Error("cannot reroll after match starts");
-    room.round1Seed = mintSeed();
+    this.relayout(code);
     return room.round1Seed;
   }
 

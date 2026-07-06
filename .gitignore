@@ -11,7 +11,14 @@ dist-ssr/
 
 # Tooling scratch
 .playwright-mcp/
+.superpowers/
+graphify-out/
+prototypes/
+
+# Editor dirs (not part of this code repo)
+.obsidian/
 
 # Debug / verification screenshots (scratch artifacts)
 gw-*.png
+val-*.png
 scratch-*.mjs

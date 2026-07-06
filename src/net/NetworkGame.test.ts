@@ -21,7 +21,6 @@ const makeUi = () => ({
   setTurn: vi.fn(),
   setNoTurnMode: vi.fn(),
   updateScoreboard: vi.fn(),
-  updateHp: vi.fn(),
   showWin: vi.fn(),
   onFire: vi.fn(),
 });
@@ -77,6 +76,7 @@ const lobbyMsg: ServerMessage = {
     scatter: {
       rMin: 0.5, rMax: 2.0, gapMin: 1, gapMax: 3,
       spawnClearance: 2, fieldMargin: 1, maxPlanets: 8,
+      spawnEdgeGap: 1, spawnBandX: 3, spawnYMargin: 1.5, spawnSeparation: 2,
     },
   },
 };
@@ -210,6 +210,46 @@ describe("NetworkGame.onMatchStarting", () => {
   });
 });
 
+describe("NetworkGame shotPlayback", () => {
+  it("colors the trail by the firer's team, not the local activeTurn (observer perspective)", async () => {
+    // p2 (Bob, blue) is the local/observing client. The firer, p1 (Alice), is on team "red".
+    const { game, client, renderer } = await makeGame("p2");
+
+    // Seed lastState (normally set by a prior matchState message) so the
+    // handler can resolve the firer's team from firerId.
+    (game as unknown as { lastState: unknown }).lastState = {
+      config: { mode: "classic", rounds: 3, noTurn: true, turnSeconds: 30 },
+      players: [
+        { id: "p1", name: "Alice", team: "red", pos: { x: 0, y: 0 }, hp: 100, alive: true },
+        { id: "p2", name: "Bob", team: "blue", pos: { x: 1, y: 1 }, hp: 100, alive: true },
+      ],
+      planets: [],
+      bounds: { width: 20, height: 15 },
+      turnQueue: ["p1", "p2"],
+      activePlayerId: "p2", // Renderer's notion of "active turn" is the OBSERVER's own team —
+      scores: { red: 0, blue: 0 }, // the opposite of the firer's team. If playShot fell back to
+      round: 1, // this, the trail would render blue instead of red.
+      phase: "play",
+      winner: null,
+      turnDeadline: null,
+    };
+
+    client.inject({
+      type: "shotPlayback",
+      firerId: "p1",
+      shot: { samples: [], hit: { kind: "dud", at: { x: 0, y: 0 }, sampleIndex: 0 }, impactSlope: 0 },
+      duration: 500,
+    });
+
+    // Let the async IIFE inside the shotPlayback handler run.
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(renderer.playShot).toHaveBeenCalledOnce();
+    expect(renderer.playShot.mock.calls[0][1]).toBe("red");
+  });
+});
+
 describe("NetworkGame send helpers", () => {
   it("sendSwitchTeam sends { type: 'switchTeam', team }", async () => {
     const { game, client } = await makeGame();
@@ -237,7 +277,10 @@ describe("NetworkGame send helpers", () => {
   it("sendConfigure passes optional map and scatter through", async () => {
     const { game, client } = await makeGame();
     const map = { width: 24, height: 18 };
-    const scatter = { rMin: 0.5, rMax: 2, gapMin: 1, gapMax: 3, spawnClearance: 2, fieldMargin: 1, maxPlanets: 10 };
+    const scatter = {
+      rMin: 0.5, rMax: 2, gapMin: 1, gapMax: 3, spawnClearance: 2, fieldMargin: 1, maxPlanets: 10,
+      spawnEdgeGap: 1, spawnBandX: 3, spawnYMargin: 1.5, spawnSeparation: 2,
+    };
     game.sendConfigure({ mode: "classic", rounds: 3, noTurn: false, turnSeconds: 60, map, scatter });
     const last = client.sent.at(-1) as unknown as { map: unknown; scatter: unknown };
     expect(last.map).toEqual(map);
@@ -248,5 +291,11 @@ describe("NetworkGame send helpers", () => {
     const { game, client } = await makeGame();
     game.requestStart();
     expect(client.sent.at(-1)).toEqual({ type: "startMatch" });
+  });
+
+  it("sendSetName sends { type: 'setName', name }", async () => {
+    const { game, client } = await makeGame();
+    game.sendSetName("NewName");
+    expect(client.sent.at(-1)).toEqual({ type: "setName", name: "NewName" });
   });
 });

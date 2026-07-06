@@ -4,8 +4,8 @@ import type { GameRenderer } from "../game/GameRenderer";
 import type { GameUiPort } from "../game/GameUiPort";
 import type { MatchState, Team } from "../game/matchState";
 import { computeDamage } from "../game/hpLogic";
-import { arenaDefaults } from "../game/arenaDefaults";
-import type { MatchConfig, ScatterConfig } from "../game/matchLogic";
+import type { ScatterConfig } from "../game/matchLogic";
+import { netLobbyStore } from "../app/net/netLobbyStore";
 
 export interface LobbySnapshot {
   players: { id: string; name: string; team: "red" | "blue" }[];
@@ -31,28 +31,19 @@ export class NetworkGame {
   private myTeam: Team | null = null;
   private myId: string | null = null;
   private myToken: string | null = null;
-  private ownerId: string | null = null;
-  private startBtn: HTMLButtonElement | null = null;
   private room = "";
   private name = "";
   private readonly boundClose = () => this.close();
-  private config: MatchConfig;
   private myBusy = false;
   private lobbyCallback: ((s: LobbySnapshot) => void) | null = null;
   private matchStartingCallback: ((startAt: number) => void) | null = null;
+  private stateCallback: ((s: MatchState) => void) | null = null;
 
   constructor(
     private client: ServerClient,
     private renderer: GameRenderer,
     private ui: GameUiPort,
-    config?: Partial<MatchConfig>,
-  ) {
-    this.config = {
-      mode: "classic", rounds: 3, noTurn: false, turnSeconds: 60, role: "online",
-      ...arenaDefaults(),
-      ...config,
-    };
-  }
+  ) {}
 
   async start(room: string, name: string): Promise<void> {
     this.room = room;
@@ -62,26 +53,20 @@ export class NetworkGame {
 
     this.client.on("joined", (m) => {
       if (m.type !== "joined") return;
+      // Clear self-reconnecting flag — we're back in.
+      netLobbyStore.set({ selfReconnecting: false });
       this.myId = m.playerId;
       this.myToken = m.token;
-      this.ownerId = m.ownerId;
       if (m.token) this.storeSession();
-      this.maybeShowStartButton();
-      this.client.setReconnectHandler(() =>
-        this.client.send({ type: "reconnect", room: this.room, playerId: this.myId!, token: this.myToken! })
-      );
+      this.client.setReconnectHandler(() => {
+        netLobbyStore.set({ selfReconnecting: true });
+        this.client.send({ type: "reconnect", room: this.room, playerId: this.myId!, token: this.myToken! });
+      });
     });
     this.client.on("lobbyState", (m) => {
       if (m.type !== "lobbyState") return;
-      this.ownerId = m.ownerId;
       const me = m.players.find((p) => p.id === this.myId);
       if (me) this.myTeam = me.team;
-      if (m.config) {
-        const modeLabel = m.config.mode === "hp" ? "HP Mode" : "Classic";
-        const noTurnLabel = m.config.noTurn ? " · No-Turn" : "";
-        this.ui.setStatus(`${modeLabel} · ${m.config.rounds} rounds · ${m.config.turnSeconds}s${noTurnLabel}`);
-      }
-      this.maybeShowStartButton();
       // Phase 3 event surface — build snapshot and fire callback
       if (this.lobbyCallback) {
         const snapshot: LobbySnapshot = {
@@ -102,14 +87,14 @@ export class NetworkGame {
     this.client.on("shotPlayback", (m) => {
       if (m.type !== "shotPlayback") return;
       void (async () => {
-        await this.renderer.playShot(m.shot);
+        const firer = this.lastState?.players.find((p) => p.id === m.firerId);
+        await this.renderer.playShot(m.shot, firer?.team);
         if (
           this.lastState?.config.mode === "hp" &&
           m.shot.hit.kind === "target" &&
           m.shot.hit.at
         ) {
           const dmg = computeDamage(m.shot.impactSlope);
-          const firer = this.lastState.players.find((p) => p.id === m.firerId);
           if (firer) {
             const targetTeam: Team = firer.team === "red" ? "blue" : "red";
             this.renderer.showFloatingDamage(m.shot.hit.at, dmg, targetTeam);
@@ -119,12 +104,25 @@ export class NetworkGame {
     });
     this.client.on("matchState", (m) => {
       if (m.type !== "matchState") return;
-      this.removeStartButton();
+      // Server-authoritative phase flip: first matchState → "play"
+      if (netLobbyStore.get().phase !== "play") {
+        netLobbyStore.set({ phase: "play" });
+      }
       this.render(m.state);
     });
     this.client.on("peerStatus", (m) => {
       if (m.type !== "peerStatus") return;
-      this.ui.setStatus(m.connected ? "" : "Opponent disconnected — waiting up to 30s…");
+      if (m.connected) {
+        netLobbyStore.set({ peerDown: null });
+        this.ui.setStatus("");
+      } else {
+        // Find the peer's name from lastState for the overlay
+        const peerName = this.lastState
+          ? (this.lastState.players.find((p) => p.id !== this.myId)?.name ?? "Opponent")
+          : "Opponent";
+        netLobbyStore.set({ peerDown: { name: peerName, deadline: Date.now() + 30_000 } });
+        this.ui.setStatus("Opponent disconnected — waiting up to 30s…");
+      }
     });
     this.client.on("error", (m) => {
       if (m.type !== "error") return;
@@ -147,6 +145,7 @@ export class NetworkGame {
 
     const saved = this.loadSession();
     if (saved) {
+      netLobbyStore.set({ selfReconnecting: true });
       this.client.send({ type: "reconnect", room: this.room, playerId: saved.playerId, token: saved.token });
     } else {
       this.client.send({ type: "join", room: this.room, name: this.name });
@@ -160,6 +159,11 @@ export class NetworkGame {
 
   onMatchStarting(cb: (startAt: number) => void): void {
     this.matchStartingCallback = cb;
+  }
+
+  /** Called at the top of every render(state) with the full server-authoritative MatchState. */
+  onState(cb: (s: MatchState) => void): void {
+    this.stateCallback = cb;
   }
 
   sendConfigure(partial: {
@@ -187,6 +191,10 @@ export class NetworkGame {
 
   sendReroll(): void {
     this.client.send({ type: "rerollArena" });
+  }
+
+  sendSetName(name: string): void {
+    this.client.send({ type: "setName", name });
   }
 
   requestStart(): void {
@@ -219,35 +227,8 @@ export class NetworkGame {
     } catch { return null; }
   }
 
-  private maybeShowStartButton(): void {
-    if (this.startBtn) return;
-    if (!this.myId || !this.ownerId || this.myId !== this.ownerId) return;
-    const btn = document.createElement("button");
-    btn.textContent = "Start Match";
-    btn.style.cssText =
-      "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);" +
-      "padding:16px 32px;font-size:1.4rem;font-weight:bold;cursor:pointer;" +
-      "background:#e74c3c;color:#fff;border:none;border-radius:8px;z-index:9999;";
-    btn.addEventListener("click", () => {
-      this.client.send({
-        type: "configureRoom",
-        mode: this.config.mode,
-        rounds: this.config.rounds,
-        noTurn: this.config.noTurn,
-        turnSeconds: this.config.turnSeconds ?? 60,
-      });
-      this.client.send({ type: "startMatch" });
-      this.removeStartButton();
-    });
-    document.body.appendChild(btn);
-    this.startBtn = btn;
-  }
-
-  private removeStartButton(): void {
-    if (this.startBtn) { this.startBtn.remove(); this.startBtn = null; }
-  }
-
   private render(state: MatchState): void {
+    this.stateCallback?.(state);
     this.lastState = state;
     // Re-enable local player fire button if they were busy.
     if (this.myBusy) {
@@ -274,24 +255,30 @@ export class NetworkGame {
     }
     // --- rest of render (unchanged below) ---
     const red = state.players.find((p) => p.team === "red")!;
-    const blue = state.players.find((p) => p.team === "blue")!;
     const viewTeam: Team = this.myTeam ?? "red";
     const viewer = state.players.find((p) => p.team === viewTeam && p.alive) ?? red;
     this.renderer.setMap(state.config.map);
+    // H3 fix: the renderer's per-player glow/aim needs both the no-turn flag
+    // and the server-authoritative active PLAYER id — previously this was
+    // never set for online play, so isPlayerActive() fell back to comparing
+    // team only (highlighting an entire NvN team instead of the one shooter).
+    this.renderer.setNoTurnMode(state.config.noTurn);
     this.renderer.setWorld(
       { soldier: { pos: viewer.pos, dir: viewTeam === "red" ? 1 : -1 }, bounds: state.bounds,
         targets: state.players.filter((p) => p.team !== viewTeam && p.alive).map((p) => ({ id: p.id, pos: p.pos, radius: 0.1 })),
         planets: state.planets },
-      viewTeam, red.pos, blue.pos,
+      viewTeam, state.players,
+      {
+        phase: "ingame",
+        mode: state.config.mode,
+        activePlayerId: state.activePlayerId,
+        scatter: state.config.scatter,
+      },
     );
     const active = state.players.find((p) => p.id === state.activePlayerId);
     if (active) this.ui.setTurn(active.team);
     else this.ui.setNoTurnMode(true);
     this.ui.updateScoreboard(state.scores.red, state.scores.blue, state.round, state.config.rounds);
-
-    if (state.config.mode === "hp") {
-      this.ui.updateHp(red.hp, blue.hp);
-    }
 
     if (state.phase === "over" && state.winner) {
       const detail = state.config.mode === "hp" ? "Out of HP." : "Direct hit.";

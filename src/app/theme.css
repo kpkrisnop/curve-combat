@@ -65,26 +65,101 @@ body { font-family: var(--gw-font-sans); overflow: hidden; }
 .arena-frame { position: absolute; inset: 0; overflow: hidden; }
 .arena-stage { position: absolute; inset: 0; transform-origin: 50% 46%; }
 
-/* ── LocalFlow + ConfigPanel ────────────────────────────────────────────── */
+/* ── Arena shell — CSS grid of cards (arena-shell-redesign C1–C3) ─────────
+   ONE shared gutter token (--gw-gap) is reused as BOTH the grid `gap` and
+   the shell `padding`, so every gap — card-to-card and card-to-screen-edge
+   — is equal. Rows: MAP row shrinks to fit (minmax(0,1fr)); FOOTER row
+   grows for tall equations (minmax(--gw-footer-min, auto)). Columns: a
+   single column when settings are closed; a second column (SIDE PANEL)
+   opens without ever overlapping the map or footer. */
 .local-flow { position: absolute; inset: 0; }
+.online-flow { position: absolute; inset: 0; }
+.arena-shell {
+  display: grid;
+  gap: var(--gw-gap);
+  padding: var(--gw-gap);
+  grid-template-columns: 1fr;
+  grid-template-rows: minmax(0, 1fr) minmax(var(--gw-footer-min), auto);
+}
+.arena-shell--open { grid-template-columns: 1fr var(--gw-panel-w); }
+
+/* Card primitive shared by MAP / SIDE PANEL / FOOTER */
+.comp {
+  position: relative;
+  border: 2px solid var(--gw-border-strong);
+  border-radius: var(--gw-radius-xl);
+  background: var(--gw-surface);
+  min-height: 0; min-width: 0;
+}
+
+/* MAP card — transparent so the spacetime grid shows through; the renderer
+   canvas + drawn world-boundary rectangle live inside it (untouched here). */
+.comp.map-card {
+  grid-column: 1 / 2; grid-row: 1 / 2;
+  background: transparent;
+  overflow: hidden;
+}
+
+/* SIDE PANEL card — its own grid column; reserves a top strip so the fixed
+   gear (never part of the grid) sits visually on top of it. */
+.comp.side-panel {
+  grid-column: 2 / 3; grid-row: 1 / 2;
+  overflow-y: auto;
+  padding: 52px var(--gw-space-3) var(--gw-space-3);
+  display: flex; flex-direction: column; gap: var(--gw-space-3);
+}
+
+/* FOOTER card — spans the full width beneath the map (+ panel) */
+.comp.footer {
+  grid-column: 1 / -1; grid-row: 2 / 3;
+  display: flex; align-items: center; gap: var(--gw-space-3);
+  padding: 0 var(--gw-space-4);
+}
+.footer--ingame { justify-content: center; }
+.footer-sep { width: 1px; align-self: stretch; background: var(--gw-border); flex: none; }
+.footer-waiting { font-weight: 600; color: var(--gw-text-muted); }
+.footer-name { display: flex; align-items: center; gap: var(--gw-space-2); font-size: var(--gw-fs-xs); }
+.footer-name-input {
+  background: var(--gw-surface-2); border: 1px solid var(--gw-border);
+  border-radius: var(--gw-radius-sm); padding: 6px 10px; color: var(--gw-text);
+}
+
+/* Fixed config gear — a constant top-right SCREEN position; identical
+   whether the settings panel is open or closed; never moves with the map. */
+.gear {
+  position: absolute;
+  top: calc(var(--gw-gap) + 8px); right: calc(var(--gw-gap) + 8px);
+  z-index: 9; width: 38px; height: 38px; border-radius: 12px;
+  border: 2px solid var(--gw-accent); background: var(--gw-surface-2);
+  color: var(--gw-text); font-size: 17px; line-height: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* Room-code badge — out-of-flow (absolute) so it never becomes an implicit
+   grid item of .arena-shell; mirrors the gear's corner on the opposite side. */
+.net-room-code {
+  position: absolute;
+  top: calc(var(--gw-gap) + 8px); left: calc(var(--gw-gap) + 8px);
+  z-index: 6; display: flex; align-items: center; gap: var(--gw-space-2);
+}
+
+/* ── LocalFlow + ConfigPanel ────────────────────────────────────────────── */
 .seat { position: absolute; bottom: 18px; z-index: 6; font-size: var(--gw-fs-md); }
 .seat-red { left: 18px; } .seat-blue { right: 18px; }
-.config-drawer {
-  position: absolute; top: 0; right: 0; bottom: 0; z-index: 7; width: 340px;
-  overflow-y: auto; padding: var(--gw-space-4);
-  display: flex; flex-direction: column; gap: var(--gw-space-3);
-  background: linear-gradient(270deg, rgba(0,0,0,0.85), rgba(0,0,0,0.55));
-}
 .cfg-row { display: flex; gap: var(--gw-space-2); }
 .cfg-opt { flex: 1; display: flex; flex-direction: column; gap: 4px; cursor: pointer; font-weight: 700; }
 .cfg-opt small { color: var(--gw-text-faint); font-weight: 400; }
 .cfg-toggle, .cfg-timer { display: flex; align-items: center; gap: var(--gw-space-2); margin: var(--gw-space-2) 0; }
 .cfg-arena { display: flex; flex-direction: column; gap: 6px; }
-.cfg-slider { display: grid; grid-template-columns: 130px 1fr; align-items: center; gap: 8px;
+.cfg-slider { display: grid; grid-template-columns: 130px minmax(0, 1fr); align-items: center; gap: 8px;
   font-size: var(--gw-fs-xs); color: var(--gw-text-muted); }
+/* Range inputs bring their own UA-default intrinsic width, which is wider
+   than a 1fr grid track's default `auto` minimum — that mismatch is what
+   forced the panel to overflow horizontally (M1). Pin the input to its
+   track instead of its intrinsic content size. */
+.cfg-slider input[type="range"] { width: 100%; min-width: 0; }
 .cfg-seed { display: flex; align-items: center; justify-content: space-between; margin-top: var(--gw-space-2);
   font-family: var(--gw-font-mono); color: var(--gw-text-code); }
-.cfg-start { margin-top: var(--gw-space-3); }
 .gw-countdown { z-index: 20; background: rgba(0, 0, 0, 0.35); }
 .gw-countdown-num {
   font-size: 220px; font-weight: 900; color: var(--gw-text);
@@ -92,3 +167,157 @@ body { font-family: var(--gw-font-sans); overflow: hidden; }
   animation: gw-count-pop 900ms ease-out;
 }
 @keyframes gw-count-pop { from { transform: scale(1.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* ── RosterColumns ──────────────────────────────────────────────────────── */
+.roster-col {
+  position: absolute; bottom: 18px; width: 220px; z-index: 6;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.roster-col.is-red  { left: 18px; }
+.roster-col.is-blue { right: 18px; }
+.roster-row {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--gw-surface); border: 1px solid var(--gw-border);
+  border-radius: var(--gw-radius-lg); padding: 6px 10px;
+  backdrop-filter: blur(6px); font-size: var(--gw-fs-sm);
+}
+.roster-row.is-me   { border-color: var(--gw-accent); }
+.roster-host-badge  { font-size: 0.85em; opacity: 0.9; }
+.roster-name        { flex: 1; }
+.roster-switch-btn  { align-self: flex-start; font-size: var(--gw-fs-xs); padding: 6px 12px; }
+
+/* Config-flash animation — pulse used by Task 4 when host changes config */
+@keyframes gw-config-flash {
+  0%   { border-color: var(--gw-border); }
+  30%  { border-color: #ffffff; box-shadow: 0 0 12px rgba(255,255,255,0.6); }
+  100% { border-color: var(--gw-border); box-shadow: none; }
+}
+
+/* ── Online screens ─────────────────────────────────────────────────────── */
+.gw-code-entry {
+  font-family: var(--gw-font-mono); font-size: 64px; letter-spacing: 0.4em;
+  text-align: center; width: 5ch;
+  background: var(--gw-surface-2); border: 1px solid var(--gw-border-strong);
+  border-radius: var(--gw-radius-lg); color: var(--gw-text-code);
+  padding: 12px 0 12px 0.4em;
+}
+
+/* ── TeamStrip — NvN player status rows ─────────────────────────────────── */
+.team-strip {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 20;
+  display: flex; justify-content: space-between; align-items: flex-start;
+  pointer-events: none;
+  padding: 6px 12px;
+  gap: 8px;
+}
+
+.team-strip__team {
+  display: flex; flex-direction: column; gap: 2px;
+  min-width: 140px;
+}
+
+.team-strip__team--red  { align-items: flex-start; }
+.team-strip__team--blue { align-items: flex-end; }
+
+.team-strip__row {
+  display: flex; align-items: center; gap: 6px;
+  font-size: var(--gw-fs-xs, 11px);
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: rgba(0,0,0,0.55);
+  border: 1px solid transparent;
+  color: var(--gw-text-muted, rgba(180,190,210,0.8));
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.team-strip__row--red  { border-left: 3px solid var(--gw-red, #ff4444); }
+.team-strip__row--blue { border-right: 3px solid var(--gw-blue, #4488ff); border-left: none; }
+
+.team-strip__row.is-dead {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+
+.team-strip__row.is-active {
+  border-color: rgba(255,255,255,0.5);
+  box-shadow: 0 0 8px rgba(255,255,255,0.2);
+  color: var(--gw-text, #e8eaf0);
+}
+
+.team-strip__row.is-me {
+  font-weight: 700;
+  color: var(--gw-text, #e8eaf0);
+}
+
+.team-strip__ring {
+  display: inline-block; width: 8px; height: 8px;
+  border-radius: 50%;
+  background: transparent;
+  border: 2px solid rgba(255,255,255,0.8);
+  flex-shrink: 0;
+}
+
+.team-strip__name  { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.team-strip__skull { font-size: 0.9em; }
+.team-strip__hp    { display: flex; align-items: center; gap: 2px; white-space: nowrap; }
+.team-strip__hp-icon { color: #ff6680; }
+
+/* ── ReconnectOverlays ───────────────────────────────────────────────────── */
+.reconnect-overlay--blocking {
+  position: fixed; inset: 0; z-index: 200;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.78);
+  backdrop-filter: blur(4px);
+}
+
+.reconnect-overlay__inner {
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+  color: var(--gw-text, #e8eaf0);
+  font-size: var(--gw-fs-md, 18px);
+  font-weight: 600;
+}
+
+.reconnect-overlay__spinner {
+  display: inline-block; width: 36px; height: 36px;
+  border: 3px solid rgba(255,255,255,0.2);
+  border-top-color: rgba(255,255,255,0.9);
+  border-radius: 50%;
+  animation: gw-spin 0.8s linear infinite;
+}
+
+@keyframes gw-spin {
+  to { transform: rotate(360deg); }
+}
+
+.reconnect-overlay--banner {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+  z-index: 100;
+  background: rgba(14,18,26,0.92);
+  border: 1px solid var(--gw-border-strong, #2e4256);
+  border-radius: 8px;
+  padding: 10px 20px;
+  color: var(--gw-text, #e8eaf0);
+  font-size: var(--gw-fs-sm, 13px);
+  white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+
+/* ── Spectator badge + leave button ─────────────────────────────────────── */
+.spectator-badge {
+  position: fixed; top: 48px; left: 50%; transform: translateX(-50%);
+  z-index: 30;
+  background: rgba(0,0,0,0.7);
+  border: 1px solid var(--gw-border-strong, #2e4256);
+  border-radius: 6px;
+  padding: 4px 14px;
+  font-size: var(--gw-fs-xs, 11px);
+  color: var(--gw-text-muted, rgba(180,190,210,0.8));
+  letter-spacing: 0.04em;
+  pointer-events: none;
+}
+
+.spectator-leave {
+  position: fixed; bottom: 24px; right: 24px; z-index: 30;
+  font-size: var(--gw-fs-sm, 13px);
+  padding: 8px 18px;
+}

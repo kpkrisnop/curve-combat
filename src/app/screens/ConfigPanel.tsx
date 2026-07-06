@@ -14,6 +14,10 @@ const ARENA_SPECS: [ArenaPath, string, number, number, number][] = [
   ["scatter.gapMin", "gap min", 0, 6, 0.1],
   ["scatter.gapMax", "gap max", 0, 6, 0.1],
   ["scatter.spawnClearance", "spawn clearance", 0, 5, 0.1],
+  ["scatter.spawnEdgeGap", "spawn edge gap", 0, 6, 0.1],
+  ["scatter.spawnBandX", "spawn band X", 0, 8, 0.2],
+  ["scatter.spawnYMargin", "spawn Y margin", 0, 5, 0.1],
+  ["scatter.spawnSeparation", "spawn min separation", 0, 6, 0.1],
   ["scatter.fieldMargin", "field margin", 0, 3, 0.1],
   ["scatter.maxPlanets", "planet count", 1, 24, 1],
 ];
@@ -32,56 +36,62 @@ interface Props {
   onChange: (patch: Partial<PanelConfig>) => void;
   seed: number;
   onReroll: () => void;
+  readOnly?: boolean;
+  hideSeedRow?: boolean;
 }
 
-export function ConfigPanel({ value, onChange, seed, onReroll }: Props) {
+export function ConfigPanel({ value, onChange, seed, onReroll, readOnly, hideSeedRow }: Props) {
   const step = (d: number) => onChange({ turnSeconds: Math.max(15, Math.min(120, value.turnSeconds + d)) });
   return (
     <div className="config-panel gw-card">
-      <p className="gw-label">Game Mode</p>
-      <div className="cfg-row">
-        <button className={`gw-card cfg-opt ${value.mode === "classic" ? "is-active" : ""}`}
-          onClick={() => onChange({ mode: "classic" })}>Classic VS<small>One hit per round</small></button>
-        <button className={`gw-card cfg-opt ${value.mode === "hp" ? "is-active" : ""}`}
-          onClick={() => onChange({ mode: "hp" })}>HP Mode<small>Slope = damage</small></button>
-      </div>
+      <fieldset disabled={readOnly} style={{ border: "none", margin: 0, padding: 0 }}>
+        <p className="gw-label">Game Mode</p>
+        <div className="cfg-row">
+          <button className={`gw-card cfg-opt ${value.mode === "classic" ? "is-active" : ""}`}
+            onClick={() => onChange({ mode: "classic" })}>Classic VS<small>One hit per round</small></button>
+          <button className={`gw-card cfg-opt ${value.mode === "hp" ? "is-active" : ""}`}
+            onClick={() => onChange({ mode: "hp" })}>HP Mode<small>Slope = damage</small></button>
+        </div>
 
-      <p className="gw-label">Rounds</p>
-      <div className="cfg-row">
-        <button className={`gw-card cfg-opt ${value.rounds === 3 ? "is-active" : ""}`}
-          onClick={() => onChange({ rounds: 3 })}>Best of 3</button>
-        <button className={`gw-card cfg-opt ${value.rounds === 5 ? "is-active" : ""}`}
-          onClick={() => onChange({ rounds: 5 })}>Best of 5</button>
-      </div>
+        <p className="gw-label">Rounds</p>
+        <div className="cfg-row">
+          <button className={`gw-card cfg-opt ${value.rounds === 3 ? "is-active" : ""}`}
+            onClick={() => onChange({ rounds: 3 })}>Best of 3</button>
+          <button className={`gw-card cfg-opt ${value.rounds === 5 ? "is-active" : ""}`}
+            onClick={() => onChange({ rounds: 5 })}>Best of 5</button>
+        </div>
 
-      <label className="cfg-toggle">
-        <input type="checkbox" checked={value.noTurn}
-          onChange={(e) => onChange({ noTurn: e.target.checked })} />
-        No-Turn Mode (simultaneous fire)
-      </label>
+        <label className="cfg-toggle">
+          <input type="checkbox" checked={value.noTurn}
+            onChange={(e) => onChange({ noTurn: e.target.checked })} />
+          No-Turn Mode (simultaneous fire)
+        </label>
 
-      <div className="cfg-timer">
-        <span className="gw-label">Turn Timer</span>
-        <button className="gw-btn" onClick={() => step(-5)}>−</button>
-        <span>{value.turnSeconds} s</span>
-        <button className="gw-btn" onClick={() => step(+5)}>+</button>
-        <small>(turn-based only · min 15 s)</small>
-      </div>
+        <div className="cfg-timer">
+          <span className="gw-label">Turn Timer</span>
+          <button className="gw-btn" onClick={() => step(-5)}>−</button>
+          <span>{value.turnSeconds} s</span>
+          <button className="gw-btn" onClick={() => step(+5)}>+</button>
+          <small>(turn-based only · min 15 s)</small>
+        </div>
 
-      <p className="gw-label">Arena — the map behind you is the real round 1</p>
-      <div className="cfg-arena" data-testid="arena-controls">
-        {ARENA_SPECS.map(([path, label, min, max, stp]) => (
-          <label key={path} className="cfg-slider">
-            <span>{label}</span>
-            <input type="range" min={min} max={max} step={stp} value={getPath(value, path)}
-              onChange={(e) => onChange(patchPath(value, path, Number(e.target.value)))} />
-          </label>
-        ))}
-      </div>
-      <div className="cfg-seed">
-        <code>seed {seed}</code>
-        <button className="gw-btn" onClick={onReroll}>Reroll</button>
-      </div>
+        <p className="gw-label">Arena — the map behind you is the real round 1</p>
+        <div className="cfg-arena" data-testid="arena-controls">
+          {ARENA_SPECS.map(([path, label, min, max, stp]) => (
+            <label key={path} className="cfg-slider">
+              <span>{label}</span>
+              <input type="range" min={min} max={max} step={stp} value={getPath(value, path)}
+                onChange={(e) => onChange(patchPath(value, path, Number(e.target.value)))} />
+            </label>
+          ))}
+        </div>
+        {!hideSeedRow && (
+          <div className="cfg-seed">
+            <code>seed {seed}</code>
+            <button className="gw-btn" onClick={onReroll}>Reroll</button>
+          </div>
+        )}
+      </fieldset>
     </div>
   );
 }

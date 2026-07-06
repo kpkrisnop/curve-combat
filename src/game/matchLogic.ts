@@ -13,6 +13,14 @@ export interface ScatterConfig {
   spawnClearance: number;
   fieldMargin: number;
   maxPlanets: number;
+  /** Distance from the map wall to the spawn zone's outer edge (world units). */
+  spawnEdgeGap: number;
+  /** Inward depth of the per-side spawn zone (world units). */
+  spawnBandX: number;
+  /** Vertical inset of the spawn zone from the top/bottom bounds (world units). */
+  spawnYMargin: number;
+  /** Minimum mutual distance between same-side spawns (world units). */
+  spawnSeparation: number;
 }
 
 export interface MatchConfig {

@@ -20,10 +20,11 @@ describe("HudBar", () => {
   beforeEach(() => hudStore.set(initialHudState()));
   afterEach(() => cleanup());
 
-  it("shows the scoreboard from store state", () => {
+  it("no longer shows a scoreboard inline (relocated to the top-center round-status overlay)", () => {
     render(<HudBar makeInput={makeInput} />);
     act(() => hudController.updateScoreboard(2, 1, 3, 5));
-    expect(screen.getByText(/Round 3\/5/)).toBeTruthy();
+    expect(document.querySelector(".scoreboard")).toBeNull();
+    expect(screen.queryByTestId("round-status")).toBeNull();
   });
 
   it("disables the inactive side's Fire button in turn-based mode", () => {
@@ -55,9 +56,71 @@ describe("HudBar", () => {
   });
 });
 
+describe("HudBar — singleTeam prop", () => {
+  beforeEach(() => hudStore.set(initialHudState()));
+  afterEach(() => cleanup());
+
+  it("singleTeam='blue' renders exactly one Fire button and it belongs to blue", () => {
+    act(() => hudController.setTurn("blue"));
+    render(<HudBar makeInput={makeInput} singleTeam="blue" />);
+    const fires = screen.getAllByRole("button", { name: "Fire" });
+    expect(fires).toHaveLength(1);
+    // The single panel should be the blue panel
+    const panel = document.querySelector(".player-panel.is-blue");
+    expect(panel).toBeTruthy();
+    expect(document.querySelector(".player-panel.is-red")).toBeNull();
+  });
+
+  it("singleTeam='red' renders exactly one Fire button for red", () => {
+    act(() => hudController.setTurn("red"));
+    render(<HudBar makeInput={makeInput} singleTeam="red" />);
+    const fires = screen.getAllByRole("button", { name: "Fire" });
+    expect(fires).toHaveLength(1);
+    expect(document.querySelector(".player-panel.is-red")).toBeTruthy();
+    expect(document.querySelector(".player-panel.is-blue")).toBeNull();
+  });
+
+  it("singleTeam unset renders both panels (dual layout unchanged)", () => {
+    render(<HudBar makeInput={makeInput} />);
+    const fires = screen.getAllByRole("button", { name: "Fire" });
+    expect(fires).toHaveLength(2);
+    expect(document.querySelector(".player-panel.is-red")).toBeTruthy();
+    expect(document.querySelector(".player-panel.is-blue")).toBeTruthy();
+  });
+
+  // M3/L4 — singleTeam (online in-game) gets a modifier class that drops
+  // the hud-bar to a single grid track and caps its width (hud.css), so
+  // there's no dangling empty second column and the footer's
+  // `justify-content: center` can actually center it. The dual (local)
+  // layout must keep the plain two-column class untouched.
+  it("singleTeam mode adds the hud-bar--single modifier (single grid track, capped width)", () => {
+    render(<HudBar makeInput={makeInput} singleTeam="blue" />);
+    const bar = document.querySelector(".hud-bar");
+    expect(bar).toBeTruthy();
+    expect(bar!.classList.contains("hud-bar--single")).toBe(true);
+  });
+
+  it("dual (local) layout does NOT get the single-column modifier", () => {
+    render(<HudBar makeInput={makeInput} />);
+    const bar = document.querySelector(".hud-bar");
+    expect(bar).toBeTruthy();
+    expect(bar!.classList.contains("hud-bar--single")).toBe(false);
+  });
+});
+
 describe("HudOverlays", () => {
   beforeEach(() => hudStore.set(initialHudState()));
   afterEach(() => cleanup());
+
+  it("renders a standalone top-center round-status element with round/best-of/score text", () => {
+    render(<HudOverlays />);
+    act(() => hudController.updateScoreboard(2, 1, 3, 5));
+    const el = screen.getByTestId("round-status");
+    expect(el.textContent).toContain("Round 3");
+    expect(el.textContent).toContain("Best of 5");
+    expect(el.textContent).toContain("2");
+    expect(el.textContent).toContain("1");
+  });
 
   it("win banner renders winner and Back to Lobby resets", () => {
     const reset = vi.fn();
@@ -76,5 +139,11 @@ describe("HudOverlays", () => {
     expect(screen.getByText("step one")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "OK" }));
     expect(onNext).toHaveBeenCalled();
+  });
+
+  it("never renders a top HP overlay — the on-dot badge is the single HP display", () => {
+    render(<HudOverlays />);
+    act(() => hudController.updateScoreboard(2, 1, 3, 5));
+    expect(document.querySelector(".hp-overlay")).toBeNull();
   });
 });
