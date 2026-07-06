@@ -392,3 +392,53 @@ describe("RoomManager room-scoped unique display names (M2)", () => {
     void annId;
   });
 });
+
+describe("RoomManager.removeFromLobby (Bug B)", () => {
+  it("removes the player from the roster and keeps the room", () => {
+    const m = new RoomManager();
+    const a = m.join("WOLF", "Ann");
+    const b = m.join("WOLF", "Bo");
+    const res = m.removeFromLobby("WOLF", b.playerId);
+    expect(res.roomGone).toBe(false);
+    const room = m.get("WOLF")!;
+    expect(room.players.map((p) => p.id)).toEqual([a.playerId]);
+  });
+
+  it("transfers ownership to the next player in roster order when the owner leaves", () => {
+    const m = new RoomManager();
+    const a = m.join("WOLF", "Ann"); // owner
+    const b = m.join("WOLF", "Bo");
+    expect(m.get("WOLF")!.ownerId).toBe(a.playerId);
+    m.removeFromLobby("WOLF", a.playerId);
+    expect(m.get("WOLF")!.ownerId).toBe(b.playerId);
+  });
+
+  it("tears the room down when the last player leaves", () => {
+    const m = new RoomManager();
+    const a = m.join("WOLF", "Ann");
+    const res = m.removeFromLobby("WOLF", a.playerId);
+    expect(res.roomGone).toBe(true);
+    expect(m.get("WOLF")).toBeUndefined();
+  });
+
+  it("is a no-op once the match has started (engine !== null)", () => {
+    const m = new RoomManager();
+    const a = m.join("WOLF", "Ann");
+    const b = m.join("WOLF", "Bo");
+    m.start("WOLF", a.playerId); // engine now set
+    const res = m.removeFromLobby("WOLF", b.playerId);
+    expect(res.roomGone).toBe(false);
+    expect(m.get("WOLF")!.players.map((p) => p.id)).toContain(b.playerId);
+  });
+
+  it("clears the leaver's grace timer and rejoin token", () => {
+    const m = new RoomManager();
+    const a = m.join("WOLF", "Ann");
+    const b = m.join("WOLF", "Bo");
+    const graceFn = vi.fn();
+    m.startGrace("WOLF", b.playerId, graceFn);
+    m.removeFromLobby("WOLF", b.playerId);
+    // token gone → rejoin must fail
+    expect(m.rejoin("WOLF", b.playerId, b.token)).toBeNull();
+  });
+});
