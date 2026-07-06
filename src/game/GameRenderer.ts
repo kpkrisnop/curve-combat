@@ -5,7 +5,7 @@ import type { MapConfig, ScatterConfig } from "./matchLogic";
 import { DEFAULT_MAP } from "./arenaDefaults";
 import { boundsFromMap, spawnZoneRects } from "../sim/planetScatter";
 import { fitContain, boundaryRectPx } from "../sim/fitRect";
-import { X_VELOCITY_WORLD } from "../sim/timing";
+import { shotDuration } from "../sim/timing";
 import { cumulativeArcLength, pointAtLength, bangTravelProgress } from "../sim/playback";
 import { PLAYER_RADIUS, type PlayerState } from "./matchState";
 import { HP_MAX } from "./hpLogic";
@@ -565,16 +565,10 @@ export class GameRenderer {
 
       const samples = result.samples;
 
-      // Compute total x-distance of the shot path (skip gap segments).
-      let xLength = 0;
-      for (let i = 0; i < samples.length - 1; i++) {
-        if (!samples[i + 1].gap) {
-          xLength += Math.abs(samples[i + 1].x - samples[i].x);
-        }
-      }
       // Duration stays x-based ("same time" — ADR-0002): flights are bounded no
-      // matter how wiggly the function is.
-      const shotDurationMs = Math.max(MIN_SHOT_MS, (xLength / X_VELOCITY_WORLD) * 1000);
+      // matter how wiggly the function is. Shared with the server (ADR + exploit
+      // fix): true curvature slows the shot down within that bound.
+      const shotDurationMs = Math.max(MIN_SHOT_MS, shotDuration(result) * 1000);
 
       // Drive the head by cumulative ARC LENGTH, not sample index, so on-screen
       // speed is constant despite curvature-adaptive sampling (ADR-0004).

@@ -4,6 +4,7 @@ import type { ServerMessage } from "./protocol";
 import type { ServerClient } from "./ServerClient";
 import type { GameRenderer } from "../game/GameRenderer";
 import type { GameUiPort } from "../game/GameUiPort";
+import type { MatchState } from "../game/matchState";
 import { NetworkGame } from "./NetworkGame";
 
 // ── Minimal mock for GameRenderer ────────────────────────────────────────────
@@ -12,6 +13,7 @@ const makeRenderer = () => ({
   showFloatingDamage: vi.fn(),
   setMap: vi.fn(),
   setWorld: vi.fn(),
+  setNoTurnMode: vi.fn(),
 });
 
 // ── Minimal mock for GameUiPort ───────────────────────────────────────────────
@@ -23,6 +25,7 @@ const makeUi = () => ({
   updateScoreboard: vi.fn(),
   showWin: vi.fn(),
   onFire: vi.fn(),
+  resetInputs: vi.fn(),
 });
 
 // ── Mock ServerClient ────────────────────────────────────────────────────────
@@ -297,5 +300,59 @@ describe("NetworkGame send helpers", () => {
     const { game, client } = await makeGame();
     game.sendSetName("NewName");
     expect(client.sent.at(-1)).toEqual({ type: "setName", name: "NewName" });
+  });
+});
+
+describe("NetworkGame round-boundary input clearing", () => {
+  const baseState: MatchState = {
+    config: {
+      mode: "classic", rounds: 3, noTurn: true, turnSeconds: 30,
+      map: { width: 20, height: 15 },
+      scatter: {
+        rMin: 0.5, rMax: 2.0, gapMin: 1, gapMax: 3,
+        spawnClearance: 2, fieldMargin: 1, maxPlanets: 8,
+        spawnEdgeGap: 1, spawnBandX: 3, spawnYMargin: 1.5, spawnSeparation: 2, spawnMirror: true,
+      },
+      teamSize: 1,
+    },
+    players: [
+      { id: "p1", name: "Alice", team: "red", pos: { x: 0, y: 0 }, hp: 100, alive: true },
+      { id: "p2", name: "Bob", team: "blue", pos: { x: 1, y: 1 }, hp: 100, alive: true },
+    ],
+    planets: [],
+    bounds: { minX: 0, minY: 0, maxX: 20, maxY: 15 },
+    turnQueue: ["p1", "p2"],
+    activePlayerId: "p1",
+    scores: { red: 0, blue: 0 },
+    round: 1,
+    phase: "play",
+    winner: null,
+    turnDeadline: null,
+  };
+
+  it("does NOT reset inputs when consecutive states share the same round", async () => {
+    const { client, ui } = await makeGame();
+
+    client.inject({ type: "matchState", state: baseState });
+    client.inject({ type: "matchState", state: { ...baseState, activePlayerId: "p2" } });
+
+    expect(ui.resetInputs).not.toHaveBeenCalled();
+  });
+
+  it("resets inputs when state.round increases between two states", async () => {
+    const { client, ui } = await makeGame();
+
+    client.inject({ type: "matchState", state: baseState });
+    client.inject({ type: "matchState", state: { ...baseState, round: 2 } });
+
+    expect(ui.resetInputs).toHaveBeenCalledOnce();
+  });
+
+  it("does NOT reset inputs on the very first state received", async () => {
+    const { client, ui } = await makeGame();
+
+    client.inject({ type: "matchState", state: baseState });
+
+    expect(ui.resetInputs).not.toHaveBeenCalled();
   });
 });

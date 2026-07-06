@@ -229,7 +229,13 @@ export class NetworkGame {
 
   private render(state: MatchState): void {
     this.stateCallback?.(state);
+    const prevRound = this.lastState?.round;
     this.lastState = state;
+    // New round started (not the first state received) — clear stale equations,
+    // mirroring LocalGame's resetInputs()-on-round-boundary behavior.
+    if (prevRound !== undefined && state.round !== prevRound) {
+      this.ui.resetInputs();
+    }
     // Re-enable local player fire button if they were busy.
     if (this.myBusy) {
       const me = state.players.find((p) => p.id === this.myId);

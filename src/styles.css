@@ -160,8 +160,10 @@ body {
   box-shadow: none;
 }
 
-/* Caret and selection in theme colours. White caret for max contrast. */
-.mq-input .mq-cursor {
+/* Caret and selection in theme colours. White caret for max contrast.
+   Extra .mq-editable-field class bumps specificity above mathquill.css's
+   own `.mq-editable-field .mq-cursor` rule (black), which loads after us. */
+.mq-input.mq-editable-field .mq-cursor {
   border-color: #fff;
 }
 
