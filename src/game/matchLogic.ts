@@ -21,6 +21,8 @@ export interface ScatterConfig {
   spawnYMargin: number;
   /** Minimum mutual distance between same-side spawns (world units). */
   spawnSeparation: number;
+  /** When true, blue spawns are the mirror image of red; when false each side rolls independently. */
+  spawnMirror: boolean;
 }
 
 export interface MatchConfig {

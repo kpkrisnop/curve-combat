@@ -79,7 +79,7 @@ describe("protocol v2 (NvN + arena + countdown)", () => {
       map: { width: 24, height: 14 },
       scatter: {
         rMin: 0.8, rMax: 2, gapMin: 0.5, gapMax: 2, spawnClearance: 2, fieldMargin: 0.5, maxPlanets: 12,
-        spawnEdgeGap: 1, spawnBandX: 3, spawnYMargin: 1.5, spawnSeparation: 2,
+        spawnEdgeGap: 1, spawnBandX: 3, spawnYMargin: 1.5, spawnSeparation: 2, spawnMirror: true,
       },
     };
     const parsed = parseClientMessage(withArena);

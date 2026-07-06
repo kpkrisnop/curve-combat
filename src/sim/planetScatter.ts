@@ -57,9 +57,9 @@ export function spawnZoneRects(bounds: Bounds, scatter: ScatterConfig): SpawnZon
  * four spawn params on `scatter` (spawnEdgeGap, spawnBandX, spawnYMargin,
  * spawnSeparation); falls back to even-Y spacing at the outer column if the zone
  * is too tight to satisfy `spawnSeparation` within 200 attempts (guarantees exactly
- * `teamSize` points per side). The LEFT side is sampled, then mirrored to the right
- * (x → -x, same y) — there is no separate mirror toggle; spawns are always
- * mirror-symmetric.
+ * `teamSize` points per side). The LEFT side is sampled first; the right side is
+ * either its mirror (x → -x, same y) when `scatter.spawnMirror` is true, or an
+ * independent roll when false.
  *
  * Deterministic in (map, teamSize, scatter, seed): uses a dedicated PRNG stream
  * (mulberry32(seed ^ salt)), decoupled from the planet generator's mulberry32(seed)
@@ -82,14 +82,14 @@ export function computeSpawns(
   const yLo = b.minY + scatter.spawnYMargin;
   const yHi = b.maxY - scatter.spawnYMargin;
 
-  const sampleLeft = (): Vec2[] => {
+  const sampleSide = (sign: number): Vec2[] => {
     const pts: Vec2[] = [];
     for (let i = 0; i < teamSize; i++) {
       let placed: Vec2 | null = null;
       for (let attempt = 0; attempt < 200 && !placed; attempt++) {
         const mag = xLoMag + rng() * (xHiMag - xLoMag);
         const y = yLo + rng() * (yHi - yLo);
-        const cand: Vec2 = { x: -mag, y };
+        const cand: Vec2 = { x: sign * mag, y };
         if (pts.every((p) => Math.hypot(p.x - cand.x, p.y - cand.y) >= scatter.spawnSeparation)) {
           placed = cand;
         }
@@ -97,15 +97,18 @@ export function computeSpawns(
       // Fallback: evenly spaced y at the outer column if the zone is too tight.
       if (!placed) {
         const t = teamSize === 1 ? 0.5 : i / (teamSize - 1);
-        placed = { x: -xHiMag, y: yLo + t * (yHi - yLo) };
+        placed = { x: sign * xHiMag, y: yLo + t * (yHi - yLo) };
       }
       pts.push(placed);
     }
     return pts;
   };
 
-  const left = sampleLeft();
-  const right = left.map((p) => ({ x: -p.x, y: p.y }));
+  // Sample the left side, then either mirror it to the right (symmetric, fair) or
+  // roll the right side independently — both consume the same PRNG stream in a fixed
+  // order, so server and preview stay identical for a given seed+config.
+  const left = sampleSide(-1);
+  const right = scatter.spawnMirror ? left.map((p) => ({ x: -p.x, y: p.y })) : sampleSide(1);
   const spawns: Vec2[] = [];
   for (let i = 0; i < teamSize; i++) spawns.push(left[i], right[i]);
   return spawns;

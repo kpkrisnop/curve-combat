@@ -17,6 +17,7 @@ export const DEFAULT_SCATTER: ScatterConfig = {
   spawnBandX: 3,
   spawnYMargin: 1.5,
   spawnSeparation: 2,
+  spawnMirror: true,
 };
 
 export const DEFAULT_TEAM_SIZE: 1 | 2 | 3 | 4 | 5 = 1;

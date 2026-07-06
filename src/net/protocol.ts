@@ -12,6 +12,7 @@ const scatterShape = z.object({
   maxPlanets: z.number().int().min(1).max(24),
   spawnEdgeGap: z.number().min(0).max(6), spawnBandX: z.number().min(0).max(8),
   spawnYMargin: z.number().min(0).max(5), spawnSeparation: z.number().min(0).max(6),
+  spawnMirror: z.boolean(),
 });
 
 // ── Client → Server ──────────────────────────────────────────────────────────
