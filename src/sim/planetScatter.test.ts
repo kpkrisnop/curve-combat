@@ -81,6 +81,24 @@ describe("computeSpawns — seeded, in-zone, mirror-symmetric", () => {
     }
   });
 
+  it("rolls sides independently (not mirrored) when spawnMirror is false", () => {
+    const asym = { ...DEFAULT_SCATTER, spawnMirror: false };
+    const s = computeSpawns({ width: 30, height: 20 }, 3, asym, 77);
+    // Still 3 per side, on the correct halves.
+    expect(s.filter((p) => p.x < 0)).toHaveLength(3);
+    expect(s.filter((p) => p.x > 0)).toHaveLength(3);
+    // At least one right spawn is NOT the mirror of its paired left one.
+    let anyAsymmetric = false;
+    for (let i = 0; i < s.length; i += 2) {
+      if (Math.abs(s[i + 1].x - -s[i].x) > 1e-6 || Math.abs(s[i + 1].y - s[i].y) > 1e-6) {
+        anyAsymmetric = true;
+      }
+    }
+    expect(anyAsymmetric).toBe(true);
+    // Deterministic from seed regardless of the flag.
+    expect(computeSpawns({ width: 30, height: 20 }, 3, asym, 77)).toEqual(s);
+  });
+
   it("honors spawnSeparation between same-side points when the zone is roomy", () => {
     const roomy = { ...DEFAULT_SCATTER, spawnBandX: 6, spawnYMargin: 0.5, spawnSeparation: 2 };
     const s = computeSpawns({ width: 30, height: 20 }, 4, roomy, 42);

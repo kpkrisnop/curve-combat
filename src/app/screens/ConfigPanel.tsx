@@ -85,6 +85,11 @@ export function ConfigPanel({ value, onChange, seed, onReroll, readOnly, hideSee
             </label>
           ))}
         </div>
+        <label className="cfg-toggle">
+          <input type="checkbox" checked={value.scatter.spawnMirror}
+            onChange={(e) => onChange({ scatter: { ...value.scatter, spawnMirror: e.target.checked } })} />
+          Symmetrical spawns (mirror both sides)
+        </label>
         {!hideSeedRow && (
           <div className="cfg-seed">
             <code>seed {seed}</code>

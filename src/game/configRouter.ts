@@ -27,7 +27,8 @@ export function configToHash(c: MatchConfig): string {
     `&sc=${n(scatter.spawnClearance)}&fm=${n(scatter.fieldMargin)}` +
     `&mp=${scatter.maxPlanets}&ts=${teamSize}` +
     `&eg=${n(scatter.spawnEdgeGap)}&bx=${n(scatter.spawnBandX)}` +
-    `&ym=${n(scatter.spawnYMargin)}&sp=${n(scatter.spawnSeparation)}`
+    `&ym=${n(scatter.spawnYMargin)}&sp=${n(scatter.spawnSeparation)}` +
+    `&sm=${scatter.spawnMirror ? 1 : 0}`
   );
 }
 
@@ -70,6 +71,8 @@ export function parseConfigFromHash(hash: string): MatchConfig {
     spawnBandX: clampNum(p.get("bx"), 0, 8, DEFAULT_SCATTER.spawnBandX),
     spawnYMargin: clampNum(p.get("ym"), 0, 5, DEFAULT_SCATTER.spawnYMargin),
     spawnSeparation: clampNum(p.get("sp"), 0, 6, DEFAULT_SCATTER.spawnSeparation),
+    // Absent (old links) → default true; "0" → false, anything else → true.
+    spawnMirror: p.get("sm") === null ? DEFAULT_SCATTER.spawnMirror : p.get("sm") !== "0",
   };
   const teamSize = Math.round(clampNum(p.get("ts"), 1, 5, arenaDefaults().teamSize)) as 1 | 2 | 3 | 4 | 5;
   const turnSeconds = Math.round(clampNum(p.get("tt"), 15, 120, 60) / 5) * 5; // snap to 5s grid
