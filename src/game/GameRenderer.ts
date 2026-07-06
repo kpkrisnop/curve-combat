@@ -6,6 +6,7 @@ import { DEFAULT_MAP } from "./arenaDefaults";
 import { boundsFromMap, spawnZoneRects } from "../sim/planetScatter";
 import { fitContain, boundaryRectPx } from "../sim/fitRect";
 import { X_VELOCITY_WORLD } from "../sim/timing";
+import { cumulativeArcLength, pointAtLength, bangTravelProgress } from "../sim/playback";
 import { PLAYER_RADIUS, type PlayerState } from "./matchState";
 import { HP_MAX } from "./hpLogic";
 import {
@@ -42,6 +43,11 @@ const GUIDE_COLORS = {
 
 /** Minimum animation duration in ms — prevents instant flicker on zero-length shots. */
 const MIN_SHOT_MS = 200;
+// Bang→travel projectile pacing (Issue 5, ADR-0004): the head starts at `c×` cruise
+// speed and decays at rate `a` toward cruise (b=1 baseline). Front-loads speed within
+// the shot's fixed duration; only the ratio c/b shapes the curve.
+const BANG_DECAY_RATE = 1; // a
+const BANG_SPEED_MULTIPLIER = 3; // c
 const BARREL_PX = 18;
 
 /**
@@ -566,14 +572,20 @@ export class GameRenderer {
           xLength += Math.abs(samples[i + 1].x - samples[i].x);
         }
       }
+      // Duration stays x-based ("same time" — ADR-0002): flights are bounded no
+      // matter how wiggly the function is.
       const shotDurationMs = Math.max(MIN_SHOT_MS, (xLength / X_VELOCITY_WORLD) * 1000);
+
+      // Drive the head by cumulative ARC LENGTH, not sample index, so on-screen
+      // speed is constant despite curvature-adaptive sampling (ADR-0004).
+      const arcLen = cumulativeArcLength(samples);
+      const totalArc = arcLen[arcLen.length - 1];
 
       const start = performance.now();
       const tick = () => {
         const progress = Math.min(1, (performance.now() - start) / shotDurationMs);
-        const headF = progress * (samples.length - 1);
-        const headIdx = Math.floor(headF);
-        const frac = headF - headIdx;
+        const paced = bangTravelProgress(progress, BANG_DECAY_RATE, BANG_SPEED_MULTIPLIER);
+        const { idx: headIdx, frac } = pointAtLength(arcLen, paced * totalArc);
 
         const g = trailLayer;
         g.clear();

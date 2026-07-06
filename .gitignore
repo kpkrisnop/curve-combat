@@ -13,6 +13,7 @@ dist-ssr/
 .playwright-mcp/
 .superpowers/
 graphify-out/
+prototypes/
 
 # Editor dirs (not part of this code repo)
 .obsidian/
