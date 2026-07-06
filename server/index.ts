@@ -261,17 +261,30 @@ export function createServer(port: number): { close: () => Promise<void> } {
         return;
       }
 
-      // If the player already reconnected on a new socket, this close is stale — skip grace.
+      // If the player already reconnected on a new socket, this close is stale — skip.
       const alreadyReconnected = [...conns].some(
         (c) => c.room === conn.room && c.playerId === conn.playerId && c.ws.readyState === WebSocket.OPEN,
       );
       if (alreadyReconnected) return;
 
+      const code = conn.room;
+
+      // ── Lobby (no match yet): remove immediately, transfer owner, drop empty room (Bug B).
+      if (room.engine === null) {
+        const { roomGone } = rooms.removeFromLobby(code, conn.playerId!);
+        if (roomGone) {
+          for (const c of conns) if (c.room === code) c.ws.terminate();
+        } else {
+          const updated = rooms.get(code);
+          if (updated) broadcast(code, rosterMsg(updated));
+        }
+        return;
+      }
+
+      // ── In-match: keep peerStatus + 30 s grace → teardown (unchanged).
       const player = room.players.find((p) => p.id === conn.playerId);
       const name = player?.name ?? "Player";
-      broadcast(conn.room, { type: "peerStatus", playerId: conn.playerId!, name, connected: false });
-
-      const code = conn.room;
+      broadcast(code, { type: "peerStatus", playerId: conn.playerId!, name, connected: false });
       rooms.startGrace(code, conn.playerId!, () => {
         cancelTurnTimer(code);
         const rm = rooms.get(code);

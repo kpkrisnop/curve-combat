@@ -458,3 +458,28 @@ describe("server integration (Phase 3)", () => {
     await server.close();
   }, 10000);
 });
+
+describe("server integration — lobby disconnect (Bug B)", () => {
+  it("host leaving the lobby removes them from the roster and transfers ownership", async () => {
+    const port = 3620 + Math.floor(Math.random() * 150);
+    const server = createServer(port);
+    const a = await open(port), b = await open(port);
+
+    a.send(encode({ type: "join", room: "LOBBY", name: "Ann" })); // owner
+    await next(a, "joined");
+    b.send(encode({ type: "join", room: "LOBBY", name: "Bo" }));
+    const bJoined = await next(b, "joined");
+    const bId = (bJoined as any).playerId;
+
+    const rosterP = next(b, "lobbyState");
+    a.close();
+    const roster = (await rosterP) as any;
+
+    expect(roster.players).toHaveLength(1);
+    expect(roster.players[0].id).toBe(bId);
+    expect(roster.ownerId).toBe(bId);
+
+    b.close();
+    await server.close();
+  });
+});
