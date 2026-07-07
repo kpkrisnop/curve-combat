@@ -99,6 +99,8 @@ export class HudController implements GameUiPort {
   }
   hideTutorial(): void { this.store.set({ tutorial: null }); }
   setTimer(seconds: number | null): void { this.store.set({ timer: seconds }); }
+  /** Wipe HUD *state* back to defaults on entering a match. NOT the leave-match
+   *  action — that's onReset/requestReset (a navigation callback). */
   reset(): void { this.store.set(initialHudState()); }
 }
 
