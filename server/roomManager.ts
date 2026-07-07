@@ -186,6 +186,32 @@ export class RoomManager {
     return { roomGone: false };
   }
 
+  /**
+   * In-match removal (Forfeit or grace-expired disconnect). Drops the player
+   * from the roster, clears their grace/token, transfers ownership if they were
+   * the owner, drives the engine's removePlayer(), and tears the room down if it
+   * becomes empty. No-op (`state:null`) in the lobby — pre-match departures use
+   * removeFromLobby(). Returns the new MatchState + who left for the caller to
+   * broadcast.
+   */
+  forfeit(code: string, playerId: string): { state: MatchState | null; roomGone: boolean; removed: { name: string; team: Team } | null } {
+    const room = this.rooms.get(code);
+    if (!room || room.engine === null) return { state: null, roomGone: false, removed: null };
+    const player = room.players.find((p) => p.id === playerId);
+    const removed = player ? { name: player.name, team: player.team } : null;
+    this.cancelGrace(code, playerId);
+    room.rejoinTokens.delete(playerId);
+    const wasOwner = room.ownerId === playerId;
+    room.players = room.players.filter((p) => p.id !== playerId);
+    const state = room.engine.removePlayer(playerId);
+    if (room.players.length === 0) {
+      this.remove(code);
+      return { state, roomGone: true, removed };
+    }
+    if (wasOwner) room.ownerId = room.players[0].id;
+    return { state, roomGone: false, removed };
+  }
+
   rejoin(code: string, playerId: string, token: string): { room: Room; token: string } | null {
     const room = this.rooms.get(code);
     if (!room) return null;

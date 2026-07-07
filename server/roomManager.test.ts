@@ -442,3 +442,28 @@ describe("RoomManager.removeFromLobby (Bug B)", () => {
     expect(m.rejoin("WOLF", b.playerId, b.token)).toBeNull();
   });
 });
+
+describe("RoomManager.forfeit", () => {
+  it("removes an in-match player and drives the engine", () => {
+    const rooms = new RoomManager();
+    rooms.join("WOLF", "Red");   // p? red
+    rooms.join("WOLF", "Blue");  // p? blue
+    const room = rooms.get("WOLF")!;
+    const redId = room.players.find((p) => p.team === "red")!.id;
+    rooms.lock("WOLF");
+    rooms.start("WOLF", room.ownerId);
+
+    const res = rooms.forfeit("WOLF", redId);
+
+    expect(res.removed).toEqual({ name: expect.any(String), team: "red" });
+    expect(res.state?.phase).toBe("over");
+    expect(res.state?.winner).toBe("blue");
+    expect(room.players.some((p) => p.id === redId)).toBe(false);
+  });
+
+  it("is a no-op in the lobby (no engine)", () => {
+    const rooms = new RoomManager();
+    const { playerId } = rooms.join("WOLF", "Red");
+    expect(rooms.forfeit("WOLF", playerId)).toEqual({ state: null, roomGone: false, removed: null });
+  });
+});
