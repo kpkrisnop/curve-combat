@@ -58,10 +58,10 @@ describe("server integration (Phase 2)", () => {
   beforeEach(() => { vi.useFakeTimers({ shouldAdvanceTime: true }); });
   afterEach(() => { vi.useRealTimers(); });
 
-  it("disconnect sends peerStatus{connected:false}; grace expire tears down room", async () => {
+  it("disconnect sends peerStatus{connected:false}; grace expire forfeits the dropped player", async () => {
     const port = 3450 + Math.floor(Math.random() * 150);
     const server = createServer(port);
-    const a = await open(port), b = await open(port);
+    const a = await open(port), b = await open(port); // a=Ann (red, first joiner), b=Bo (blue)
     a.send(encode({ type: "join", room: "DROP", name: "Ann" })); await next(a, "joined");
     b.send(encode({ type: "join", room: "DROP", name: "Bo" }));  await next(b, "joined");
     a.send(encode({ type: "startMatch" })); await next(a, "matchState");
@@ -72,11 +72,13 @@ describe("server integration (Phase 2)", () => {
     expect((status as any).connected).toBe(false);
     expect((status as any).name).toBe("Ann");
 
-    // Advance past 30s grace — b should receive "opponent-timed-out" error
-    const errP = next(b, "error");
+    // Advance past 30s grace — the 1v1 room empties Ann's team, so b sees the
+    // match end via the forfeit removal path (not a room-teardown error).
+    const finalP = next(b, "matchState");
     vi.advanceTimersByTime(30_001);
-    const err = await errP;
-    expect((err as any).code).toBe("opponent-timed-out");
+    const final = await finalP;
+    expect((final as any).state.phase).toBe("over");
+    expect((final as any).state.winner).toBe("blue"); // Bo's team, since Ann (red) dropped
 
     b.close(); await server.close();
   });

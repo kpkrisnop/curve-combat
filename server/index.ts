@@ -324,10 +324,17 @@ export function createServer(port: number): { close: () => Promise<void> } {
       const name = player?.name ?? "Player";
       broadcast(code, { type: "peerStatus", playerId: conn.playerId!, name, connected: false });
       rooms.startGrace(code, conn.playerId!, () => {
-        cancelTurnTimer(code);
+        const res = rooms.forfeit(code, conn.playerId!);
+        if (!res.state) return;
+        if (res.roomGone) {
+          cancelTurnTimer(code);
+          for (const c of conns) if (c.room === code) c.ws.terminate();
+          return;
+        }
         const rm = rooms.get(code);
-        if (rm) broadcast(code, { type: "error", code: "opponent-timed-out", message: "Opponent timed out — room closed." });
-        rooms.remove(code);
+        if (!rm || !rm.engine) return;
+        const patched = armTurnTimer(code, res.state, rm.engine);
+        broadcast(code, { type: "matchState", state: patched });
       });
     });
   });
