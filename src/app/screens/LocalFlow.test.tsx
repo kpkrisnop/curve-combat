@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { LocalFlow } from "./LocalFlow";
 import { arenaDefaults } from "../../game/arenaDefaults";
+import { LocalGame } from "../../game/LocalGame";
 import type { MatchConfig } from "../../game/matchLogic";
 
 const fakeRenderer = {
@@ -61,5 +62,13 @@ describe("LocalFlow arena shell", () => {
   it("does not render the top-center round-status element before the match starts (config phase)", () => {
     render(<LocalFlow initial={initial} />);
     expect(screen.queryByTestId("round-status")).toBeNull();
+  });
+
+  it("disposes the LocalGame when the screen unmounts by any path other than Back to Lobby", () => {
+    const disposeSpy = vi.spyOn(LocalGame.prototype, "dispose");
+    const { unmount } = render(<LocalFlow initial={initial} />);
+    unmount();
+    expect(disposeSpy).toHaveBeenCalled();
+    disposeSpy.mockRestore();
   });
 });

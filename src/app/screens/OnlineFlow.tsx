@@ -70,6 +70,7 @@ export function OnlineFlow({ code }: Props) {
 
   // ── Initialize store on mount ─────────────────────────────────────────────
   useEffect(() => {
+    hudController.reset();
     netLobbyStore.set(initialNetLobbyState(code));
     hudController.onReset(() => { location.hash = ""; });
     return () => {

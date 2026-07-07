@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { MatchConfig } from "../../game/matchLogic";
 import { LocalGame } from "../../game/LocalGame";
 import type { GameRenderer } from "../../game/GameRenderer";
@@ -27,6 +27,11 @@ export function LocalFlow({ initial, autostart = false }: Props) {
   const [seed, setSeed] = useState(newSeed);
   const [settingsOpen, setSettingsOpen] = useState(true);
   const gameRef = useRef<LocalGame | null>(null);
+
+  useEffect(() => {
+    hudController.reset();
+    return () => { gameRef.current?.dispose(); };
+  }, []);
 
   const toMatchConfig = (c: PanelConfig): MatchConfig =>
     ({ ...c, role: "local", teamSize: 1 });

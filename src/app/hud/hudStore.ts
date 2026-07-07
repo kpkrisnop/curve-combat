@@ -99,6 +99,7 @@ export class HudController implements GameUiPort {
   }
   hideTutorial(): void { this.store.set({ tutorial: null }); }
   setTimer(seconds: number | null): void { this.store.set({ timer: seconds }); }
+  reset(): void { this.store.set(initialHudState()); }
 }
 
 // App-wide singletons (one HUD per page).

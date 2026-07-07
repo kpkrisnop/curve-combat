@@ -97,4 +97,16 @@ describe("HudController", () => {
     expect(onSkip).toHaveBeenCalled();
     expect(onNext).not.toHaveBeenCalled();
   });
+
+  it("reset() restores the store to initialHudState()", () => {
+    hud.setTimer(42);
+    hud.setStatus("busy");
+    hud.showWin("red");
+    hud.reset();
+    const s = store.get();
+    expect(s).toEqual(initialHudState());
+    expect(s.timer).toBeNull();
+    expect(s.status).toBe("");
+    expect(s.win).toBeNull();
+  });
 });
