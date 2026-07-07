@@ -50,6 +50,14 @@ _Avoid_: joiner, client (that's a network term)
 A non-playing viewer in a **Room** beyond the two Player seats. Watches the Match read-only; cannot fire or affect play.
 _Avoid_: observer, viewer
 
+**Leave**:
+A Player exiting *before the Match begins* (from the Lobby/pre-game). No **Round** or **Match** is in flight, so there is nothing to concede — the seat simply empties. Online this is surfaced as the "Leave Room" action. Distinct from **Forfeit**.
+_Avoid_: quit, exit, forfeit (that's the in-match concept)
+
+**Forfeit**:
+A Player quitting a *live* Match (surfaced as "Quit Match"). The forfeiting Player is removed from the Match for good — their **Soldier** leaves the field and they do not respawn in later **Rounds**, so a 2v2 continues as 1v2. The **Match** itself continues; the opposing **Team** wins the Match only when a Team is left with **no Players** (so 1v1 ends immediately, since removing the sole Player empties that Team). A Forfeit happens two ways, sharing one removal path: pressing "Quit Match" (immediate) or fully disconnecting (removed once the reconnect grace expires). A transient drop that reconnects within grace is *not* a Forfeit — the Player keeps their seat. Supersedes the current "any in-match departure closes the room, nobody wins" behavior. Locally the label is cosmetic — hot-seat quitting just returns to the landing screen with no winner declared.
+_Avoid_: leave (that's the pre-game concept), abandon, rage-quit
+
 **Soldier**:
 The *role* a Player occupies on its own turn: the shooter. Fires one **Shot** from its world position toward the opponent. (Also how the pure engine names the firing unit.)
 _Avoid_: cannon
