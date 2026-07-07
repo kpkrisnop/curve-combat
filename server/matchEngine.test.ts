@@ -86,3 +86,49 @@ describe("MatchEngine", () => {
     expect(next.activePlayerId).toBe("B"); // loser (blue) shoots first
   });
 });
+
+const cfg = (over: Partial<MatchConfig> = {}): MatchConfig =>
+  ({ mode: "classic", rounds: 3, noTurn: false, ...arenaDefaults(), ...over });
+
+describe("MatchEngine.removePlayer", () => {
+  it("1v1: removing the red player ends the match, blue wins", () => {
+    const players: RoomPlayer[] = [
+      { id: "r1", name: "R", team: "red" },
+      { id: "b1", name: "B", team: "blue" },
+    ];
+    const eng = new MatchEngine(cfg(), players, () => 123);
+    const s = eng.removePlayer("r1");
+    expect(s.phase).toBe("over");
+    expect(s.winner).toBe("blue");
+    expect(s.players.some((p) => p.id === "r1")).toBe(false);
+  });
+
+  it("2v2: removing one red player continues the match (no winner)", () => {
+    const players: RoomPlayer[] = [
+      { id: "r1", name: "R1", team: "red" },
+      { id: "r2", name: "R2", team: "red" },
+      { id: "b1", name: "B1", team: "blue" },
+      { id: "b2", name: "B2", team: "blue" },
+    ];
+    const eng = new MatchEngine(cfg({ teamSize: 2 }), players, () => 123);
+    const s = eng.removePlayer("r1");
+    expect(s.phase).toBe("play");
+    expect(s.winner).toBeNull();
+    expect(s.players.filter((p) => p.team === "red").map((p) => p.id)).toEqual(["r2"]);
+    expect(s.turnQueue).not.toContain("r1");
+  });
+
+  it("advances the active turn when the active player is removed", () => {
+    const players: RoomPlayer[] = [
+      { id: "r1", name: "R1", team: "red" },
+      { id: "r2", name: "R2", team: "red" },
+      { id: "b1", name: "B1", team: "blue" },
+      { id: "b2", name: "B2", team: "blue" },
+    ];
+    const eng = new MatchEngine(cfg({ teamSize: 2 }), players, () => 123);
+    // round 1 starts red-first: activePlayerId === "r1"
+    const s = eng.removePlayer("r1");
+    expect(s.activePlayerId).not.toBe("r1");
+    expect(s.activePlayerId).not.toBeNull();
+  });
+});

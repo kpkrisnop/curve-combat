@@ -1,7 +1,8 @@
 // server/matchEngine.ts
 import { createMatch, beginRound, skipTurn, type MatchState, type PlayerState, type Team, type RoundLayout } from "../src/game/matchState";
 import { resolveFire } from "../src/game/resolveFire";
-import { firstShooterNextRound, type MatchConfig } from "../src/game/matchLogic";
+import { firstShooterNextRound, matchWinner, type MatchConfig } from "../src/game/matchLogic";
+import { nextActive } from "../src/game/turnQueue";
 import { generatePlanets, computeSpawns, boundsFromMap } from "../src/sim/planetScatter";
 import { shotDuration } from "../src/sim/timing";
 import type { ShotResult } from "../src/sim/types";
@@ -86,6 +87,62 @@ export class MatchEngine {
   skipActiveTurn(): MatchState {
     if (this.inFlight.size > 0) return this.state;
     this.state = skipTurn(this.state);
+    return this.state;
+  }
+
+  /**
+   * Remove a player from the match for good (Forfeit or grace-expired disconnect).
+   * The player leaves the engine roster (so future rounds shrink) and the live
+   * state. If their Team is left with zero players the opposing Team wins the
+   * Match immediately; if the removal wipes the Team's alive set for the current
+   * round, that round is awarded (matchWinner may then end the Match); otherwise
+   * the round continues and the active turn advances past the leaver.
+   */
+  removePlayer(playerId: string): MatchState {
+    this.players = this.players.filter((p) => p.id !== playerId);
+    this.inFlight.delete(playerId);
+
+    const s = this.state;
+    const players = s.players.filter((p) => p.id !== playerId);
+    const teams: Team[] = ["red", "blue"];
+
+    // 1) A Team with zero players → other Team wins the Match now.
+    const emptyTeam = teams.find((t) => players.filter((p) => p.team === t).length === 0);
+    if (emptyTeam) {
+      const winner: Team = emptyTeam === "red" ? "blue" : "red";
+      this.state = { ...s, players, turnQueue: s.turnQueue.filter((id) => id !== playerId), activePlayerId: null, phase: "over", winner };
+      this.roundLoser = null;
+      return this.state;
+    }
+
+    // 2) Team still has players but all of one Team are now not-alive → round over.
+    const roundLoser = teams.find((t) => {
+      const tp = players.filter((p) => p.team === t);
+      return tp.length > 0 && tp.every((p) => !p.alive);
+    });
+    if (roundLoser) {
+      const winnerTeam: Team = roundLoser === "red" ? "blue" : "red";
+      const scores = { ...s.scores, [winnerTeam]: s.scores[winnerTeam] + 1 };
+      const winner = matchWinner(scores.red, scores.blue, s.config.rounds);
+      this.state = {
+        ...s, players, turnQueue: s.turnQueue.filter((id) => id !== playerId),
+        scores, phase: winner ? "over" : "between", winner,
+        activePlayerId: winner ? null : s.activePlayerId,
+      };
+      this.roundLoser = roundLoser;
+      return this.state;
+    }
+
+    // 3) Round continues. Advance the active turn if the leaver was active
+    //    (compute the next id off the ORIGINAL queue so ordering is preserved).
+    let activePlayerId = s.activePlayerId;
+    if (activePlayerId === playerId) {
+      activePlayerId = nextActive(
+        s.turnQueue, playerId,
+        (id) => id !== playerId && (players.find((p) => p.id === id)?.alive ?? false),
+      );
+    }
+    this.state = { ...s, players, turnQueue: s.turnQueue.filter((id) => id !== playerId), activePlayerId };
     return this.state;
   }
 }
