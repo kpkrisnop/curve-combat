@@ -53,4 +53,10 @@ describe("ReconnectOverlays", () => {
     const blocking = document.querySelector(".reconnect-overlay--blocking");
     expect(blocking).toBeTruthy();
   });
+
+  it("shows the forfeit notice when set", () => {
+    netLobbyStore.set({ forfeitNotice: "Red quit" });
+    render(<ReconnectOverlays />);
+    expect(screen.getByText(/red quit/i)).toBeTruthy();
+  });
 });
