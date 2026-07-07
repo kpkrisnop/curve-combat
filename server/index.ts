@@ -316,7 +316,7 @@ export function createServer(port: number): { close: () => Promise<void> } {
         return;
       }
 
-      // ── In-match: keep peerStatus + 30 s grace → teardown (unchanged).
+      // ── In-match: keep peerStatus + 30 s grace → forfeit removal.
       // If the player was already removed (explicit forfeit just ran), this
       // close is a no-op — nothing left to grace.
       if (!room.players.some((p) => p.id === conn.playerId)) return;

@@ -465,6 +465,37 @@ describe("server integration (Phase 3)", () => {
   }, 10000);
 });
 
+describe("server integration — forfeit", () => {
+  it("forfeit mid-match ends it: surviving player's matchState has phase over + their team as winner", async () => {
+    const port = 4200 + Math.floor(Math.random() * 50);
+    const server = createServer(port);
+    const a = await open(port), b = await open(port); // a=Ann (red, first joiner), b=Bo (blue)
+
+    a.send(encode({ type: "join", room: "FORFEIT", name: "Ann" }));
+    await next(a, "joined");
+    b.send(encode({ type: "join", room: "FORFEIT", name: "Bo" }));
+    await next(b, "joined");
+
+    // Drain the match-start broadcast on BOTH sockets — b's copy can arrive
+    // asynchronously and would otherwise be mistaken for the forfeit broadcast.
+    const aStartP = next(a, "matchState");
+    const bStartP = next(b, "matchState");
+    a.send(encode({ type: "startMatch" }));
+    await Promise.all([aStartP, bStartP]); // real 3s countdown, phase: play
+
+    // Register b's listener before a forfeits so the broadcast isn't missed.
+    const bFinalP = next(b, "matchState");
+    a.send(encode({ type: "forfeit" }));
+    const bFinal = await bFinalP;
+
+    expect((bFinal as any).state.phase).toBe("over");
+    expect((bFinal as any).state.winner).toBe("blue"); // Bo's team, since Ann (red) forfeited
+
+    a.close(); b.close();
+    await server.close();
+  }, 8000);
+});
+
 describe("server integration — lobby disconnect grace (Bug B + blip resilience)", () => {
   beforeEach(() => { vi.useFakeTimers({ shouldAdvanceTime: true }); });
   afterEach(() => { vi.useRealTimers(); });
