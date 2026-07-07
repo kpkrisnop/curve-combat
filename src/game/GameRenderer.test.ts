@@ -8,7 +8,14 @@
 // doc comment for the manual-verification note on drawStatic/drawField).
 
 import { describe, it, expect, vi } from "vitest";
-import { destroyLayerChildren, dashRanges, circlePoint, rectPerimeterPoint } from "./GameRenderer";
+import {
+  destroyLayerChildren,
+  dashRanges,
+  circlePoint,
+  rectPerimeterPoint,
+  zoomedCamScale,
+  easeInOutCubic,
+} from "./GameRenderer";
 
 describe("destroyLayerChildren", () => {
   it("destroys every child returned by removeChildren()", () => {
@@ -116,5 +123,21 @@ describe("rectPerimeterPoint", () => {
   it("wraps t modulo the perimeter", () => {
     const perimeter = 2 * (w + h);
     expect(rectPerimeterPoint(x, y, w, h, perimeter + 15)).toEqual(rectPerimeterPoint(x, y, w, h, 15));
+  });
+});
+
+describe("zoomedCamScale", () => {
+  it("is fitContain scale times the factor", () => {
+    const map = { width: 20, height: 12 };
+    const full = zoomedCamScale(map, 800, 600, 1);
+    expect(zoomedCamScale(map, 800, 600, 0.87)).toBeCloseTo(full * 0.87, 6);
+  });
+});
+
+describe("easeInOutCubic", () => {
+  it("pins endpoints and midpoint", () => {
+    expect(easeInOutCubic(0)).toBe(0);
+    expect(easeInOutCubic(1)).toBe(1);
+    expect(easeInOutCubic(0.5)).toBeCloseTo(0.5, 6);
   });
 });

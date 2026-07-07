@@ -83,6 +83,15 @@ export function destroyLayerChildren(layer: {
   }
 }
 
+/** Camera pixels-per-world-unit that fits the map, scaled by a zoom factor (<1 = zoomed out). */
+export function zoomedCamScale(map: MapConfig, canvasW: number, canvasH: number, factor: number): number {
+  return fitContain(map, canvasW, canvasH).scale * factor;
+}
+
+export function easeInOutCubic(t: number): number {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
 export class GameRenderer {
   readonly app = new Application();
   private camera!: Camera;
@@ -139,6 +148,10 @@ export class GameRenderer {
 
   /** Collision bounds — the map rectangle, centered on the origin. */
   private effectiveBounds: Bounds = boundsFromMap(DEFAULT_MAP);
+
+  /** Visual zoom multiplier on the fit-to-frame camera scale (1 = arena fills frame). */
+  private zoomFactor = 1;
+  private zoomRaf: number | null = null;
 
   async init(container: HTMLElement) {
     await this.app.init({
@@ -237,10 +250,39 @@ export class GameRenderer {
    */
   private recomputeEffectiveBounds() {
     const cam = this.camera;
-    cam.scale = fitContain(this.map, cam.width, cam.height).scale;
+    cam.scale = zoomedCamScale(this.map, cam.width, cam.height, this.zoomFactor);
     cam.centerX = 0;
     cam.centerY = 0;
     this.effectiveBounds = boundsFromMap(this.map);
+  }
+
+  /** Set the zoom factor and redraw immediately (no animation). */
+  setZoomFactor(factor: number): void {
+    this.zoomFactor = factor;
+    this.recomputeEffectiveBounds();
+    if (this.world) {
+      this.drawStatic();
+      this.drawPlanets();
+      this.drawField();
+    }
+  }
+
+  /** Tween the zoom factor to `to` over `durationMs`, redrawing each frame. */
+  animateZoom(to: number, durationMs = 900): void {
+    if (this.zoomRaf !== null) cancelAnimationFrame(this.zoomRaf);
+    const from = this.zoomFactor;
+    if (from === to) return;
+    const start = performance.now();
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / durationMs);
+      this.setZoomFactor(from + (to - from) * easeInOutCubic(t));
+      if (t < 1) {
+        this.zoomRaf = requestAnimationFrame(step);
+      } else {
+        this.zoomRaf = null;
+      }
+    };
+    this.zoomRaf = requestAnimationFrame(step);
   }
 
   private drawStatic() {
