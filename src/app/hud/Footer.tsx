@@ -35,6 +35,9 @@ export function roomLink(roomCode: string, base: string): string {
 interface FooterProps {
   mode: FooterMode;
 
+  /** Leave/Quit action. ingame confirms first; pregame calls directly. */
+  onLeave?: () => void;
+
   // pregame (both local + online)
   onStart?: () => void;
   startDisabled?: boolean;
@@ -62,9 +65,13 @@ export function Footer(props: FooterProps) {
   }, [props.name]);
 
   if (props.mode === "ingame") {
+    const quit = () => { if (window.confirm("Quit match?")) props.onLeave?.(); };
     return (
       <div className="comp footer footer--ingame" data-testid="arena-footer">
         <HudBar makeInput={props.makeInput} singleTeam={props.singleTeam} />
+        <button type="button" className="gw-btn footer-leave" onClick={quit}>
+          Quit Match
+        </button>
       </div>
     );
   }
@@ -88,6 +95,9 @@ export function Footer(props: FooterProps) {
 
   return (
     <div className="comp footer footer--pregame" data-testid="arena-footer">
+      <button type="button" className="gw-btn footer-leave" onClick={props.onLeave}>
+        {props.mode === "pregame-online" ? "Leave Room" : "Leave"}
+      </button>
       {showWaiting ? (
         <span className="footer-waiting">⏳ Waiting for host…</span>
       ) : (

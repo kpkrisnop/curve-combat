@@ -105,4 +105,30 @@ describe("Footer", () => {
     fireEvent.click(screen.getByRole("button", { name: /Switch side/i }));
     expect(onSwitchSide).toHaveBeenCalled();
   });
+
+  it("pregame-local renders a Leave button that calls onLeave without confirm", () => {
+    const onLeave = vi.fn();
+    render(<Footer mode="pregame-local" onStart={vi.fn()} onLeave={onLeave} />);
+    fireEvent.click(screen.getByRole("button", { name: /leave/i }));
+    expect(onLeave).toHaveBeenCalledTimes(1);
+  });
+
+  it("ingame Quit Match confirms before calling onLeave", () => {
+    const onLeave = vi.fn();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(<Footer mode="ingame" onLeave={onLeave} />);
+    fireEvent.click(screen.getByRole("button", { name: /quit match/i }));
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(onLeave).toHaveBeenCalledTimes(1);
+    confirmSpy.mockRestore();
+  });
+
+  it("ingame Quit Match does nothing if the confirm is dismissed", () => {
+    const onLeave = vi.fn();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(<Footer mode="ingame" onLeave={onLeave} />);
+    fireEvent.click(screen.getByRole("button", { name: /quit match/i }));
+    expect(onLeave).not.toHaveBeenCalled();
+    confirmSpy.mockRestore();
+  });
 });
