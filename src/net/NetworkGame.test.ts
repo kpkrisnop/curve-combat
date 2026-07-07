@@ -493,3 +493,51 @@ describe("NetworkGame forfeit", () => {
     expect(netLobbyStore.get().forfeitNotice).toBe("Red quit");
   });
 });
+
+describe("NetworkGame render with an emptied viewed team", () => {
+  const baseState: MatchState = {
+    config: {
+      mode: "classic", rounds: 3, noTurn: true, turnSeconds: 30,
+      map: { width: 20, height: 15 },
+      scatter: {
+        rMin: 0.5, rMax: 2.0, gapMin: 1, gapMax: 3,
+        spawnClearance: 2, fieldMargin: 1, maxPlanets: 8,
+        spawnEdgeGap: 1, spawnBandX: 3, spawnYMargin: 1.5, spawnSeparation: 2, spawnMirror: true,
+      },
+      teamSize: 1,
+    },
+    players: [],
+    planets: [],
+    bounds: { minX: 0, minY: 0, maxX: 20, maxY: 15 },
+    turnQueue: [],
+    activePlayerId: null,
+    scores: { red: 0, blue: 1 },
+    round: 1,
+    phase: "over",
+    winner: "blue",
+    turnDeadline: null,
+  };
+
+  it("does not throw when the viewed team (red, via spectator default) has been forfeited away, and still surfaces the win screen", async () => {
+    // "myId" ("p9") never appears in players — mirrors a SPECTATOR: myTeam
+    // stays null (no lobbyState sets it), so viewTeam falls back to "red".
+    // Only a blue player remains (red forfeited out entirely), so the old
+    // `state.players.find(p => p.team === "red")!` resolves to undefined and
+    // `viewer.pos` used to throw.
+    const { client, ui } = await makeGame("p9");
+
+    expect(() => {
+      client.inject({
+        type: "matchState",
+        state: {
+          ...baseState,
+          players: [
+            { id: "b1", name: "Blue", team: "blue", pos: { x: 1, y: 1 }, hp: 100, alive: true },
+          ],
+        },
+      });
+    }).not.toThrow();
+
+    expect(ui.showWin).toHaveBeenCalledWith("blue", "Direct hit.");
+  });
+});
