@@ -28,6 +28,23 @@
 .hud-input { flex: 1; min-width: 0; background: var(--gw-surface);
   border: 1px solid var(--gw-border); border-radius: var(--gw-radius-sm);
   padding: 6px 10px; display: block; }
+/* MathQuill ships its own light-theme chrome (grey border, black caret) that
+   otherwise leaks through into this dark box — override to match. (This used
+   to live in src/styles.css, a stylesheet the live app never actually loads;
+   moved here, the file the game HUD really uses.) */
+.hud-input .mq-editable-field {
+  border: none; background: transparent; color: var(--gw-text); box-shadow: none;
+}
+.hud-input .mq-editable-field.mq-focused { border: none; box-shadow: none; }
+/* Three selectors deliberately outrank mathquill.css's own two-selector
+   `.mq-editable-field .mq-cursor` (black), regardless of stylesheet load order. */
+.hud-input .mq-editable-field .mq-cursor { border-color: #fff; }
+/* Locked (inactive-turn) field: block clicks so it can't be focused/typed.
+   See setFieldEnabled — the lock deliberately avoids `disabled`. */
+.hud-input .mq-input.mq-locked { pointer-events: none; }
+.hud-input .mq-selection, .hud-input .mq-selection .mq-non-leaf {
+  background: var(--gw-accent); color: #fff;
+}
 .hud-status { min-height: 18px; font-size: var(--gw-fs-xs); color: var(--gw-text-faint); }
 .hud-timer { font-family: var(--gw-font-mono); font-weight: 800; min-width: 44px; text-align: center; }
 .hud-timer.warn { color: #ffb020; }

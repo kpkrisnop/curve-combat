@@ -22,6 +22,18 @@ _Avoid_: game (ambiguous — could mean one Round or the whole Match), session
 One play-through from a fresh field to a single winner. In Classic VS a Round ends on the first direct hit; in HP Mode it ends when a Player's HP reaches zero. The Round loser shoots first in the next Round.
 _Avoid_: level, stage
 
+**Turn**:
+Within a Round, one Player's opportunity to fire a single **Shot**. In turn-based play the two Teams alternate Turns; **No-Turn Mode** has no Turns (both fire freely).
+_Avoid_: move, go
+
+**Turn Timer**:
+The countdown bounding a single **Turn** (default 60 seconds; Host-configurable, 15-second minimum). If it expires before the Player fires, that Player's Turn is skipped and passes to the opponent. Online it is server-owned; the client only displays it. Does not apply in No-Turn Mode.
+_Avoid_: clock, countdown, deadline
+
+**No-Turn Mode**:
+A Match option where both Teams fire simultaneously with no **Turn** alternation and no **Turn Timer** — a real-time free-for-all rather than a taking-turns duel.
+_Avoid_: simultaneous mode, freeplay
+
 **Room**:
 A server-side rendezvous for one online Match, identified by a 4-letter human-readable code (e.g. `WOLF`). Created by the **Host**; joined by **Guests** via typed code or shared URL.
 _Avoid_: lobby (the Lobby is the pre-game screen, not the rendezvous), session

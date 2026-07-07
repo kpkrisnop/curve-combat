@@ -26,6 +26,27 @@ const CONFIG: MQConfig = {
     "sinh cosh tanh ln log exp abs floor ceil round sign",
 };
 
+/**
+ * Lock/unlock a MathQuill field's host element WITHOUT touching
+ * `textarea.disabled`. A disabled→enabled cycle permanently breaks MathQuill's
+ * click-to-focus: the field reads enabled but clicking it won't focus it, so the
+ * player can't type (only programmatic focus still works). Instead we blur, drop
+ * the textarea out of the tab order, and kill pointer events via `.mq-locked` —
+ * none of which corrupt MathQuill's focus model, so unlocking restores full
+ * click-to-focus. Exported for unit testing (no live MathQuill needed).
+ */
+export function setFieldEnabled(el: HTMLElement, enabled: boolean): void {
+  const ta = el.querySelector<HTMLTextAreaElement>("textarea");
+  if (enabled) {
+    el.classList.remove("mq-locked");
+    ta?.removeAttribute("tabindex");
+  } else {
+    ta?.blur();
+    ta?.setAttribute("tabindex", "-1");
+    el.classList.add("mq-locked");
+  }
+}
+
 export class MathInput {
   /** The element to insert into the DOM. */
   readonly el: HTMLSpanElement;
@@ -85,16 +106,7 @@ export class MathInput {
   }
 
   setEnabled(enabled: boolean): void {
-    const ta = this.el.querySelector<HTMLTextAreaElement>("textarea");
-    if (!ta) return;
-    if (enabled) {
-      ta.disabled = false;
-      ta.removeAttribute("tabindex");
-    } else {
-      ta.blur();
-      ta.disabled = true;
-      ta.tabIndex = -1;
-    }
+    setFieldEnabled(this.el, enabled);
   }
 
   /** Recompute layout — call once after el is attached to the DOM. */
