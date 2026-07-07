@@ -115,6 +115,12 @@ describe("server integration (Phase 2)", () => {
     expect((rejoined as any).token).not.toBe(aToken); // fresh token
     expect((snap as any).state.phase).toBe("play");
     expect((statusUp as any).connected).toBe(true);
+    // Regression: the reconnect snapshot must carry the live turn deadline —
+    // MatchEngine.snapshot() itself never has one (armTurnTimer only patches
+    // it onto broadcast copies), so a rejoining client used to see `null`
+    // and never show a countdown even though the server timer kept running.
+    expect((snap as any).state.turnDeadline).toBeTypeOf("number");
+    expect((snap as any).state.turnDeadline).toBeGreaterThan(Date.now());
 
     a2.close(); b.close(); await server.close();
   });

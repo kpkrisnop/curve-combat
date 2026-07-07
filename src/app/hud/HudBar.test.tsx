@@ -35,6 +35,19 @@ describe("HudBar", () => {
     expect((fires[1] as HTMLButtonElement).disabled).toBe(true);  // blue (right)
   });
 
+  it("locks the inactive side's math input, not just the Fire button (was: dimmed but still typeable)", () => {
+    const mocks: ReturnType<typeof makeInput>[] = [];
+    const trackedMakeInput = () => { const m = makeInput(); mocks.push(m); return m; };
+    render(<HudBar makeInput={trackedMakeInput} />);
+    act(() => hudController.setTurn("red"));
+    const [redInput, blueInput] = mocks;
+    expect(redInput.setEnabled).toHaveBeenLastCalledWith(true);
+    expect(blueInput.setEnabled).toHaveBeenLastCalledWith(false);
+    act(() => hudController.setTurn("blue"));
+    expect(redInput.setEnabled).toHaveBeenLastCalledWith(false);
+    expect(blueInput.setEnabled).toHaveBeenLastCalledWith(true);
+  });
+
   it("shows the timer only on the active panel and hides it in no-turn", () => {
     render(<HudBar makeInput={makeInput} />);
     act(() => hudController.setTurn("red"));

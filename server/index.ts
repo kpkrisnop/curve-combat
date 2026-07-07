@@ -8,6 +8,11 @@ import { MatchEngine } from "./matchEngine";
 interface Conn { ws: WebSocket; playerId?: string; room?: string; isSpectator?: boolean }
 
 const turnTimers = new Map<string, ReturnType<typeof setTimeout>>();
+// Wall-clock deadline for each room's active turn, kept in lockstep with
+// turnTimers. `MatchEngine.snapshot()` never carries this — armTurnTimer only
+// patches it onto the transient broadcast copy — so a (re)joining connection
+// needs it read back out of here instead of off the engine's own state.
+const turnDeadlines = new Map<string, number>();
 
 export function createServer(port: number): { close: () => Promise<void> } {
   const wss = new WebSocketServer({ port });
@@ -41,6 +46,7 @@ export function createServer(port: number): { close: () => Promise<void> } {
   function cancelTurnTimer(code: string): void {
     const t = turnTimers.get(code);
     if (t !== undefined) { clearTimeout(t); turnTimers.delete(code); }
+    turnDeadlines.delete(code);
   }
 
   /** Patch a wall-clock deadline onto state and arm the server turn timer. */
@@ -51,6 +57,7 @@ export function createServer(port: number): { close: () => Promise<void> } {
     }
     const ms = (state.config.turnSeconds ?? 60) * 1000;
     const deadline = Date.now() + ms;
+    turnDeadlines.set(code, deadline);
     turnTimers.set(
       code,
       setTimeout(() => {
@@ -61,6 +68,11 @@ export function createServer(port: number): { close: () => Promise<void> } {
       }, ms),
     );
     return { ...state, turnDeadline: deadline };
+  }
+
+  /** Snapshot for a (re)joining connection, with the live turn deadline patched back in. */
+  function snapshotWithDeadline(code: string, eng: MatchEngine): MatchState {
+    return { ...eng.snapshot(), turnDeadline: turnDeadlines.get(code) ?? null };
   }
 
   wss.on("connection", (ws) => {
@@ -82,7 +94,7 @@ export function createServer(port: number): { close: () => Promise<void> } {
             conn.playerId = id; conn.room = msg.room; conn.isSpectator = true;
             send(ws, { type: "joined", playerId: id, token: "", ownerId: room.ownerId });
             broadcast(msg.room, rosterMsg(room));
-            if (room.engine) { const snap = room.engine.snapshot(); setImmediate(() => send(ws, { type: "matchState", state: snap })); }
+            if (room.engine) { const snap = snapshotWithDeadline(msg.room, room.engine); setImmediate(() => send(ws, { type: "matchState", state: snap })); }
           } catch (e) {
             send(ws, { type: "error", code: "join-failed", message: (e as Error).message });
           }
@@ -104,7 +116,7 @@ export function createServer(port: number): { close: () => Promise<void> } {
             send(ws, { type: "joined", playerId: id, token: "", ownerId: fallbackRoom.ownerId });
             broadcast(msg.room, rosterMsg(fallbackRoom));
             if (fallbackRoom.engine) {
-              const snap = fallbackRoom.engine.snapshot();
+              const snap = snapshotWithDeadline(msg.room, fallbackRoom.engine);
               setImmediate(() => send(ws, { type: "matchState", state: snap }));
             }
           } catch (e2) {
@@ -123,7 +135,7 @@ export function createServer(port: number): { close: () => Promise<void> } {
         const player = room.players.find((p) => p.id === msg.playerId);
         send(ws, { type: "joined", playerId: msg.playerId, token: fresh, ownerId: room.ownerId });
         send(ws, rosterMsg(room));
-        if (room.engine) send(ws, { type: "matchState", state: room.engine.snapshot() });
+        if (room.engine) send(ws, { type: "matchState", state: snapshotWithDeadline(msg.room, room.engine) });
         broadcast(msg.room, {
           type: "peerStatus", playerId: msg.playerId,
           name: player?.name ?? "Player", connected: true,

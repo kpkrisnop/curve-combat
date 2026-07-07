@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import "./hud.css";
 import { useStore } from "../store";
 import { hudStore, hudController, hudInputs, type Team } from "./hudStore";
@@ -18,6 +19,12 @@ function PlayerPanel({ team, makeInput }: { team: Team; makeInput?: () => any })
   const status = useStore(hudStore, (s) => s.status);
   const active = noTurn || turn === team;
   const canFire = active && !busy;
+  // MathInput's own textarea-disable exists but nothing called it — the
+  // dimmed "inactive" panel look was purely cosmetic and the field stayed
+  // typeable. Mirror the same condition the Fire button already uses.
+  useEffect(() => {
+    hudInputs.get(team)?.setEnabled(canFire);
+  }, [team, canFire]);
   return (
     <div className={`player-panel is-${team} ${active ? "is-active" : "is-inactive"}`}>
       <div className="fire-row">

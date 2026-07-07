@@ -143,36 +143,6 @@ body {
   min-width: 0;
 }
 
-/* Dark-theme recolour of MathQuill — colour only, the native font is kept.
-   We zero the default light input chrome (border/background) so the field
-   blends into the row the way the old input did. */
-.mq-input .mq-editable-field,
-.mq-input.mq-editable-field {
-  border: none;
-  background: transparent;
-  color: var(--text);
-  box-shadow: none;
-}
-
-.mq-input .mq-editable-field.mq-focused,
-.mq-input.mq-editable-field.mq-focused {
-  border: none;
-  box-shadow: none;
-}
-
-/* Caret and selection in theme colours. White caret for max contrast.
-   Extra .mq-editable-field class bumps specificity above mathquill.css's
-   own `.mq-editable-field .mq-cursor` rule (black), which loads after us. */
-.mq-input.mq-editable-field .mq-cursor {
-  border-color: #fff;
-}
-
-.mq-input .mq-selection,
-.mq-input .mq-selection .mq-non-leaf {
-  background: var(--accent);
-  color: #fff;
-}
-
 .remove {
   width: 24px;
   min-width: 24px;
