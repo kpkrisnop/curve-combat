@@ -71,4 +71,11 @@ describe("LocalFlow arena shell", () => {
     expect(disposeSpy).toHaveBeenCalled();
     disposeSpy.mockRestore();
   });
+
+  it("pregame Leave navigates back to landing", () => {
+    location.hash = "#game";
+    render(<LocalFlow initial={initial} />);
+    fireEvent.click(screen.getByRole("button", { name: /^leave$/i }));
+    expect(location.hash === "" || location.hash === "#").toBe(true);
+  });
 });

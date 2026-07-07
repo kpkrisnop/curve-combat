@@ -106,9 +106,9 @@ export function LocalFlow({ initial, autostart = false }: Props) {
         </button>
       )}
 
-      {phase === "config" && <Footer mode="pregame-local" onStart={onStart} />}
+      {phase === "config" && <Footer mode="pregame-local" onStart={onStart} onLeave={() => hudController.requestReset()} />}
       {phase === "countdown" && <CountdownOverlay seconds={3} onDone={onCountdownDone} />}
-      {phase === "play" && (<><Footer mode="ingame" /><HudOverlays /></>)}
+      {phase === "play" && (<><Footer mode="ingame" onLeave={() => hudController.requestReset()} /><HudOverlays /></>)}
     </div>
   );
 }
