@@ -32,7 +32,8 @@ const configureRoom = z.object({
 const switchTeam = z.object({ type: z.literal("switchTeam"), team: z.enum(["red", "blue"]) });
 const rerollArena = z.object({ type: z.literal("rerollArena") });
 const setName = z.object({ type: z.literal("setName"), name: z.string() });
-const clientSchema = z.discriminatedUnion("type", [join, startMatch, fireIntent, reconnect, configureRoom, switchTeam, rerollArena, setName]);
+const forfeit = z.object({ type: z.literal("forfeit") });
+const clientSchema = z.discriminatedUnion("type", [join, startMatch, fireIntent, reconnect, configureRoom, switchTeam, rerollArena, setName, forfeit]);
 export type ClientMessage = z.infer<typeof clientSchema>;
 
 // ── Server → Client ──────────────────────────────────────────────────────────

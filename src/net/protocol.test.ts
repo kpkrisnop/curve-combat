@@ -98,4 +98,8 @@ describe("protocol v2 (NvN + arena + countdown)", () => {
     const msg = { type: "setName", name: "Ada" };
     expect(parseClientMessage(msg)).toEqual(msg);
   });
+
+  it("parses a forfeit message", () => {
+    expect(parseClientMessage({ type: "forfeit" })).toEqual({ type: "forfeit" });
+  });
 });
