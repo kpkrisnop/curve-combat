@@ -75,6 +75,22 @@ export function createServer(port: number): { close: () => Promise<void> } {
     return { ...eng.snapshot(), turnDeadline: turnDeadlines.get(code) ?? null };
   }
 
+  /**
+   * A state landing in "between" phase (round awarded, match not over) needs
+   * the next round begun after a short pause. This is the only path that does
+   * that — call it from every place that can produce "between" (shot resolve,
+   * forfeit, grace-expiry) so none of them leave the match stuck.
+   */
+  function scheduleNextRoundIfBetween(code: string): void {
+    setTimeout(() => {
+      const rm = rooms.get(code);
+      if (!rm || !rm.engine) return;
+      const nextRound = rm.engine.beginNextRound();
+      const patched = armTurnTimer(code, nextRound, rm.engine);
+      broadcast(code, { type: "matchState", state: patched });
+    }, 2000);
+  }
+
   wss.on("connection", (ws) => {
     const conn: Conn = { ws };
     conns.add(conn);
@@ -248,13 +264,7 @@ export function createServer(port: number): { close: () => Promise<void> } {
           // In no-turn mode a concurrent shot may resolve after the round already ended;
           // resolvePlayerShot returns the same state reference in that case.
           if (raw !== prevState && raw.phase === "between") {
-            setTimeout(() => {
-              const rm2 = rooms.get(room.code);
-              if (!rm2 || !rm2.engine) return;
-              const nextRound = rm2.engine.beginNextRound();
-              const patched2 = armTurnTimer(room.code, nextRound, rm2.engine);
-              broadcast(room.code, { type: "matchState", state: patched2 });
-            }, 2000);
+            scheduleNextRoundIfBetween(room.code);
           }
         }, r.duration * 1000);
         return;
@@ -275,6 +285,7 @@ export function createServer(port: number): { close: () => Promise<void> } {
         if (!rm || !rm.engine) return;
         const patched = armTurnTimer(room.code, res.state, rm.engine);
         broadcast(room.code, { type: "matchState", state: patched });
+        if (res.state.phase === "between") scheduleNextRoundIfBetween(room.code);
         return;
       }
     });
@@ -335,6 +346,7 @@ export function createServer(port: number): { close: () => Promise<void> } {
         if (!rm || !rm.engine) return;
         const patched = armTurnTimer(code, res.state, rm.engine);
         broadcast(code, { type: "matchState", state: patched });
+        if (res.state.phase === "between") scheduleNextRoundIfBetween(code);
       });
     });
   });

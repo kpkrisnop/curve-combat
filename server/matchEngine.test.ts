@@ -131,4 +131,58 @@ describe("MatchEngine.removePlayer", () => {
     expect(s.activePlayerId).not.toBe("r1");
     expect(s.activePlayerId).not.toBeNull();
   });
+
+  // Regression for the "forfeit awards a round" hang: a teammate is already
+  // eliminated THIS round (real combat, not faked), then the last living
+  // teammate is removed (forfeit/grace-expiry) — this must land on the same
+  // "round over, match not over" branch as a natural elimination, with a
+  // clean (non-dangling) activePlayerId.
+  it("2v2: removing the last living red after r1 was already eliminated this round awards the round, doesn't end the match", () => {
+    const players: RoomPlayer[] = [
+      { id: "r1", name: "R1", team: "red" },
+      { id: "r2", name: "R2", team: "red" },
+      { id: "b1", name: "B1", team: "blue" },
+      { id: "b2", name: "B2", team: "blue" },
+    ];
+    // A constant-latex shot ("0") always rides the SHOOTER's own y — the
+    // trajectory is anchored vertically to pass through the muzzle
+    // (yOffset = shooter.y - fn(shooter.x), so a constant fn's offset always
+    // cancels back to shooter.y; see src/sim/trajectory.ts). So b1 only hits
+    // r1 if b1 and r1 share a row: force spawnMirror so right = mirror(left)
+    // at the same y, and spawnBandX: 0 so r1/r2 (and their mirrors b1/b2)
+    // land on distinct rows — same fixed-column trick as
+    // matchEngine.nvn.test.ts's "killing one of two blues" case.
+    const c = cfg({
+      teamSize: 2,
+      scatter: { ...arenaDefaults().scatter, maxPlanets: 0, spawnBandX: 0, spawnMirror: true },
+    });
+    const e = new MatchEngine(c, players, () => 1);
+
+    // Turn order is r1, b1, r2, b2 (red-first snake). r1 fires a guaranteed
+    // miss so nobody dies yet and the turn passes to b1.
+    expect(e.fire("r1", "x+999").ok).toBe(true);
+    e.resolvePlayerShot("r1");
+
+    // b1 fires a flat shot along its own row, which mirrors r1's row →
+    // real combat hit, kills r1. Red still has r2 alive (different row), so
+    // the round stays in play (mirrors the 2v2 "partial elimination" case
+    // in matchEngine.nvn.test.ts).
+    expect(e.fire("b1", "0").ok).toBe(true);
+    const afterKill = e.resolvePlayerShot("b1");
+    expect(afterKill.phase).toBe("play");
+    expect(afterKill.players.find((p) => p.id === "r1")!.alive).toBe(false);
+
+    // r2 now forfeits (or their disconnect grace expires) — this is the
+    // exact shape of the Critical bug: removing the last living red wipes
+    // red's alive set for the round without red's roster being empty.
+    const s = e.removePlayer("r2");
+
+    expect(s.phase).toBe("between"); // round awarded, not "over" — best-of-3, blue only 1-0
+    expect(s.winner).toBeNull();
+    expect(s.scores.blue).toBe(1);
+    expect(s.scores.red).toBe(0);
+    expect(s.players.some((p) => p.id === "r2")).toBe(false);
+    // Minor fix: no dangling reference to the just-removed active player.
+    expect(s.activePlayerId).toBeNull();
+  });
 });

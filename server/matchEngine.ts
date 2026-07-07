@@ -127,7 +127,7 @@ export class MatchEngine {
       this.state = {
         ...s, players, turnQueue: s.turnQueue.filter((id) => id !== playerId),
         scores, phase: winner ? "over" : "between", winner,
-        activePlayerId: winner ? null : s.activePlayerId,
+        activePlayerId: null,
       };
       this.roundLoser = roundLoser;
       return this.state;
