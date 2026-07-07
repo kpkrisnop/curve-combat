@@ -252,12 +252,12 @@ export class NetworkGame {
     if (state.turnDeadline !== null && state.phase === "play" && state.activePlayerId !== null) {
       const tick = () => {
         const secs = Math.max(0, Math.ceil(((state.turnDeadline as number) - Date.now()) / 1000));
-        this.ui.setStatus(`⏱ ${secs}s`);
+        this.ui.setTimer(secs);
       };
       tick();
       this.countdownInterval = setInterval(tick, 500);
     } else {
-      this.ui.setStatus("");
+      this.ui.setTimer(null);
     }
     // --- rest of render (unchanged below) ---
     const red = state.players.find((p) => p.team === "red")!;

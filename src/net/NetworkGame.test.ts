@@ -26,6 +26,7 @@ const makeUi = () => ({
   showWin: vi.fn(),
   onFire: vi.fn(),
   resetInputs: vi.fn(),
+  setTimer: vi.fn(),
 });
 
 // ── Mock ServerClient ────────────────────────────────────────────────────────
@@ -354,5 +355,77 @@ describe("NetworkGame round-boundary input clearing", () => {
     client.inject({ type: "matchState", state: baseState });
 
     expect(ui.resetInputs).not.toHaveBeenCalled();
+  });
+});
+
+describe("NetworkGame turn-timer unification", () => {
+  const baseState: MatchState = {
+    config: {
+      mode: "classic", rounds: 3, noTurn: true, turnSeconds: 30,
+      map: { width: 20, height: 15 },
+      scatter: {
+        rMin: 0.5, rMax: 2.0, gapMin: 1, gapMax: 3,
+        spawnClearance: 2, fieldMargin: 1, maxPlanets: 8,
+        spawnEdgeGap: 1, spawnBandX: 3, spawnYMargin: 1.5, spawnSeparation: 2, spawnMirror: true,
+      },
+      teamSize: 1,
+    },
+    players: [
+      { id: "p1", name: "Alice", team: "red", pos: { x: 0, y: 0 }, hp: 100, alive: true },
+      { id: "p2", name: "Bob", team: "blue", pos: { x: 1, y: 1 }, hp: 100, alive: true },
+    ],
+    planets: [],
+    bounds: { minX: 0, minY: 0, maxX: 20, maxY: 15 },
+    turnQueue: ["p1", "p2"],
+    activePlayerId: "p1",
+    scores: { red: 0, blue: 0 },
+    round: 1,
+    phase: "play",
+    winner: null,
+    turnDeadline: null,
+  };
+
+  it("calls setTimer with positive seconds during active turn, NOT setStatus with timer", async () => {
+    const { client, ui } = await makeGame();
+
+    const futureDeadline = Date.now() + 15000;
+    client.inject({
+      type: "matchState",
+      state: { ...baseState, turnDeadline: futureDeadline, activePlayerId: "p1" },
+    });
+
+    expect(ui.setTimer).toHaveBeenCalledWith(expect.any(Number));
+    const timerCall = (ui.setTimer as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(timerCall).toBeGreaterThan(0);
+
+    // Assert setStatus was NOT called with the timer string
+    const statusCalls = (ui.setStatus as ReturnType<typeof vi.fn>).mock.calls;
+    for (const call of statusCalls) {
+      if (typeof call[0] === "string") {
+        expect(call[0]).not.toContain("⏱");
+      }
+    }
+  });
+
+  it("calls setTimer(null) when turnDeadline is null", async () => {
+    const { client, ui } = await makeGame();
+
+    client.inject({
+      type: "matchState",
+      state: { ...baseState, turnDeadline: null, activePlayerId: "p1" },
+    });
+
+    expect(ui.setTimer).toHaveBeenCalledWith(null);
+  });
+
+  it("calls setTimer(null) when phase is not 'play'", async () => {
+    const { client, ui } = await makeGame();
+
+    client.inject({
+      type: "matchState",
+      state: { ...baseState, turnDeadline: Date.now() + 15000, phase: "over" },
+    });
+
+    expect(ui.setTimer).toHaveBeenCalledWith(null);
   });
 });
