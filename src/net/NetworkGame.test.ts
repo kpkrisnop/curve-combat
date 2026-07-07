@@ -6,6 +6,7 @@ import type { GameRenderer } from "../game/GameRenderer";
 import type { GameUiPort } from "../game/GameUiPort";
 import type { MatchState } from "../game/matchState";
 import { NetworkGame } from "./NetworkGame";
+import { netLobbyStore, initialNetLobbyState } from "../app/net/netLobbyStore";
 
 // ── Minimal mock for GameRenderer ────────────────────────────────────────────
 const makeRenderer = () => ({
@@ -427,5 +428,68 @@ describe("NetworkGame turn-timer unification", () => {
     });
 
     expect(ui.setTimer).toHaveBeenCalledWith(null);
+  });
+});
+
+describe("NetworkGame forfeit", () => {
+  const baseState: MatchState = {
+    config: {
+      mode: "classic", rounds: 3, noTurn: true, turnSeconds: 30,
+      map: { width: 20, height: 15 },
+      scatter: {
+        rMin: 0.5, rMax: 2.0, gapMin: 1, gapMax: 3,
+        spawnClearance: 2, fieldMargin: 1, maxPlanets: 8,
+        spawnEdgeGap: 1, spawnBandX: 3, spawnYMargin: 1.5, spawnSeparation: 2, spawnMirror: true,
+      },
+      teamSize: 1,
+    },
+    players: [],
+    planets: [],
+    bounds: { minX: 0, minY: 0, maxX: 20, maxY: 15 },
+    turnQueue: [],
+    activePlayerId: null,
+    scores: { red: 0, blue: 0 },
+    round: 1,
+    phase: "play",
+    winner: null,
+    turnDeadline: null,
+  };
+
+  it("sendForfeit sends { type: 'forfeit' }", async () => {
+    const { game, client } = await makeGame();
+    game.sendForfeit();
+    expect(client.sent.at(-1)).toEqual({ type: "forfeit" });
+  });
+
+  it("sets a forfeit notice when a player disappears from matchState", async () => {
+    netLobbyStore.set(initialNetLobbyState("WOLF"));
+    const { client } = await makeGame();
+
+    // First state: r1 ("Red") will forfeit; r2 stays on the red team so
+    // render()'s red-team lookup (unrelated to this feature) still resolves.
+    client.inject({
+      type: "matchState",
+      state: {
+        ...baseState,
+        players: [
+          { id: "r1", name: "Red", team: "red", pos: { x: 0, y: 0 }, hp: 100, alive: true },
+          { id: "r2", name: "Red2", team: "red", pos: { x: 0, y: 1 }, hp: 100, alive: true },
+          { id: "b1", name: "Blue", team: "blue", pos: { x: 1, y: 1 }, hp: 100, alive: true },
+        ],
+      },
+    });
+    // Second state: r1 gone (forfeited).
+    client.inject({
+      type: "matchState",
+      state: {
+        ...baseState,
+        players: [
+          { id: "r2", name: "Red2", team: "red", pos: { x: 0, y: 1 }, hp: 100, alive: true },
+          { id: "b1", name: "Blue", team: "blue", pos: { x: 1, y: 1 }, hp: 100, alive: true },
+        ],
+      },
+    });
+
+    expect(netLobbyStore.get().forfeitNotice).toBe("Red quit");
   });
 });

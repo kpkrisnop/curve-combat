@@ -201,6 +201,10 @@ export class NetworkGame {
     this.client.send({ type: "startMatch" });
   }
 
+  sendForfeit(): void {
+    this.client.send({ type: "forfeit" });
+  }
+
   close(): void {
     if (this.countdownInterval !== null) {
       clearInterval(this.countdownInterval);
@@ -230,6 +234,15 @@ export class NetworkGame {
   private render(state: MatchState): void {
     this.stateCallback?.(state);
     const prevRound = this.lastState?.round;
+    // A player id present last frame but gone now = forfeit / grace-expired
+    // disconnect (elimination keeps players in the array with alive:false, so a
+    // true disappearance is always a removal). Surface a transient toast.
+    const removed = (this.lastState?.players ?? []).filter(
+      (p) => !state.players.some((q) => q.id === p.id),
+    );
+    if (removed.length > 0) {
+      netLobbyStore.set({ forfeitNotice: `${removed[0].name} quit`, peerDown: null });
+    }
     this.lastState = state;
     // New round started (not the first state received) — clear stale equations,
     // mirroring LocalGame's resetInputs()-on-round-boundary behavior.

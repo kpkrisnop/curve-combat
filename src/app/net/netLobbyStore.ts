@@ -31,6 +31,8 @@ export interface NetLobbyState {
   startAt: number | null;
   configFlash: number;   // increments on every guest-visible config change (drives the flash)
   peerDown: { name: string; deadline: number } | null;
+  /** Transient "<name> quit" toast text; cleared by the UI after a few seconds. */
+  forfeitNotice: string | null;
   selfReconnecting: boolean;
   error: string | null;
 }
@@ -63,6 +65,7 @@ export function initialNetLobbyState(roomCode: string): NetLobbyState {
     startAt: null,
     configFlash: 0,
     peerDown: null,
+    forfeitNotice: null,
     selfReconnecting: false,
     error: null,
   };
