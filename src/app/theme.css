@@ -63,7 +63,7 @@ body { font-family: var(--gw-font-sans); overflow: hidden; }
 
 /* ── Arena layout (ADR-0003) ────────────────────────────────────────────── */
 .arena-frame { position: absolute; inset: 0; overflow: hidden; }
-.arena-stage { position: absolute; inset: 0; transform-origin: 50% 46%; }
+.arena-stage { position: absolute; inset: 0; }
 
 /* ── Arena shell — CSS grid of cards (arena-shell-redesign C1–C3) ─────────
    ONE shared gutter token (--gw-gap) is reused as BOTH the grid `gap` and
