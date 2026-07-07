@@ -259,6 +259,24 @@ export function createServer(port: number): { close: () => Promise<void> } {
         }, r.duration * 1000);
         return;
       }
+
+      // ── forfeit ───────────────────────────────────────────────────────────
+      if (msg.type === "forfeit") {
+        if (conn.isSpectator) return; // spectators just close their socket to leave
+        if (!room.engine) return; // not in a match — nothing to forfeit
+        const res = rooms.forfeit(room.code, conn.playerId);
+        if (!res.state) return;
+        if (res.roomGone) {
+          cancelTurnTimer(room.code);
+          for (const c of conns) if (c.room === room.code) c.ws.terminate();
+          return;
+        }
+        const rm = rooms.get(room.code);
+        if (!rm || !rm.engine) return;
+        const patched = armTurnTimer(room.code, res.state, rm.engine);
+        broadcast(room.code, { type: "matchState", state: patched });
+        return;
+      }
     });
 
     ws.on("close", () => {
@@ -299,6 +317,9 @@ export function createServer(port: number): { close: () => Promise<void> } {
       }
 
       // ── In-match: keep peerStatus + 30 s grace → teardown (unchanged).
+      // If the player was already removed (explicit forfeit just ran), this
+      // close is a no-op — nothing left to grace.
+      if (!room.players.some((p) => p.id === conn.playerId)) return;
       const player = room.players.find((p) => p.id === conn.playerId);
       const name = player?.name ?? "Player";
       broadcast(code, { type: "peerStatus", playerId: conn.playerId!, name, connected: false });
