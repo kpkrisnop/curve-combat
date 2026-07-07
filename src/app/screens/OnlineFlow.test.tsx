@@ -33,6 +33,7 @@ const mockNet = {
   sendReroll: vi.fn(),
   sendSetName: vi.fn(),
   requestStart: vi.fn(),
+  sendForfeit: vi.fn(),
   onLobby: vi.fn(),
   onMatchStarting: vi.fn(),
   onState: vi.fn(),
@@ -489,5 +490,34 @@ describe("OnlineFlow", () => {
 
     const gearAfter = screen.getByRole("button", { name: /settings/i });
     expect(gearAfter.className).toContain("gw-config-flash");
+  });
+
+  // ── Task 9: Leave/Quit wiring ──────────────────────────────────────────────
+
+  it("ingame Quit Match sends forfeit then navigates away", async () => {
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    await act(async () => {
+      render(<OnlineFlow code="ROOM1" />);
+    });
+    act(() => {
+      setLobbyState({
+        phase: "play",
+        roomCode: "ROOM1",
+        players: BASE_PLAYERS,
+        myId: "r1",
+        hostId: "r1",
+        amHost: true,
+        amSpectator: false,
+        matchPlayers: [
+          { id: "r1", name: "Alice", team: "red", pos: { x: 0, y: 0 }, hp: 100, alive: true },
+          { id: "b1", name: "Bob", team: "blue", pos: { x: 0, y: 0 }, hp: 100, alive: true },
+        ],
+      });
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /quit match/i }));
+    expect(mockNet.sendForfeit).toHaveBeenCalledTimes(1);
+
+    confirmSpy.mockRestore();
   });
 });

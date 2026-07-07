@@ -343,6 +343,7 @@ export function OnlineFlow({ code }: Props) {
             onNameChange={onFooterNameChange}
             onSwitchSide={onFooterSwitchSide}
             roomCode={roomCode}
+            onLeave={() => hudController.requestReset()}
           />
         </>
       )}
@@ -373,7 +374,11 @@ export function OnlineFlow({ code }: Props) {
 
       {isPlay && !amSpectator && (
         <>
-          <Footer mode="ingame" singleTeam={myTeam ?? undefined} />
+          <Footer
+            mode="ingame"
+            singleTeam={myTeam ?? undefined}
+            onLeave={() => { netRef.current?.sendForfeit(); hudController.requestReset(); }}
+          />
           <HudOverlays />
           <ReconnectOverlays />
         </>
