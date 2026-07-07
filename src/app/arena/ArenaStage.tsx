@@ -13,12 +13,14 @@ export function ArenaStage({ scale, onReady, factory }: Props) {
   const rendererRef = useRef<GameRenderer | null>(null);
   const onReadyRef = useRef(onReady);
   onReadyRef.current = onReady;
+  const readyScaleRef = useRef(scale); // captures the scale at mount for the initial (un-animated) zoom
 
   useEffect(() => {
     let cancelled = false;
     void acquireRenderer(hostRef.current!, factory).then((r) => {
       if (cancelled) return;
       rendererRef.current = r;
+      r.setZoomFactor(readyScaleRef.current); // initial zoom, no animation
       onReadyRef.current(r);
       // Pixi's resizeTo measures the container at init and only re-measures on
       // window resize. When this stage mounts into a screen whose layout settles
@@ -29,6 +31,11 @@ export function ArenaStage({ scale, onReady, factory }: Props) {
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Animate the coordinate-plane zoom whenever the target scale changes.
+  useEffect(() => {
+    rendererRef.current?.animateZoom(scale);
+  }, [scale]);
 
   useEffect(() => {
     const el = hostRef.current;
@@ -49,11 +56,7 @@ export function ArenaStage({ scale, onReady, factory }: Props) {
 
   return (
     <div className="arena-frame">
-      <div
-        ref={hostRef}
-        className="arena-stage"
-        style={{ transform: `scale(${scale})`, transition: "transform 900ms cubic-bezier(0.22, 1, 0.36, 1)" }}
-      />
+      <div ref={hostRef} className="arena-stage" />
     </div>
   );
 }

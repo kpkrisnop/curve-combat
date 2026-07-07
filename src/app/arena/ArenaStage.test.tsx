@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render } from "@testing-library/react";
+import { render, waitFor } from "@testing-library/react";
 import { act } from "react";
 import { ArenaStage } from "./ArenaStage";
 import { _resetForTests } from "./rendererSingleton";
@@ -10,6 +10,8 @@ function fakeRenderer() {
   const canvas = document.createElement("canvas");
   return {
     app: { canvas, resizeTo: window as Window | HTMLElement, resize: vi.fn() },
+    setZoomFactor: vi.fn(),
+    animateZoom: vi.fn(),
     async init(c: HTMLElement) {
       c.appendChild(canvas);
       this.app.resizeTo = c;
@@ -100,5 +102,20 @@ describe("ArenaStage resize reflow", () => {
     expect(ro.disconnected).toBe(false);
     unmount();
     expect(ro.disconnected).toBe(true);
+  });
+
+  it("sets the initial zoom factor on ready and animates on scale change", async () => {
+    const setZoomFactor = vi.fn();
+    const animateZoom = vi.fn();
+    const r = {
+      app: { resize: vi.fn() },
+      setZoomFactor,
+      animateZoom,
+      async init() {},
+    } as any;
+    const { rerender } = render(<ArenaStage scale={0.87} onReady={vi.fn()} factory={() => r} />);
+    await waitFor(() => expect(setZoomFactor).toHaveBeenCalledWith(0.87));
+    rerender(<ArenaStage scale={1} onReady={vi.fn()} factory={() => r} />);
+    await waitFor(() => expect(animateZoom).toHaveBeenCalledWith(1));
   });
 });
