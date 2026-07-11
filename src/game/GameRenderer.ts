@@ -4,7 +4,7 @@ import type { Bounds, ShotResult, Vec2, World } from "../sim/types";
 import type { MapConfig, ScatterConfig } from "./matchLogic";
 import { DEFAULT_MAP } from "./arenaDefaults";
 import { boundsFromMap, spawnZoneRects } from "../sim/planetScatter";
-import { fitContain, boundaryRectPx } from "../sim/fitRect";
+import { fitContain } from "../sim/fitRect";
 import { shotDuration } from "../sim/timing";
 import { cumulativeArcLength, pointAtLength, bangTravelProgress } from "../sim/playback";
 import { PLAYER_RADIUS, type PlayerState } from "./matchState";
@@ -19,26 +19,30 @@ import {
   type MatchMode,
 } from "./badge";
 
+// Arena palette, aligned to the DESIGN.md tokens (foundation.css): pitch-black
+// stage, the border ramp for grid chrome, the ink ramp for labels/boundary,
+// and saturated hue reserved for the two teams + fx.
 const COLORS = {
-  bg: 0x0f141a,
-  grid: 0x1d2935,
-  axis: 0x3b4f60,
-  label: 0x5b7185,
-  boundary: 0x5b7185,
-  red: 0xff4444,
-  blue: 0x4488ff,
+  bg: 0x000000,        // --gw-bg — pitch black, same field as the page
+  grid: 0x1d222a,      // --gw-border — default hairline
+  axis: 0x303c48,      // --gw-border-strong — emphasized hairline
+  label: 0x5e7081,     // --gw-text-faint
+  boundary: 0x5e7081,  // --gw-text-faint — the real collision bounds
+  red: 0xff4444,       // --gw-red
+  blue: 0x4488ff,      // --gw-blue
   projectile: 0xffffff,
   boom: 0xffc24d,
-  planet: 0x3a4250,
+  planet: 0x262c34,
+  planetRim: 0x485460, // light catching the planet's edge — glow-not-shadow depth
   dust: 0xb59a78,
 };
 
 /** Colors for the pre-game margin guides that aren't team-tinted (Task S3). */
 const GUIDE_COLORS = {
-  /** Field-margin box — grey. */
-  margin: 0x96aacd,
-  /** Spawn separation ring — whitish. */
-  separation: 0xdce4f5,
+  /** Field-margin box — faint ink, quiet ambient guide. */
+  margin: 0x5e7081,
+  /** Spawn separation ring — primary ink, the brightest guide. */
+  separation: 0xcdd9e5,
 };
 
 /** Minimum animation duration in ms — prevents instant flicker on zero-length shots. */
@@ -327,17 +331,21 @@ export class GameRenderer {
 
   /**
    * Draws the visible play-boundary rectangle — the same `bounds` the sim
-   * collides bullets against (`detectCollision` in src/sim/collision.ts),
-   * derived here via the shared pure `boundaryRectPx()` (src/sim/fitRect.ts).
-   * Never a separate constant: single source of truth is `boundsFromMap(map)`.
+   * collides bullets against (`detectCollision` in src/sim/collision.ts).
+   * Mapped through the camera (`toScreen`), so it inherits the same
+   * zoom-aware `cam.scale` as the grid/planets/guides and moves *with* the
+   * coordinate plane during the pre-game→match zoom tween — not pinned to the
+   * frame. Single source of truth for the rect is `boundsFromMap(map)` =
+   * `effectiveBounds`.
    */
   private drawBoundary() {
-    const cam = this.camera;
-    const rect = boundaryRectPx(this.map, cam.width, cam.height);
+    const b = this.effectiveBounds;
+    const tl = this.toScreen({ x: b.minX, y: b.maxY });
+    const br = this.toScreen({ x: b.maxX, y: b.minY });
     this.boundaryLayer.clear();
     this.boundaryLayer
-      .rect(rect.x, rect.y, rect.w, rect.h)
-      .stroke({ width: 2, color: COLORS.boundary, alpha: 0.6 });
+      .rect(tl.x, tl.y, br.x - tl.x, br.y - tl.y)
+      .stroke({ width: 1.5, color: COLORS.boundary, alpha: 0.55 });
   }
 
   private addLabel(text: string, x: number, y: number) {
@@ -370,7 +378,9 @@ export class GameRenderer {
       const rt = RenderTexture.create({ width: texSize, height: texSize, resolution: dpr, antialias: true });
 
       const base = new Graphics();
-      base.circle(texCenter, texCenter, rPx * SS).fill({ color: COLORS.planet });
+      base.circle(texCenter, texCenter, rPx * SS)
+        .fill({ color: COLORS.planet })
+        .stroke({ width: 1 * SS, color: COLORS.planetRim, alpha: 0.55 });
       this.app.renderer.render({ container: base, target: rt, clear: true });
       base.destroy();
 
@@ -473,8 +483,8 @@ export class GameRenderer {
       const h = (zone.yHi - zone.yLo) * cam.scale;
       const color = zone.sign < 0 ? COLORS.red : COLORS.blue;
       g.rect(topLeft.x, topLeft.y, w, h)
-        .fill({ color, alpha: 0.1 })
-        .stroke({ width: 1, color, alpha: 0.4 });
+        .fill({ color, alpha: 0.07 })
+        .stroke({ width: 1, color, alpha: 0.3 });
     }
 
     // Spawn clearance (team-colored) + spawn separation (whitish) rings,
