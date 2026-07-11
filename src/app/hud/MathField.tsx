@@ -8,6 +8,7 @@ interface MathInputLike {
   setLatex(v: string): void;
   focus(): void;
   setEnabled(e: boolean): void;
+  insertText(chars: string): void;
   reflow(): void;
   onEnter(cb: () => void): void;
 }

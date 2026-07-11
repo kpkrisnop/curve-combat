@@ -13,6 +13,8 @@ export interface HudState {
   win: { winner: Team; detail: string } | null;
   splash: string | null;
   tutorial: { text: string } | null;
+  /** Per-team fired-equation history, newest first, capped at HudController.HISTORY_MAX. Client-local — never sent over the wire. */
+  history: { red: string[]; blue: string[] };
 }
 
 export function initialHudState(): HudState {
@@ -26,6 +28,7 @@ export function initialHudState(): HudState {
     win: null,
     splash: null,
     tutorial: null,
+    history: { red: [], blue: [] },
   };
 }
 
@@ -34,6 +37,8 @@ export interface HudInputHandle {
   setLatex(v: string): void;
   focus(): void;
   setEnabled(e: boolean): void;
+  /** Type raw chars/LaTeX at the cursor (function chips). */
+  insertText(chars: string): void;
 }
 
 export class HudInputRegistry {
@@ -44,6 +49,7 @@ export class HudInputRegistry {
 }
 
 export class HudController implements GameUiPort {
+  private static readonly HISTORY_MAX = 8;
   private fireCb: ((player: Team, latex: string) => void) | null = null;
   private resetCb: (() => void) | null = null;
   private tutNext: (() => void) | null = null;
@@ -57,7 +63,14 @@ export class HudController implements GameUiPort {
     if (!s.noTurn && team !== s.turn) return;
     if (s.busy[team]) return;
     const latex = this.inputs.get(team)?.getLatex().trim();
-    if (latex) this.fireCb?.(team, latex);
+    if (!latex) return;
+    this.pushHistory(team, latex);
+    this.fireCb?.(team, latex);
+  }
+  pushHistory(team: Team, latex: string): void {
+    this.store.set((s) => ({
+      history: { ...s.history, [team]: [latex, ...s.history[team]].slice(0, HudController.HISTORY_MAX) },
+    }));
   }
   requestReset(): void { this.resetCb?.(); }
   tutorialNext(): void { this.tutNext?.(); }

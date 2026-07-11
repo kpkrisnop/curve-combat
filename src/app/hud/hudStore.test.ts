@@ -4,7 +4,7 @@ import { HudController, HudInputRegistry, initialHudState, type HudState } from 
 import type { Store } from "../store";
 
 function fakeInput(latex = "x") {
-  return { getLatex: () => latex, setLatex: vi.fn(), focus: vi.fn(), setEnabled: vi.fn() };
+  return { getLatex: () => latex, setLatex: vi.fn(), focus: vi.fn(), setEnabled: vi.fn(), insertText: vi.fn() };
 }
 
 describe("HudController", () => {
@@ -88,6 +88,34 @@ describe("HudController", () => {
     hud.setBusy("red", true);
     hud.requestFire("red");
     expect(cb).not.toHaveBeenCalled();
+  });
+
+  it("requestFire pushes the fired latex onto that team's history, newest first", () => {
+    const cb = vi.fn();
+    hud.onFire(cb);
+    inputs.register("red", fakeInput("x"));
+    hud.setTurn("red");
+    hud.requestFire("red");
+    expect(store.get().history.red).toEqual(["x"]);
+    expect(store.get().history.blue).toEqual([]);
+  });
+
+  it("history caps at 8 entries per team, dropping the oldest", () => {
+    hud.setNoTurnMode(true); // let the same team fire repeatedly without turn-gating
+    for (let i = 0; i < 9; i++) {
+      inputs.register("red", fakeInput(`shot${i}`));
+      hud.requestFire("red");
+    }
+    expect(store.get().history.red).toHaveLength(8);
+    expect(store.get().history.red[0]).toBe("shot8"); // newest first
+    expect(store.get().history.red).not.toContain("shot0"); // oldest dropped
+  });
+
+  it("does not push to history when requestFire is gated (wrong turn / busy / empty)", () => {
+    inputs.register("red", fakeInput("x"));
+    hud.setTurn("blue"); // red can't fire
+    hud.requestFire("red");
+    expect(store.get().history.red).toEqual([]);
   });
 
   it("tutorialSkip invokes the onSkip callback", () => {

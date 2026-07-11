@@ -11,7 +11,7 @@ function fakeMathInput() {
   return {
     el,
     getLatex: () => "x", setLatex: vi.fn(), focus: vi.fn(),
-    setEnabled: vi.fn(), reflow: vi.fn(),
+    setEnabled: vi.fn(), insertText: vi.fn(), reflow: vi.fn(),
     onEnter: (cb: () => void) => { enterCb = cb; },
     fireEnter: () => enterCb?.(),
   };

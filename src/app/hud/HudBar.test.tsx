@@ -6,14 +6,14 @@ import { HudOverlays } from "./Overlays";
 import { hudStore, hudController, hudInputs, initialHudState } from "./hudStore";
 
 const fakeInput = (latex: string) => ({
-  getLatex: () => latex, setLatex: vi.fn(), focus: vi.fn(), setEnabled: vi.fn(),
+  getLatex: () => latex, setLatex: vi.fn(), focus: vi.fn(), setEnabled: vi.fn(), insertText: vi.fn(),
 });
 
 // HudBar renders MathFields with a test factory via prop
 const makeInput = () => {
   const el = document.createElement("span");
   return { el, getLatex: () => "x", setLatex: vi.fn(), focus: vi.fn(),
-           setEnabled: vi.fn(), reflow: vi.fn(), onEnter: vi.fn() };
+           setEnabled: vi.fn(), insertText: vi.fn(), reflow: vi.fn(), onEnter: vi.fn() };
 };
 
 describe("HudBar", () => {

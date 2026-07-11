@@ -116,6 +116,10 @@ export class MathInput {
     setFieldEnabled(this.el, enabled);
   }
 
+  insertText(chars: string): void {
+    this.mq.write(chars);
+  }
+
   /** Recompute layout — call once after el is attached to the DOM. */
   reflow(): void {
     this.mq.reflow?.();
