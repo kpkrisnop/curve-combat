@@ -54,6 +54,8 @@ export class MathInput {
   private mq: MQMathField;
   private editCb: (() => void) | null = null;
   private enterCb: (() => void) | null = null;
+  private upOutCb: (() => void) | null = null;
+  private downOutCb: (() => void) | null = null;
   private placeholderEl: HTMLSpanElement | null = null;
 
   constructor(initialLatex = "", placeholder = "") {
@@ -70,6 +72,11 @@ export class MathInput {
           this.syncPlaceholder();
         },
         enter: () => this.enterCb?.(),
+        // Fire only when the cursor is at the field's top/bottom level with
+        // nowhere higher/lower to go — inside a fraction/exponent, Up/Down
+        // still navigate the math. Consumers use this for equation recall.
+        upOutOf: () => this.upOutCb?.(),
+        downOutOf: () => this.downOutCb?.(),
       },
     });
 
@@ -120,5 +127,15 @@ export class MathInput {
 
   onEnter(cb: () => void): void {
     this.enterCb = cb;
+  }
+
+  /** Up pressed with the cursor already at the top level (nowhere higher to go). */
+  onUpOutOf(cb: () => void): void {
+    this.upOutCb = cb;
+  }
+
+  /** Down pressed with the cursor already at the bottom level. */
+  onDownOutOf(cb: () => void): void {
+    this.downOutCb = cb;
   }
 }

@@ -1,0 +1,237 @@
+/* PROTOTYPE — throwaway styling for the redesigned in-game footer. Consumes the
+   real design tokens (foundation.css) + primitives (theme.css); only the new
+   footer composition lives here. Delete with the rest of the prototype. */
+
+.pf-stage {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column;
+  background: var(--gw-bg);
+  color: var(--gw-text);
+  font-family: var(--gw-font-display);
+  padding: var(--gw-gap);
+  gap: var(--gw-gap);
+}
+
+/* Faux arena so the footer sits in truthful context (blur has something behind
+   it, the card reads as chrome laid AROUND the play surface). */
+.pf-arena {
+  /* min-height floor (not 0): the footer is allowed to grow for a tall
+     equation and the arena yields space to it, but the arena must never
+     shrink to nothing — the board is the one thing that has to stay legible
+     regardless of what's being typed below it. */
+  flex: 1; min-height: 180px;
+  border: 1px solid var(--gw-border);
+  border-radius: var(--gw-radius-xl);
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(68, 136, 255, 0.05), transparent 60%),
+    repeating-linear-gradient(0deg, transparent 0 46px, rgba(68, 136, 255, 0.04) 46px 47px),
+    repeating-linear-gradient(90deg, transparent 0 46px, rgba(68, 136, 255, 0.04) 46px 47px);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding-top: 14px;
+}
+.pf-arena__tag {
+  font-family: var(--gw-font-tech); font-size: var(--gw-fs-2xs);
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--gw-text-faint);
+}
+
+/* ── The footer card — mirrors .comp.footer, plus a team-tinted resting glow ── */
+.pf-footer {
+  position: relative;
+  flex: none;
+  min-height: var(--gw-footer-min);
+  display: flex; align-items: center; justify-content: center;
+  gap: var(--gw-space-3);
+  border: 1px solid var(--gw-border);
+  border-radius: var(--gw-radius-xl);
+  background: var(--gw-surface);
+  backdrop-filter: blur(14px);
+  transition: border-color 220ms var(--gw-ease-out-expo), box-shadow 220ms var(--gw-ease-out-expo);
+}
+/* `.comp.footer` (theme.css) sets `padding: 0 var(--gw-space-4)` at specificity
+   (0,2,0) — a single-class `.pf-footer { padding: ... }` rule can never beat
+   that regardless of stylesheet load order, which is why the top/bottom
+   padding silently stayed 0 despite being set above. Match the specificity
+   with a second class instead of fighting the cascade with !important. */
+.comp.pf-footer { padding: var(--gw-space-5) var(--gw-space-6); }
+/* Turn ownership reads three ways at once — border, glow, AND the dot+label
+   (never colour alone, per PRODUCT.md accessibility). Mixed `in srgb`, not
+   `in oklch`: OKLCH interpolates hue around the polar wheel, and red (~25°)
+   vs this border's cool blue-gray (~250°) are far enough apart that the
+   browser swings through magenta on the way — verified via getComputedStyle,
+   RED's ring rendered hue ≈333°. srgb mixes per-channel, so no hue rotation. */
+.pf-footer.is-red   { border-color: color-mix(in srgb, var(--gw-red) 45%, var(--gw-border)); box-shadow: 0 0 40px -8px rgba(255, 68, 68, 0.28); }
+.pf-footer.is-blue  { border-color: color-mix(in srgb, var(--gw-blue) 45%, var(--gw-border)); box-shadow: 0 0 40px -8px rgba(68, 136, 255, 0.28); }
+/* Waiting keeps a faint reminder of the opponent's colour instead of going fully
+   neutral — reassurance during the anxious "watching for your turn" moment.
+   Three classes beats `.is-red`/`.is-blue`'s two regardless of source order. */
+.pf-footer.is-waiting.is-red  { border-color: color-mix(in srgb, var(--gw-red) 22%, var(--gw-border)); box-shadow: 0 0 24px -10px rgba(255, 68, 68, 0.18); }
+.pf-footer.is-waiting.is-blue { border-color: color-mix(in srgb, var(--gw-blue) 22%, var(--gw-border)); box-shadow: 0 0 24px -10px rgba(68, 136, 255, 0.18); }
+
+@media (prefers-reduced-motion: reduce) {
+  .pf-footer { transition: none; }
+}
+
+/* ── Quit — quiet card-level utility, pinned to the top-left corner so it never
+   competes with the input row at mid-height ── */
+.pf-quit { position: absolute; left: var(--gw-space-5); top: var(--gw-space-4); }
+.pf-quit__btn {
+  border-color: transparent; color: var(--gw-text-faint);
+  padding: 8px 14px; font-size: var(--gw-fs-xs);
+}
+.pf-quit__btn:hover:not(:disabled) { color: var(--gw-text); border-color: var(--gw-border-strong); background: transparent; }
+.pf-quit__confirm { display: inline-flex; align-items: center; gap: var(--gw-space-2); }
+.pf-quit__q { font-size: var(--gw-fs-xs); color: var(--gw-text-muted); }
+.pf-quit__yes, .pf-quit__no { padding: 6px 12px; font-size: var(--gw-fs-xs); }
+
+/* ── The firing console ── */
+.pf-console {
+  width: 100%; max-width: 720px;
+  display: flex; flex-direction: column; gap: var(--gw-space-3);
+}
+
+.pf-turnline { display: flex; align-items: center; justify-content: space-between; }
+.pf-turn {
+  display: inline-flex; align-items: center; gap: var(--gw-space-2);
+  font-family: var(--gw-font-tech); font-size: var(--gw-fs-xs);
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--gw-text-muted);
+}
+.pf-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.pf-dot.is-red  { background: var(--gw-red);  box-shadow: 0 0 8px var(--gw-red); }
+.pf-dot.is-blue { background: var(--gw-blue); box-shadow: 0 0 8px var(--gw-blue); }
+
+/* Timer promoted from a buried inline badge to the console's loudest readout. */
+.pf-timer {
+  font-family: var(--gw-font-tech); font-weight: 700;
+  font-size: var(--gw-fs-lg); font-variant-numeric: tabular-nums;
+  color: var(--gw-text); letter-spacing: 0.02em;
+}
+.pf-timer.warn { color: #ffb020; }
+.pf-timer.crit { color: var(--gw-red); animation: pf-pulse 0.6s infinite alternate; }
+@keyframes pf-pulse { from { opacity: 1; } to { opacity: 0.4; } }
+@media (prefers-reduced-motion: reduce) { .pf-timer.crit { animation: none; } }
+
+/* Input row */
+.pf-inputrow { display: flex; align-items: center; gap: var(--gw-space-2); }
+.pf-inputrow.is-locked { opacity: 0.6; }
+.pf-prompt {
+  font-family: var(--gw-font-tech); font-size: var(--gw-fs-md);
+  color: var(--gw-text-muted); flex: none;
+}
+.pf-fields { position: relative; flex: 1; min-width: 0; display: flex; }
+.pf-field {
+  flex: 1; min-width: 0;
+  background: var(--gw-surface-2); border: 1px solid var(--gw-border);
+  border-radius: var(--gw-radius-sm);
+  padding: 8px 12px; font-size: 18px;
+  transition: border-color 150ms var(--gw-ease-out-expo);
+  /* A deeply nested equation (stacked fractions, etc.) grows the footer, which
+     shrinks the arena above it (flex column, arena's own min-height floor
+     stops it vanishing) — that's the intended trade. But an unbounded field
+     would let one pathological equation still consume the whole footer. Cap
+     it and let the field scroll internally past that point instead. */
+  max-height: 220px; overflow-y: auto;
+  scrollbar-width: thin; scrollbar-color: var(--gw-border-strong) transparent;
+}
+.pf-field::-webkit-scrollbar { width: 8px; }
+.pf-field::-webkit-scrollbar-track { background: transparent; }
+.pf-field::-webkit-scrollbar-thumb { background: var(--gw-border-strong); border-radius: 4px; }
+.pf-field--hidden { display: none; }
+.pf-field--locked {
+  color: var(--gw-text-faint); font-family: var(--gw-font-tech);
+  font-size: var(--gw-fs-sm); display: flex; align-items: center;
+}
+/* Active field's focus-within picks up the current team's colour ring.
+   `in srgb`, same reason as the footer border above — oklch mixed this
+   warm/cool pair through magenta instead of team-red. */
+.pf-footer.is-red  .pf-field:focus-within { border-color: color-mix(in srgb, var(--gw-red) 60%, var(--gw-border-strong)); }
+.pf-footer.is-blue .pf-field:focus-within { border-color: color-mix(in srgb, var(--gw-blue) 60%, var(--gw-border-strong)); }
+
+/* MathQuill chrome overrides — same set the real .hud-input carries, so the
+   field is dark-native (no leaked light theme / black caret). */
+.pf-field .mq-input { position: relative; display: block; }
+.pf-field .mq-editable-field { border: none; background: transparent; color: var(--gw-text); box-shadow: none; }
+.pf-field .mq-editable-field.mq-focused { border: none; box-shadow: none; }
+.pf-field .mq-editable-field .mq-cursor { border-color: #fff; }
+.pf-field .mq-input.mq-locked { pointer-events: none; }
+.pf-field .mq-selection, .pf-field .mq-selection .mq-non-leaf { background: var(--gw-accent); color: #fff; }
+.pf-field .mq-placeholder {
+  position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+  color: var(--gw-text-faint); pointer-events: none;
+  font-family: var(--gw-font-tech); font-size: var(--gw-fs-sm);
+}
+
+.pf-clear {
+  flex: none; width: 30px; height: 30px; border-radius: var(--gw-radius-sm);
+  border: 1px solid var(--gw-border); background: transparent;
+  color: var(--gw-text-muted); font-size: 18px; line-height: 1; cursor: pointer;
+  transition: color 150ms, border-color 150ms;
+}
+.pf-clear:hover:not(:disabled) { color: var(--gw-text); border-color: var(--gw-border-strong); }
+.pf-clear:disabled { opacity: 0.3; cursor: default; }
+
+/* Fire — the single ivory primary in-game (the action pressed every turn). */
+.pf-fire { flex: none; padding: 10px 22px; }
+.pf-fire__key {
+  font-family: var(--gw-font-tech); font-size: var(--gw-fs-2xs);
+  opacity: 0.55; margin-left: 2px;
+  border: 1px solid currentColor; border-radius: var(--gw-radius-sm); padding: 0 4px; line-height: 1.4;
+}
+
+/* Chip row — grouped (trig / powers-roots / constants / structural) via
+   proximity: a tighter gap within a group, a wider gap between groups, so
+   scanning for one symbol under a 25s timer doesn't mean reading 10 flat,
+   undifferentiated buttons left to right. */
+.pf-chiprow { display: flex; align-items: center; justify-content: space-between; gap: var(--gw-space-3); }
+.pf-chips { display: flex; flex-wrap: wrap; gap: var(--gw-space-3); }
+.pf-chip-group { display: flex; flex-wrap: wrap; gap: 6px; }
+.pf-chip {
+  font-family: var(--gw-font-tech); font-size: var(--gw-fs-xs);
+  color: var(--gw-text-muted); background: var(--gw-surface-2);
+  border: 1px solid var(--gw-border); border-radius: var(--gw-radius-sm);
+  padding: 4px 9px; cursor: pointer;
+  transition: color 120ms, border-color 120ms, background 120ms;
+}
+.pf-chip:hover:not(:disabled) { color: var(--gw-text); border-color: var(--gw-border-strong); background: oklch(1 0 0 / 0.04); }
+.pf-chip:active:not(:disabled) { transform: scale(0.94); }
+.pf-chip:disabled { opacity: 0.35; cursor: default; }
+/* Was falling back to the browser's native blue outline — a literal fourth
+   hue leak, and the app's own ivory focus ring (theme.css .gw-btn) skipped
+   entirely. Same spec, applied here. */
+.pf-chip:focus-visible { outline: 2px solid oklch(0.9 0.01 250 / 0.9); outline-offset: 2px; }
+.pf-hint {
+  flex: none; font-family: var(--gw-font-tech); font-size: var(--gw-fs-2xs);
+  letter-spacing: 0.1em; color: var(--gw-text-faint); white-space: nowrap;
+}
+
+.pf-oppfire { position: absolute; right: var(--gw-space-5); top: var(--gw-space-4); transform: none; }
+
+/* ── Inspector (clearly not part of the game — dashed, monospace, labelled) ── */
+.pf-inspector {
+  flex: none;
+  border: 1px dashed var(--gw-border-strong); border-radius: var(--gw-radius-lg);
+  padding: var(--gw-space-3) var(--gw-space-4);
+  font-family: var(--gw-font-tech); font-size: var(--gw-fs-xs);
+  background: rgba(255, 255, 255, 0.015);
+}
+.pf-inspector__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--gw-space-2); }
+.pf-inspector__title { letter-spacing: 0.16em; color: var(--gw-text-faint); }
+.pf-modeswitch { display: inline-flex; gap: 4px; }
+.pf-modeswitch button {
+  font-family: var(--gw-font-tech); font-size: var(--gw-fs-2xs);
+  color: var(--gw-text-muted); background: transparent;
+  border: 1px solid var(--gw-border); border-radius: var(--gw-radius-sm);
+  padding: 4px 10px; cursor: pointer;
+}
+.pf-modeswitch button.is-on { color: oklch(0.13 0.01 250); background: var(--gw-accent); border-color: transparent; }
+.pf-inspector__grid {
+  display: grid; grid-template-columns: 110px 1fr; gap: 4px var(--gw-space-3);
+  align-items: baseline;
+}
+.pf-k { color: var(--gw-text-faint); text-transform: uppercase; letter-spacing: 0.08em; }
+.pf-k.is-red { color: var(--gw-red); } .pf-k.is-blue { color: var(--gw-blue); }
+.pf-k.is-live::after { content: " ● live"; color: var(--gw-text-muted); }
+.pf-v { color: var(--gw-text); display: flex; flex-direction: column; gap: 2px; }
+.pf-v.is-red { color: var(--gw-red); } .pf-v.is-blue { color: var(--gw-blue); }
+.pf-v code { color: var(--gw-text); font-family: var(--gw-font-tech); }
+.pf-histline { color: var(--gw-text-faint); font-size: var(--gw-fs-2xs); }
+.pf-inspector__note { margin: var(--gw-space-3) 0 0; color: var(--gw-text-muted); line-height: 1.5; }
