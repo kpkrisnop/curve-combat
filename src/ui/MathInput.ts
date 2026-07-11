@@ -116,8 +116,11 @@ export class MathInput {
     setFieldEnabled(this.el, enabled);
   }
 
-  insertText(chars: string): void {
-    this.mq.write(chars);
+  /** Type raw chars at the cursor, as if the user had typed them (function chips). */
+  insertText(text: string): void {
+    this.mq.typedText(text);
+    this.mq.focus();
+    this.syncPlaceholder();
   }
 
   /** Recompute layout — call once after el is attached to the DOM. */

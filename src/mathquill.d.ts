@@ -13,6 +13,8 @@ interface MQMathField {
   el(): HTMLElement;
   /** Write LaTeX at the cursor. */
   write(latex: string): MQMathField;
+  /** Type raw chars/LaTeX at the cursor, same as user keystrokes (chip insertion). */
+  typedText(text: string): MQMathField;
   /** Type a command at the cursor (e.g. "\\sqrt"). */
   cmd(latex: string): MQMathField;
   /** Recompute layout — call after the element is attached / resized. */
