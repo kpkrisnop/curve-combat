@@ -1,0 +1,157 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-09T00:00:00.000Z",
+  "title": "Design System: Graph War",
+  "extensions": {
+    "colorMeta": {
+      "pitch-black": { "role": "neutral", "displayName": "Pitch Black", "canonical": "oklch(0 0 0)", "tonalRamp": ["oklch(0 0 0)", "oklch(0.12 0 0)", "oklch(0.24 0 0)", "oklch(0.36 0 0)", "oklch(0.48 0 0)", "oklch(0.6 0 0)", "oklch(0.78 0 0)", "oklch(0.95 0 0)"] },
+      "surface": { "role": "neutral", "displayName": "Surface", "canonical": "oklch(0.2 0.02 250 / 0.82)", "tonalRamp": ["oklch(0.06 0.01 250)", "oklch(0.14 0.02 250)", "oklch(0.22 0.02 250)", "oklch(0.32 0.02 250)", "oklch(0.44 0.02 250)", "oklch(0.58 0.02 250)", "oklch(0.74 0.02 250)", "oklch(0.9 0.01 250)"] },
+      "surface-inset": { "role": "neutral", "displayName": "Surface Inset", "canonical": "oklch(0.12 0.01 250 / 0.9)", "tonalRamp": ["oklch(0.06 0.01 250)", "oklch(0.12 0.01 250)", "oklch(0.2 0.01 250)", "oklch(0.3 0.01 250)", "oklch(0.42 0.01 250)", "oklch(0.56 0.01 250)", "oklch(0.72 0.01 250)", "oklch(0.9 0.005 250)"] },
+      "border": { "role": "neutral", "displayName": "Border", "canonical": "oklch(0.26 0.03 250)", "tonalRamp": ["oklch(0.1 0.02 250)", "oklch(0.18 0.03 250)", "oklch(0.26 0.03 250)", "oklch(0.34 0.04 250)", "oklch(0.46 0.03 250)", "oklch(0.6 0.03 250)", "oklch(0.75 0.02 250)", "oklch(0.9 0.01 250)"] },
+      "border-strong": { "role": "neutral", "displayName": "Border Strong", "canonical": "oklch(0.34 0.04 240)", "tonalRamp": ["oklch(0.12 0.02 240)", "oklch(0.2 0.03 240)", "oklch(0.28 0.04 240)", "oklch(0.34 0.04 240)", "oklch(0.44 0.04 240)", "oklch(0.58 0.03 240)", "oklch(0.74 0.02 240)", "oklch(0.9 0.01 240)"] },
+      "ink-primary": { "role": "neutral", "displayName": "Ink Primary", "canonical": "oklch(0.86 0.02 240)", "tonalRamp": ["oklch(0.15 0.02 240)", "oklch(0.28 0.02 240)", "oklch(0.4 0.02 240)", "oklch(0.53 0.02 240)", "oklch(0.65 0.02 240)", "oklch(0.77 0.02 240)", "oklch(0.86 0.02 240)", "oklch(0.95 0.01 240)"] },
+      "ink-muted": { "role": "neutral", "displayName": "Ink Muted", "canonical": "oklch(0.64 0.03 240)", "tonalRamp": ["oklch(0.15 0.03 240)", "oklch(0.27 0.03 240)", "oklch(0.39 0.03 240)", "oklch(0.51 0.03 240)", "oklch(0.64 0.03 240)", "oklch(0.76 0.02 240)", "oklch(0.86 0.02 240)", "oklch(0.95 0.01 240)"] },
+      "ink-faint": { "role": "neutral", "displayName": "Ink Faint", "canonical": "oklch(0.5 0.03 240)", "tonalRamp": ["oklch(0.15 0.03 240)", "oklch(0.25 0.03 240)", "oklch(0.35 0.03 240)", "oklch(0.5 0.03 240)", "oklch(0.62 0.03 240)", "oklch(0.74 0.02 240)", "oklch(0.85 0.02 240)", "oklch(0.94 0.01 240)"] },
+      "accent-ivory": { "role": "primary", "displayName": "Ivory Accent", "canonical": "oklch(0.93 0.008 250)", "tonalRamp": ["oklch(0.2 0.008 250)", "oklch(0.32 0.008 250)", "oklch(0.45 0.008 250)", "oklch(0.58 0.008 250)", "oklch(0.7 0.008 250)", "oklch(0.82 0.008 250)", "oklch(0.93 0.008 250)", "oklch(0.99 0.003 250)"] },
+      "team-red": { "role": "secondary", "displayName": "Team Red", "canonical": "oklch(0.63 0.24 25)", "tonalRamp": ["oklch(0.15 0.1 25)", "oklch(0.27 0.15 25)", "oklch(0.39 0.19 25)", "oklch(0.51 0.22 25)", "oklch(0.63 0.24 25)", "oklch(0.72 0.18 25)", "oklch(0.83 0.11 25)", "oklch(0.93 0.04 25)"] },
+      "team-blue": { "role": "secondary", "displayName": "Team Blue", "canonical": "oklch(0.62 0.2 258)", "tonalRamp": ["oklch(0.15 0.1 258)", "oklch(0.27 0.14 258)", "oklch(0.39 0.17 258)", "oklch(0.5 0.19 258)", "oklch(0.62 0.2 258)", "oklch(0.72 0.15 258)", "oklch(0.83 0.09 258)", "oklch(0.93 0.03 258)"] },
+      "duel-red": { "role": "secondary", "displayName": "Duel Red", "canonical": "oklch(0.63 0.235 27)", "tonalRamp": ["oklch(0.15 0.1 27)", "oklch(0.27 0.15 27)", "oklch(0.39 0.19 27)", "oklch(0.51 0.22 27)", "oklch(0.63 0.235 27)", "oklch(0.72 0.18 27)", "oklch(0.83 0.11 27)", "oklch(0.93 0.04 27)"] },
+      "duel-blue": { "role": "secondary", "displayName": "Duel Blue", "canonical": "oklch(0.66 0.19 258)", "tonalRamp": ["oklch(0.15 0.09 258)", "oklch(0.27 0.13 258)", "oklch(0.39 0.16 258)", "oklch(0.51 0.18 258)", "oklch(0.66 0.19 258)", "oklch(0.75 0.14 258)", "oklch(0.85 0.08 258)", "oklch(0.94 0.03 258)"] },
+      "status-warn": { "role": "tertiary", "displayName": "Warn Amber", "canonical": "oklch(0.78 0.16 75)", "tonalRamp": ["oklch(0.2 0.06 75)", "oklch(0.32 0.09 75)", "oklch(0.45 0.12 75)", "oklch(0.57 0.14 75)", "oklch(0.68 0.16 75)", "oklch(0.78 0.16 75)", "oklch(0.87 0.11 75)", "oklch(0.94 0.05 75)"] },
+      "hp-pink": { "role": "tertiary", "displayName": "HP Pink", "canonical": "oklch(0.68 0.18 12)", "tonalRamp": ["oklch(0.2 0.09 12)", "oklch(0.32 0.13 12)", "oklch(0.44 0.16 12)", "oklch(0.56 0.18 12)", "oklch(0.68 0.18 12)", "oklch(0.78 0.14 12)", "oklch(0.87 0.08 12)", "oklch(0.94 0.03 12)"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Landing hero title only (\"GRAPH WAR\"). Letter-spacing settles 0.11em -> 0.06em on entrance." },
+      "title": { "displayName": "Title", "purpose": "Win banners, round status, overlay headings." },
+      "label": { "displayName": "Label", "purpose": "Buttons, config option cards, control copy." },
+      "mono-annotation": { "displayName": "Mono Annotation", "purpose": "Eyebrows, HUD corner chrome, hints, dividers, room-code label. 9-14px by role." },
+      "mono-code": { "displayName": "Mono Code", "purpose": "The 4-letter room-code entry. Widest tracking in the app." }
+    },
+    "shadows": [
+      { "name": "ignition-glow-red", "value": "text-shadow: 0 0 16px oklch(0.63 0.235 27 / 0.28), 0 0 56px oklch(0.63 0.235 27 / 0.18)", "purpose": "Halo behind the \"GRAPH\" half of the landing title." },
+      { "name": "ignition-glow-blue", "value": "text-shadow: 0 0 16px oklch(0.66 0.19 258 / 0.3), 0 0 56px oklch(0.66 0.19 258 / 0.2)", "purpose": "Halo behind the \"WAR\" half of the landing title." },
+      { "name": "accent-glow", "value": "box-shadow: 0 0 20px oklch(1 0 0 / 0.22)", "purpose": "Ivory bloom on a selected/active surface (config-flash, active card)." },
+      { "name": "team-glow-red", "value": "box-shadow: 0 0 24px rgba(255, 68, 68, 0.35)", "purpose": "Active-turn RED player-panel halo. A box-shadow used as a state signal, not decoration." },
+      { "name": "team-glow-blue", "value": "box-shadow: 0 0 24px rgba(68, 136, 255, 0.35)", "purpose": "Active-turn BLUE player-panel halo." },
+      { "name": "primary-hover-bloom", "value": "box-shadow: 0 8px 32px oklch(1 0 0 / 0.09)", "purpose": "Appears only on a primary button's :hover." },
+      { "name": "focus-ring", "value": "outline: 2px solid oklch(0.9 0.01 250 / 0.9)", "purpose": "Keyboard-focus ring on every interactive element, 2-3px offset." }
+    ],
+    "motion": [
+      { "name": "ease-out-expo", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Default easing for every transition and entrance keyframe." },
+      { "name": "transition", "value": "0.15s ease", "purpose": "Default state-change duration for product controls (150ms band)." },
+      { "name": "duration-ignite", "value": "700ms", "purpose": "Landing title entrance: blur-to-focus + letter-spacing settle." },
+      { "name": "duration-rise", "value": "500ms", "purpose": "Tagline / actions entrance, staggered 180ms / 320ms after ignite." }
+    ],
+    "breakpoints": [
+      { "name": "phone-gate", "value": "1024px", "purpose": "Below this width a phone-gate overlay replaces the app. Desktop/landscape-only by design." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Default control voice across the app; transparent HUD-toggle at rest.",
+      "html": "<button class=\"ds-btn-ghost\">Play Online</button>",
+      "css": ".ds-btn-ghost { font-family: var(--gw-font-display, \"Archivo Variable\", sans-serif); font-size: 0.9375rem; font-weight: 600; letter-spacing: 0.02em; padding: 10px 20px; border-radius: 10px; border: 1px solid var(--gw-border-strong, #2e4256); background: transparent; color: var(--gw-text, #cdd9e5); cursor: pointer; transition: background 150ms cubic-bezier(0.16,1,0.3,1), border-color 150ms cubic-bezier(0.16,1,0.3,1), transform 150ms cubic-bezier(0.16,1,0.3,1); } .ds-btn-ghost:hover { border-color: oklch(1 0 0 / 0.4); background: oklch(1 0 0 / 0.04); transform: translateY(-1px); } .ds-btn-ghost:active { transform: translateY(0) scale(0.98); } .ds-btn-ghost:focus-visible { outline: 2px solid oklch(0.9 0.01 250 / 0.9); outline-offset: 3px; }"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one filled ivory action per screen.",
+      "html": "<button class=\"ds-btn-primary\">Play Locally</button>",
+      "css": ".ds-btn-primary { font-family: var(--gw-font-display, \"Archivo Variable\", sans-serif); font-size: 0.9375rem; font-weight: 600; letter-spacing: 0.02em; padding: 10px 20px; border-radius: 10px; border: none; background: var(--gw-accent, oklch(0.93 0.008 250)); color: oklch(0.13 0.01 250); cursor: pointer; transition: background 150ms cubic-bezier(0.16,1,0.3,1), box-shadow 150ms cubic-bezier(0.16,1,0.3,1), transform 150ms cubic-bezier(0.16,1,0.3,1); } .ds-btn-primary:hover { background: oklch(0.99 0.003 250); box-shadow: 0 8px 32px oklch(1 0 0 / 0.09); transform: translateY(-1px); } .ds-btn-primary:active { transform: translateY(0) scale(0.98); }"
+    },
+    {
+      "name": "Config Selector",
+      "kind": "custom",
+      "refersTo": "config-selector",
+      "description": "Segmented, one active at a time. Active segment = ivory text + white-alpha wash + hairline ring.",
+      "html": "<div class=\"ds-segment\" role=\"group\"><button class=\"ds-segment__opt\" aria-pressed=\"false\">Best of 1</button><button class=\"ds-segment__opt\" aria-pressed=\"true\">Best of 3</button><button class=\"ds-segment__opt\" aria-pressed=\"false\">Best of 5</button></div>",
+      "css": ".ds-segment { display: flex; gap: 2px; padding: 3px; background: var(--gw-surface-2, rgba(8,10,15,0.9)); border: 1px solid var(--gw-border-strong, #2e4256); border-radius: 12px; } .ds-segment__opt { flex: 1; font-family: var(--gw-font-display, \"Archivo Variable\", sans-serif); font-size: 13px; font-weight: 600; padding: 9px 18px; border: none; background: transparent; color: var(--gw-text-muted, #8499ab); border-radius: 9px; cursor: pointer; transition: color 150ms cubic-bezier(0.16,1,0.3,1), background 150ms cubic-bezier(0.16,1,0.3,1); } .ds-segment__opt:hover { color: var(--gw-text, #cdd9e5); } .ds-segment__opt[aria-pressed=\"true\"] { color: var(--gw-accent, oklch(0.93 0.008 250)); background: oklch(1 0 0 / 0.06); box-shadow: inset 0 0 0 1px oklch(1 0 0 / 0.2); }"
+    },
+    {
+      "name": "Config Slider",
+      "kind": "custom",
+      "refersTo": "config-slider",
+      "description": "Thin 2px track, one outlined circular thumb, ivory-filled progress.",
+      "html": "<input class=\"ds-range\" type=\"range\" min=\"0\" max=\"100\" value=\"34\" aria-label=\"Map width\">",
+      "css": ".ds-range { -webkit-appearance: none; appearance: none; width: 100%; height: 18px; margin: 0; background: transparent; cursor: pointer; } .ds-range::-webkit-slider-runnable-track { height: 2px; border-radius: 2px; background: linear-gradient(to right, var(--gw-accent, oklch(0.93 0.008 250)) 0 var(--fill, 50%), var(--gw-border-strong, #2e4256) var(--fill, 50%) 100%); } .ds-range::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; margin-top: -7px; border-radius: 50%; background: #000; border: 2px solid var(--gw-accent, oklch(0.93 0.008 250)); box-shadow: 0 0 0 0 oklch(1 0 0 / 0.1); transition: box-shadow 150ms cubic-bezier(0.16,1,0.3,1); } .ds-range:hover::-webkit-slider-thumb, .ds-range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 5px oklch(1 0 0 / 0.1); }"
+    },
+    {
+      "name": "Config Stepper",
+      "kind": "custom",
+      "refersTo": "config-stepper",
+      "description": "Decrement / editable value / increment. Value clamps to range on change.",
+      "html": "<div class=\"ds-stepper\"><button class=\"ds-stepper__btn\" aria-label=\"Decrease\">−</button><span class=\"ds-stepper__field\"><input class=\"ds-stepper__input\" type=\"number\" value=\"60\" min=\"15\" max=\"300\" step=\"15\"><span class=\"ds-stepper__unit\">s</span></span><button class=\"ds-stepper__btn\" aria-label=\"Increase\">+</button></div>",
+      "css": ".ds-stepper { display: inline-flex; align-items: stretch; width: max-content; background: var(--gw-surface-2, rgba(8,10,15,0.9)); border: 1px solid var(--gw-border-strong, #2e4256); border-radius: 10px; overflow: hidden; } .ds-stepper:focus-within { border-color: oklch(1 0 0 / 0.4); } .ds-stepper__btn { width: 38px; border: none; background: transparent; color: var(--gw-text-muted, #8499ab); font-family: var(--gw-font-tech, \"Martian Mono Variable\", monospace); font-size: 18px; cursor: pointer; display: grid; place-items: center; } .ds-stepper__btn:hover { color: var(--gw-text, #cdd9e5); background: oklch(1 0 0 / 0.06); } .ds-stepper__field { display: inline-flex; align-items: baseline; justify-content: center; gap: 2px; min-width: 4.5ch; padding: 9px 6px; border-left: 1px solid var(--gw-border-strong, #2e4256); border-right: 1px solid var(--gw-border-strong, #2e4256); } .ds-stepper__input { width: 3ch; border: none; background: transparent; text-align: right; font-family: var(--gw-font-tech, \"Martian Mono Variable\", monospace); font-variant-numeric: tabular-nums; font-size: 14px; font-weight: 500; color: var(--gw-text, #cdd9e5); appearance: textfield; -moz-appearance: textfield; } .ds-stepper__input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; } .ds-stepper__input:focus-visible { outline: none; color: var(--gw-accent, oklch(0.93 0.008 250)); } .ds-stepper__unit { font-family: var(--gw-font-tech, monospace); font-size: 11px; color: var(--gw-text-faint, #5e7081); }"
+    },
+    {
+      "name": "Config Checkbox",
+      "kind": "custom",
+      "refersTo": "config-checkbox",
+      "description": "Custom box with an SVG check; fills ivory when on, label brightens with it.",
+      "html": "<label class=\"ds-check\"><input class=\"ds-check__input\" type=\"checkbox\" checked><span class=\"ds-check__box\"><svg viewBox=\"0 0 12 12\" fill=\"none\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M2.5 6.4 5 9l4.5-5.5\"/></svg></span><span class=\"ds-check__label\">Symmetrical spawns</span></label>",
+      "css": ".ds-check { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-family: var(--gw-font-display, \"Archivo Variable\", sans-serif); font-size: 13px; font-weight: 500; color: var(--gw-text-muted, #8499ab); } .ds-check__input { position: absolute; width: 1px; height: 1px; opacity: 0; } .ds-check__box { width: 18px; height: 18px; flex: none; display: grid; place-items: center; border: 1px solid var(--gw-border-strong, #2e4256); border-radius: 5px; background: var(--gw-surface-2, rgba(8,10,15,0.9)); } .ds-check__box svg { width: 11px; height: 11px; stroke: oklch(0.13 0.01 250); opacity: 0; transform: scale(0.6); transition: 150ms cubic-bezier(0.16,1,0.3,1); } .ds-check:hover .ds-check__box { border-color: oklch(1 0 0 / 0.4); } .ds-check__input:checked + .ds-check__box { background: var(--gw-accent, oklch(0.93 0.008 250)); border-color: var(--gw-accent, oklch(0.93 0.008 250)); } .ds-check__input:checked + .ds-check__box svg { opacity: 1; transform: scale(1); } .ds-check__input:checked ~ .ds-check__label { color: var(--gw-text, #cdd9e5); }"
+    },
+    {
+      "name": "Room Code Input",
+      "kind": "input",
+      "refersTo": "code-input",
+      "description": "4-letter room-code entry, auto-submits once filled. Widest tracking in the app.",
+      "html": "<input class=\"ds-code-entry\" type=\"text\" maxlength=\"4\" placeholder=\"····\" aria-label=\"Room code\" />",
+      "css": ".ds-code-entry { font-family: var(--gw-font-tech, \"Martian Mono Variable\", monospace); font-size: 1.5rem; font-weight: 500; letter-spacing: 0.5em; text-align: center; width: 8ch; padding: 8px 0 8px 0.5em; background: var(--gw-surface-2, rgba(8,10,15,0.9)); border: 1px solid var(--gw-border-strong, #2e4256); border-radius: 10px; color: var(--gw-text, #cdd9e5); text-transform: uppercase; transition: border-color 150ms cubic-bezier(0.16,1,0.3,1), box-shadow 150ms cubic-bezier(0.16,1,0.3,1); } .ds-code-entry::placeholder { color: var(--gw-text-muted, #8499ab); } .ds-code-entry:focus-visible { outline: none; border-color: oklch(1 0 0 / 0.45); box-shadow: 0 0 0 3px oklch(1 0 0 / 0.07); }"
+    },
+    {
+      "name": "Turn-Timer States",
+      "kind": "custom",
+      "description": "The status-color home. normal (ink) -> warn (amber) -> crit (team-red, pulsing). The pulse, not just the color, carries crit.",
+      "html": "<div class=\"ds-timers\"><span class=\"ds-timer\">42</span><span class=\"ds-timer is-warn\">12</span><span class=\"ds-timer is-crit\">04</span></div>",
+      "css": ".ds-timers { display: flex; gap: 20px; } .ds-timer { font-family: var(--gw-font-tech, \"Martian Mono Variable\", monospace); font-weight: 800; font-variant-numeric: tabular-nums; font-size: 22px; color: var(--gw-text, #cdd9e5); } .ds-timer.is-warn { color: #ffb020; } .ds-timer.is-crit { color: var(--gw-red, #ff4444); animation: ds-pulse 0.6s infinite alternate; } @keyframes ds-pulse { from { opacity: 1; } to { opacity: 0.4; } }"
+    },
+    {
+      "name": "Duel Title Lockup",
+      "kind": "custom",
+      "description": "The landing \"GRAPH WAR\" hero, split into duel-red and duel-blue halves with per-half ignition glow.",
+      "html": "<h1 class=\"ds-title\"><span class=\"ds-title__red\">GRAPH</span> <span class=\"ds-title__blue\">WAR</span></h1>",
+      "css": ".ds-title { margin: 0; font-family: var(--gw-font-display, \"Archivo Variable\", sans-serif); font-weight: 900; font-variation-settings: \"wdth\" 125; font-size: clamp(2.5rem, 6vw, 4.5rem); line-height: 1; letter-spacing: 0.06em; text-align: center; } .ds-title__red { color: oklch(0.63 0.235 27); text-shadow: 0 0 16px oklch(0.63 0.235 27 / 0.28), 0 0 56px oklch(0.63 0.235 27 / 0.18); } .ds-title__blue { color: oklch(0.66 0.19 258); text-shadow: 0 0 16px oklch(0.66 0.19 258 / 0.3), 0 0 56px oklch(0.66 0.19 258 / 0.2); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Instrument Around the Arena",
+    "overview": "Graph War is an opaque Pixi arena on pitch black, and every piece of UI is luminous HUD instrumentation laid around that arena, never on it. That single move governs the whole app: the landing, the dense config panel, and the in-match HUD are all the same material, precise, technical, faintly dangerous chrome that frames the play surface and gets out of its way. On the surface it reads in-world and cosmic; underneath it holds Linear/Vercel-grade precision in spacing, alignment, and micro-interaction. The landing's one-shot Ignition Sequence is the flagship expression of this instrument voice, not a separate language.\n\nThe palette is mostly absence. Pitch black is the field; a cool blue-gray ink ramp carries all text and structure; and color appears only where it means something: the two duel/team hues (red vs. blue), one near-white ivory accent for \"this is selected / important,\" and a tiny set of status colors for danger.",
+    "keyCharacteristics": [
+      "Pitch-black stage; saturated color rationed to team identity, one ivory accent, and status only",
+      "One accent language app-wide: ivory means \"selected / important\" on every surface, landing to HUD",
+      "Glow, not shadow: depth reads as light (duel halos, hover blooms, focus rings), not drop shadows",
+      "Instrument voice: quiet at rest, confident on commit; Martian Mono for readouts, Archivo for the few things that shout",
+      "Dense but calm: the config panel packs many controls without adding decoration to carry them"
+    ],
+    "rules": [
+      { "name": "The One Accent Rule", "body": "Ivory (accent-ivory) is the only \"selected / important\" color, and it is the same on every surface. If a screen needs a third saturated hue to signal interactivity, that's a bug; the previous cyan accent was removed for exactly this reason.", "section": "colors" },
+      { "name": "The Rationed-Hue Rule", "body": "Saturated color earns its place three ways only: team identity (red/blue), the timer status ladder (amber -> red), and the HP heart. Everywhere else is black, ivory, and the blue-gray ink ramp.", "section": "colors" },
+      { "name": "The One Animated Word Rule", "body": "Only the landing display title's letter-spacing moves. Every other element enters via opacity/position; type geometry elsewhere stays static.", "section": "typography" },
+      { "name": "The Glow-Not-Shadow Rule", "body": "To make something feel important, give it light, never a drop shadow.", "section": "elevation" },
+      { "name": "The Blur-Is-For-Floating-Things Rule", "body": "backdrop-filter: blur() is allowed only on genuinely floating transient overlays (win banner, round splash, reconnect overlay, tutorial box, translucent surface panels). It is never a decorative default.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep the app background pitch black (#000000): no near-black tints, no warm/cool drift.",
+      "Do use ivory (accent-ivory) as the one \"selected / important\" accent on every surface, landing to HUD.",
+      "Do ration saturated color to the three sanctioned jobs: team identity, the timer status ladder, the HP heart.",
+      "Do convey depth with glow (halos, hover blooms, focus rings), never a drop shadow on a base card or panel.",
+      "Do pair a non-color signal with every status color (the timer pulses at crit; teams read by position/label too).",
+      "Do keep the primary action to one filled ivory button per screen; every sibling stays ghost/outline.",
+      "Do run the ignition entrance once per mount and honor prefers-reduced-motion with an instant/opacity-only fallback."
+    ],
+    "donts": [
+      "Don't reintroduce the retired cyan accent, or any third saturated hue, to signal interactivity; ivory carries that job app-wide now.",
+      "Don't introduce gamer-RGB / neon-cyberpunk overload: rainbow gradients or glow beyond the title and the sanctioned status/team hues. Electric != garish.",
+      "Don't let the config panel read as a generic admin dashboard / SaaS settings form; density is carried by hierarchy and the instrument voice.",
+      "Don't reach for glassmorphism as a default; backdrop-filter is only for genuinely floating transient overlays.",
+      "Don't add cutesy edu-game touches: mascots, primary-color blocks, \"math is fun!\" framing.",
+      "Don't use border-left/border-right greater than 1px as a colored accent stripe on any element.",
+      "Don't let the landing title overflow at the clamp(3.5rem, 8vw, 6rem) ceiling; test copy at the 1024px phone-gate breakpoint."
+    ]
+  }
+}
