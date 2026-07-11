@@ -1,4 +1,6 @@
 import { createRoot } from "react-dom/client";
+import "@fontsource-variable/archivo/wdth.css";
+import "@fontsource-variable/martian-mono/index.css";
 import "../design/foundation.css";
 import "./theme.css";
 import { App } from "./App";

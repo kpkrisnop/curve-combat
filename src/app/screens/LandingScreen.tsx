@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SpacetimeBackground } from "../SpacetimeBackground";
 import { RoomCodeInput } from "./RoomCodeInput";
 
@@ -11,40 +11,70 @@ function randomCode(): string {
 
 export function LandingScreen({ initialPanelOpen = false }: { initialPanelOpen?: boolean } = {}) {
   const [panelOpen, setPanelOpen] = useState(initialPanelOpen);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+
+  // Escape closes the online panel and returns focus to its toggle
+  useEffect(() => {
+    if (!panelOpen) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setPanelOpen(false);
+        toggleRef.current?.focus();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [panelOpen]);
 
   function handleCreate() {
     location.hash = `#room=${randomCode()}`;
   }
 
   return (
-    <div className="gw-landing gw-layer">
+    <div className="gw-landing">
       <SpacetimeBackground />
-      <div className="gw-layer" style={{ textAlign: "center" }}>
-        <h1><span className="t-red">GRAPH</span> <span className="t-blue">WAR</span></h1>
-        <p className="gw-tagline">Fire mathematical functions. Hit your opponent.</p>
+      <div className="land-bleed" aria-hidden="true" />
+      <div className="land-chrome" aria-hidden="true">
+        <span className="land-chrome__tl">SPACETIME ARENA</span>
+        <span className="land-chrome__tr">DESKTOP · 2 TEAMS</span>
+        <span className="land-chrome__bl">f : ℝ → ℝ</span>
+        <span className="land-chrome__br">TURN-BASED · LOCAL + ONLINE</span>
       </div>
-      <div className="gw-layer" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "20px" }}>
-        <div style={{ display: "flex", gap: "20px" }}>
-          <button className="gw-btn gw-btn--primary" onClick={() => { location.hash = "#local"; }}>
-            ▶ Play Locally
-          </button>
-          <button
-            className="gw-btn"
-            aria-expanded={panelOpen}
-            onClick={() => setPanelOpen((v) => !v)}
-          >
-            Play Online
-          </button>
-        </div>
+      <h1 className="land-title">
+        <span className="t-red">GRAPH</span> <span className="t-blue">WAR</span>
+      </h1>
+      <p className="land-tagline">
+        <span className="land-tagline__eq">y = f(x)</span>
+        <span className="land-tagline__sep" aria-hidden="true">·</span>
+        fire curves, hit your opponent
+      </p>
+      <div className="land-actions">
+        <button
+          className="land-btn land-btn--primary"
+          onClick={() => { location.hash = "#local"; }}
+        >
+          Play Locally
+        </button>
+        <button
+          ref={toggleRef}
+          className="land-btn"
+          aria-expanded={panelOpen}
+          onClick={() => setPanelOpen((v) => !v)}
+        >
+          Play Online
+        </button>
+      </div>
+      <div className="land-panel-slot">
         {panelOpen && (
-          <div
-            className="gw-online-panel"
-            style={{ display: "flex", gap: "20px", alignItems: "center" }}
-          >
-            <button className="gw-btn gw-btn--primary" onClick={handleCreate}>
+          <div className="land-panel">
+            <button className="land-btn" onClick={handleCreate}>
               Create Room
             </button>
-            <RoomCodeInput />
+            <span className="land-panel__or" aria-hidden="true">or</span>
+            <div className="land-join">
+              <RoomCodeInput autoFocus />
+              <span className="land-join__hint">ENTER A ROOM CODE</span>
+            </div>
           </div>
         )}
       </div>

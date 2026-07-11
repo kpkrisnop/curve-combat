@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:all": "npm run server & npm run dev; wait",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
@@ -14,6 +15,10 @@
   "dependencies": {
     "@cortex-js/compute-engine": "^0.62.0",
     "@edtr-io/mathquill": "^0.11.0",
+    "@fontsource-variable/archivo": "^5.2.8",
+    "@fontsource-variable/martian-mono": "^5.2.7",
+    "@mdi/js": "^7.4.47",
+    "@mdi/react": "^1.6.1",
     "jquery": "^3.7.1",
     "pixi.js": "^8.19.0",
     "react": "^19.2.7",

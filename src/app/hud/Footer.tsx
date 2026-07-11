@@ -16,7 +16,9 @@
 // component only renders the controls and calls the prop back. Copy code/
 // link are fully wired here (clipboard write is local, no server round-trip).
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Icon } from "../mdiIcon";
+import { mdiPlay, mdiClockOutline, mdiSwapHorizontal, mdiContentCopy, mdiCheck } from "@mdi/js";
 import { HudBar } from "./HudBar";
 import type { Team } from "./hudStore";
 
@@ -57,12 +59,22 @@ interface FooterProps {
 
 export function Footer(props: FooterProps) {
   const [localName, setLocalName] = useState(props.name ?? "");
+  const [copied, setCopied] = useState<"code" | "link" | null>(null);
+  const copiedTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Keep in sync if the parent's `name` prop changes from outside (e.g. once
   // E2 wires setName round-trips and the server echoes the confirmed name).
   useEffect(() => {
     if (props.name !== undefined) setLocalName(props.name);
   }, [props.name]);
+
+  useEffect(() => () => { if (copiedTimeout.current) clearTimeout(copiedTimeout.current); }, []);
+
+  function flashCopied(which: "code" | "link") {
+    setCopied(which);
+    if (copiedTimeout.current) clearTimeout(copiedTimeout.current);
+    copiedTimeout.current = setTimeout(() => setCopied(null), 1400);
+  }
 
   if (props.mode === "ingame") {
     const quit = () => { if (window.confirm("Quit match?")) props.onLeave?.(); };
@@ -85,12 +97,14 @@ export function Footer(props: FooterProps) {
   };
 
   const copyCode = () => {
-    if (props.roomCode) void navigator.clipboard.writeText(props.roomCode);
+    if (!props.roomCode) return;
+    void navigator.clipboard.writeText(props.roomCode);
+    flashCopied("code");
   };
   const copyLink = () => {
-    if (props.roomCode) {
-      void navigator.clipboard.writeText(roomLink(props.roomCode, location.origin + location.pathname));
-    }
+    if (!props.roomCode) return;
+    void navigator.clipboard.writeText(roomLink(props.roomCode, location.origin + location.pathname));
+    flashCopied("link");
   };
 
   return (
@@ -99,7 +113,10 @@ export function Footer(props: FooterProps) {
         {props.mode === "pregame-online" ? "Leave Room" : "Leave"}
       </button>
       {showWaiting ? (
-        <span className="footer-waiting">⏳ Waiting for host…</span>
+        <span className="footer-waiting">
+          <Icon className="footer-waiting__icon" path={mdiClockOutline} size="15px" color="currentColor" />
+          Waiting for host…
+        </span>
       ) : (
         <button
           type="button"
@@ -107,7 +124,8 @@ export function Footer(props: FooterProps) {
           disabled={props.startDisabled}
           onClick={props.onStart}
         >
-          ▶ Start Match
+          <Icon path={mdiPlay} size="15px" color="currentColor" />
+          Start Match
         </button>
       )}
 
@@ -124,14 +142,17 @@ export function Footer(props: FooterProps) {
             />
           </label>
           <button type="button" className="gw-btn footer-switch" onClick={props.onSwitchSide}>
-            ⇄ Switch side
+            <Icon path={mdiSwapHorizontal} size="15px" color="currentColor" />
+            Switch side
           </button>
           <span className="footer-sep" aria-hidden="true" />
-          <button type="button" className="gw-btn footer-copy-code" onClick={copyCode}>
-            ⧉ Copy code
+          <button type="button" className={`gw-btn footer-copy-code ${copied === "code" ? "is-confirmed" : ""}`} onClick={copyCode}>
+            <Icon path={copied === "code" ? mdiCheck : mdiContentCopy} size="15px" color="currentColor" />
+            {copied === "code" ? "Copied" : "Copy code"}
           </button>
-          <button type="button" className="gw-btn footer-copy-link" onClick={copyLink}>
-            ⧉ Copy link
+          <button type="button" className={`gw-btn footer-copy-link ${copied === "link" ? "is-confirmed" : ""}`} onClick={copyLink}>
+            <Icon path={copied === "link" ? mdiCheck : mdiContentCopy} size="15px" color="currentColor" />
+            {copied === "link" ? "Copied" : "Copy link"}
           </button>
         </>
       )}

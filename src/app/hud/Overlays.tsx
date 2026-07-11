@@ -19,9 +19,9 @@ function WinBanner() {
   const win = useStore(hudStore, (s) => s.win);
   if (!win) return null;
   return (
-    <div className="gw-overlay-center">
+    <div className="gw-overlay-center gw-overlay-center--modal">
       <div className="win-banner">
-        <h2 className={`w-${win.winner}`}>{win.winner.toUpperCase()} WINS!</h2>
+        <h2 className={`w-${win.winner}`}>{win.winner} wins</h2>
         <p>{win.detail}</p>
         <button className="gw-btn gw-btn--primary" onClick={() => hudController.requestReset()}>
           Back to Lobby
@@ -46,7 +46,7 @@ function TutorialOverlay() {
   const tutorial = useStore(hudStore, (s) => s.tutorial);
   if (!tutorial) return null;
   return (
-    <div className="gw-overlay-center">
+    <div className="gw-overlay-center gw-overlay-center--modal">
       <div className="tutorial-box">
         <p>{tutorial.text}</p>
         <div className="tutorial-actions">

@@ -24,7 +24,7 @@ export interface NetLobbyState {
   spectators: { id: string; name: string }[];
   /** Live player states from MatchState, updated on every server matchState event. */
   matchPlayers: PlayerState[];
-  /** Active player id (from MatchState.activePlayerId), for TeamStrip ring. */
+  /** Active player id (from MatchState.activePlayerId), for the on-map active badge. */
   matchActivePlayerId: string | null;
   config: PanelConfig;   // Phase 1's PanelConfig (mode/rounds/noTurn/turnSeconds/map/scatter)
   round1Seed: number | null;

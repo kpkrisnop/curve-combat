@@ -6,6 +6,21 @@ import { arenaDefaults } from "../../game/arenaDefaults";
 import { LocalGame } from "../../game/LocalGame";
 import type { MatchConfig } from "../../game/matchLogic";
 
+// SpacetimeBackground calls window.matchMedia — stub it for jsdom
+Object.defineProperty(window, "matchMedia", {
+  writable: true,
+  value: vi.fn().mockImplementation((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+});
+
 const fakeRenderer = {
   setMap: vi.fn(),
   getEffectiveBounds: vi.fn(() => ({ xMin: -10, xMax: 10, yMin: -8, yMax: 8 })),
@@ -39,24 +54,13 @@ describe("LocalFlow arena shell", () => {
     expect(screen.getByRole("button", { name: /Start Match/i })).toBeTruthy();
   });
 
-  it("gear toggles the settings panel as a second grid column, without moving the gear", () => {
+  it("pre-game always shows the settings panel; there is no open/close toggle (ADR-0007)", () => {
     render(<LocalFlow initial={initial} />);
     const shell = document.querySelector(".local-flow") as HTMLElement;
-    const gear = screen.getByRole("button", { name: /settings/i });
-    const gearClassBefore = gear.className;
 
-    // Settings open by default (parity with today's always-visible drawer).
     expect(document.querySelector(".comp.side-panel")).toBeTruthy();
     expect(shell.className).toContain("arena-shell--open");
-
-    fireEvent.click(gear);
-    expect(document.querySelector(".comp.side-panel")).toBeNull();
-    expect(shell.className).not.toContain("arena-shell--open");
-    // Gear itself carries the exact same classes open or closed (fixed position).
-    expect(gear.className).toBe(gearClassBefore);
-
-    fireEvent.click(gear);
-    expect(document.querySelector(".comp.side-panel")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /settings/i })).toBeNull();
   });
 
   it("does not render the top-center round-status element before the match starts (config phase)", () => {

@@ -58,15 +58,39 @@
    the map. Not a bar: a single self-contained pill, in-game only. */
 .round-status { position: absolute; top: var(--gw-gap); left: 50%; transform: translateX(-50%);
   z-index: 6; background: var(--gw-surface); border: 1px solid var(--gw-border);
-  border-radius: 999px; padding: 8px 18px; font-weight: 800; white-space: nowrap;
-  pointer-events: none; }
+  border-radius: var(--gw-radius-pill); padding: 8px 18px; font-weight: 800;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+  backdrop-filter: blur(6px); pointer-events: none; }
 .gw-overlay-center { position: absolute; inset: 0; z-index: 10;
   display: flex; align-items: center; justify-content: center; }
+/* Modal overlays (win, tutorial) dim the arena behind them so the card holds
+   focus; transient ones (round splash) skip the scrim to stay lightweight. */
+.gw-overlay-center--modal { background: oklch(0 0 0 / 0.55); backdrop-filter: blur(2px); }
 .win-banner, .round-splash, .tutorial-box {
   background: var(--gw-surface); border: 1px solid var(--gw-border-strong);
-  border-radius: var(--gw-radius-xl); padding: var(--gw-space-6);
-  text-align: center; backdrop-filter: blur(10px);
+  border-radius: var(--gw-radius-2xl); padding: var(--gw-space-6) var(--gw-space-7);
+  text-align: center; backdrop-filter: blur(12px);
+  box-shadow: 0 24px 64px oklch(0 0 0 / 0.5);
 }
-.win-banner h2 { margin: 0 0 var(--gw-space-3); font-size: var(--gw-fs-xl); }
+.win-banner h2 {
+  margin: 0 0 var(--gw-space-2); font-size: var(--gw-fs-xl); font-weight: 800;
+  letter-spacing: 0.02em; text-transform: uppercase;
+}
+.win-banner p { margin: 0 0 var(--gw-space-5); color: var(--gw-text-muted); }
 .win-banner .w-red { color: var(--gw-red); } .win-banner .w-blue { color: var(--gw-blue); }
-.tutorial-actions { display: flex; gap: var(--gw-space-3); justify-content: center; margin-top: var(--gw-space-4); }
+.tutorial-box p { margin: 0; color: var(--gw-text); }
+.tutorial-actions { display: flex; gap: var(--gw-space-3); justify-content: center; margin-top: var(--gw-space-5); }
+
+/* Entrance — a quiet lift into focus, the app's expo-out language. Scrim fades
+   first, the card rises through it. */
+@media (prefers-reduced-motion: no-preference) {
+  .gw-overlay-center--modal { animation: gw-scrim-in 200ms var(--gw-ease-out-expo) both; }
+  .win-banner, .round-splash, .tutorial-box {
+    animation: gw-overlay-in 280ms var(--gw-ease-out-expo) 60ms both;
+  }
+}
+@keyframes gw-scrim-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes gw-overlay-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); filter: blur(6px); }
+  to   { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}

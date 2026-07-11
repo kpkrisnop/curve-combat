@@ -213,7 +213,7 @@ describe("OnlineFlow", () => {
     expect(screen.getByRole("button", { name: /Copy link/i })).toBeTruthy();
   });
 
-  it("gear toggles the settings panel as a second grid column, without moving the gear", async () => {
+  it("lobby always shows the settings panel; there is no open/close toggle (ADR-0007)", async () => {
     await act(async () => {
       render(<OnlineFlow code="ROOM1" />);
     });
@@ -230,16 +230,9 @@ describe("OnlineFlow", () => {
     });
 
     const shell = document.querySelector(".online-flow") as HTMLElement;
-    const gear = screen.getByRole("button", { name: /settings/i });
-    const gearClassBefore = gear.className;
-
     expect(document.querySelector(".comp.side-panel")).toBeTruthy();
     expect(shell.className).toContain("arena-shell--open");
-
-    fireEvent.click(gear);
-    expect(document.querySelector(".comp.side-panel")).toBeNull();
-    expect(shell.className).not.toContain("arena-shell--open");
-    expect(gear.className).toBe(gearClassBefore);
+    expect(screen.queryByRole("button", { name: /settings/i })).toBeNull();
   });
 
   it("joins with the default nickname from getNickname()", async () => {
@@ -433,9 +426,9 @@ describe("OnlineFlow", () => {
     expect(namedPlayers.map((p) => p.id).sort()).toEqual(["b1", "r1"]);
   });
 
-  // ── L2 regression: config-flash target survives settings panel collapse ──
+  // ── Config-flash cue is anchored to the always-present lobby side panel ──
 
-  it("the config-flash target element (gear button) is rendered whether or not the settings panel is open", async () => {
+  it("the config-flash target (side panel) is present throughout the lobby (ADR-0007)", async () => {
     await act(async () => {
       render(<OnlineFlow code="ROOM1" />);
     });
@@ -451,17 +444,12 @@ describe("OnlineFlow", () => {
       });
     });
 
-    const gear = screen.getByRole("button", { name: /settings/i });
+    // No gear toggle exists; the panel (the flash target) is simply always there.
+    expect(screen.queryByRole("button", { name: /settings/i })).toBeNull();
     expect(document.querySelector(".comp.side-panel")).toBeTruthy();
-    expect(gear).toBeTruthy();
-
-    fireEvent.click(gear);
-    expect(document.querySelector(".comp.side-panel")).toBeNull();
-    // Gear (and thus the config-flash ref target) must still be present.
-    expect(screen.getByRole("button", { name: /settings/i })).toBeTruthy();
   });
 
-  it("a config-flash increment adds the flash class to the gear button even with the panel collapsed", async () => {
+  it("a config-flash increment adds the flash class to the side panel", async () => {
     await act(async () => {
       render(<OnlineFlow code="ROOM1" />);
     });
@@ -478,18 +466,15 @@ describe("OnlineFlow", () => {
       });
     });
 
-    // Collapse the settings panel (guest closes the gear).
-    const gear = screen.getByRole("button", { name: /settings/i });
-    fireEvent.click(gear);
-    expect(document.querySelector(".comp.side-panel")).toBeNull();
+    const panel = document.querySelector(".comp.side-panel") as HTMLElement;
+    expect(panel).toBeTruthy();
 
     // Host changes config → server broadcasts a bumped configFlash counter.
     act(() => {
       netLobbyStore.set({ configFlash: 1 });
     });
 
-    const gearAfter = screen.getByRole("button", { name: /settings/i });
-    expect(gearAfter.className).toContain("gw-config-flash");
+    expect(panel.className).toContain("gw-config-flash");
   });
 
   // ── Task 9: Leave/Quit wiring ──────────────────────────────────────────────

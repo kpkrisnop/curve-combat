@@ -14,6 +14,7 @@ A browser game where two teams fire mathematical function curves across a planet
 - `src/ui/` — Math-input helpers (MathQuill-based; browser-only).
 - `server/` — Authoritative WebSocket server: rooms and the match engine. **The server is the source of truth for online matches.**
 - `docs/` — `adr/` (accepted decisions), `superpowers/specs` + `superpowers/plans` (design specs and implementation plans).
+- `CONTEXT.md` (root) — the domain glossary. Canonical vocabulary (Team, Player, Match, Round, Turn, Turn Timer, Planet, Crater, …) with the words to avoid. Use these terms in code and discussion; extend it when new domain concepts are pinned down.
 
 ## Commands
 
@@ -37,4 +38,6 @@ A browser game where two teams fire mathematical function curves across a planet
 
 - This checkout often lives on a slow (cloud-synced) filesystem, which makes Vitest's per-file environment setup slow. The **full suite is flaky under parallel load** — timing-sensitive React and countdown tests time out when many run at once but pass in isolation. Before treating a failure as a regression, re-run that file alone. The server integration tests (real countdown delays) are the most sensitive.
 - Keep the client protocol and server handlers in lockstep (see Conventions).
+- The HUD (`hudStore` / `hudController` in `src/app/hud/`) is an app-wide singleton shared by both local and online play. Screens own its lifecycle — reset HUD state on entry and dispose their game instance on unmount — or timers, intervals, and stale state bleed between modes.
+- Much of the surface is UI, animation, networking, and turn/round lifecycle: the bug classes here (focus, leaked intervals, render timing, reconnect/turn state) are ones the unit suite misses. Reproduce and verify in a real browser, not just Vitest.
 - `.superpowers/` (gitignored) holds a subagent-workflow progress ledger when that workflow is in use.

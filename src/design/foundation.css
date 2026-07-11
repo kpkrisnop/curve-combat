@@ -1,41 +1,52 @@
 /* ============================================================================
    Graph War — Design Foundation
-   Tokens + primitives codified from the existing game dark theme (index.html).
-   This is a systematization of what already ships, not a redesign. Team colors
-   are kept as their own semantic tokens so the neutral UI accent can diverge
-   from the blue player identity later without a recolor.
+   Single source of truth for design tokens (colors, type, spacing, radii,
+   motion) plus the primitives (`.gw-*`) the lobby, settings panel, and HUDs
+   share. `theme.css` (loaded after this file) holds composed, page-specific
+   styles that consume these tokens — it must not redeclare any of them.
    ============================================================================ */
 
 :root {
-  /* ── Surfaces ──────────────────────────────────────────────────────────── */
-  --gw-bg: #0f141a;              /* app background */
-  --gw-surface: #121a22;         /* panels/cards (was rgba(18,26,34,.92)) */
-  --gw-surface-2: #0c1116;       /* inset fields, wells */
-  --gw-border: #2b3a49;          /* default hairline */
-  --gw-border-strong: #34506a;   /* emphasized/interactive border */
+  /* ── Surfaces — pitch-black spacetime (Phase-1 redesign) ─────────────────
+     Near-neutral darks: barely-cool, chroma trimmed so panels read as deep
+     charcoal on black, not blue glass. The blue-gray coolness lives in the
+     ink ramp; surfaces stay close to the pitch-black field. */
+  --gw-bg: #000000;
+  --gw-surface: rgba(12, 14, 18, 0.85);
+  --gw-surface-2: rgba(7, 9, 12, 0.9);
+  --gw-border: #1d222a;
+  --gw-border-strong: #303c48;
 
   /* ── Text ──────────────────────────────────────────────────────────────── */
   --gw-text: #cdd9e5;            /* primary */
   --gw-text-muted: #8499ab;      /* secondary */
-  --gw-text-faint: #5e7081;      /* tertiary / hints / disabled labels */
-  --gw-text-code: #9fd8b6;       /* inline code / room codes */
+  --gw-text-faint: #5e7081;      /* tertiary — reserve for the single quietest element on a screen */
 
   /* ── Player identity (semantic — do NOT reuse as neutral UI accent) ──────── */
   --gw-red: #ff4444;
-  --gw-red-dim: rgba(255, 68, 68, 0.18);
   --gw-blue: #4488ff;
-  --gw-blue-dim: rgba(68, 136, 255, 0.18);
+  --gw-glow-red: 0 0 24px rgba(255, 68, 68, 0.35);
+  --gw-glow-blue: 0 0 24px rgba(68, 136, 255, 0.35);
+  /* Hero duel colors — tuned for glow-on-black title/seat treatments; team tokens above stay untouched */
+  --gw-hero-red: oklch(0.63 0.235 27);
+  --gw-hero-blue: oklch(0.66 0.19 258);
 
-  /* ── Neutral interactive accent (currently the blue hue; kept separate so it
-        can be retuned independently of the blue TEAM color) ────────────────── */
-  --gw-accent: #4488ff;
-  --gw-accent-hover: #2266dd;
-  --gw-accent-tint: rgba(68, 136, 255, 0.12);
-  --gw-danger: #c74440;
+  /* Neutral interactive accent — the same near-white "primary-ivory" landing
+     uses for its one filled button, reused here as the whole app's "this is
+     selected/important" language instead of a third, disconnected hue.
+     Deliberately NOT team-blue (was #4488ff, identical to --gw-blue) so
+     "this is selected" never reads as "this is the BLUE team" when a seat
+     chip and a selected option card sit side by side. */
+  --gw-accent: oklch(0.93 0.008 250);
+  --gw-accent-hover: oklch(0.99 0.003 250);
+  --gw-accent-tint: oklch(1 0 0 / 0.08);
+  --gw-glow-accent: 0 0 20px oklch(1 0 0 / 0.22);
 
   /* ── Type scale ────────────────────────────────────────────────────────── */
   --gw-font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
   --gw-font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --gw-font-display: "Archivo Variable", var(--gw-font-sans);
+  --gw-font-tech: "Martian Mono Variable", ui-monospace, SFMono-Regular, Menlo, monospace;
   --gw-fs-2xs: 9px;
   --gw-fs-xs: 11px;
   --gw-fs-sm: 13px;
@@ -61,28 +72,18 @@
   --gw-radius-2xl: 16px;
   --gw-radius-pill: 20px;
 
-  /* ── Elevation ─────────────────────────────────────────────────────────── */
-  --gw-shadow-sm: 0 6px 20px rgba(0, 0, 0, 0.45);
-  --gw-shadow-md: 0 8px 32px rgba(0, 0, 0, 0.5);
-  --gw-shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.55);
-  --gw-glow-accent: 0 0 12px var(--gw-accent-tint);
-
-  /* ── Z-layers (codified from the game overlay stack) ───────────────────── */
-  --gw-z-hud: 5;
-  --gw-z-banner: 6;
-  --gw-z-splash: 7;
-  --gw-z-tutorial: 8;
-  --gw-z-lobby: 10;
-  --gw-z-popover: 20;
-
   /* ── Motion ────────────────────────────────────────────────────────────── */
   --gw-transition: 0.15s ease;
+  --gw-ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 
   /* ── Arena shell (grid-of-cards) ───────────────────────────────────────────
      ONE shared gutter token reused as BOTH the grid `gap` and the shell
      `padding` — every gap (card-to-card, card-to-screen-edge) is equal. */
   --gw-gap: 18px;
-  --gw-panel-w: 340px;
+  /* Fixed 340px at the 1024px phone-gate floor through ~1920px (tested);
+     grows modestly on large/ultra-wide displays instead of staying a fixed
+     sliver next to an ever-larger map, capped so it never gets absurd. */
+  --gw-panel-w: clamp(340px, 16vw, 420px);
   --gw-footer-min: 78px;
 }
 
@@ -90,212 +91,36 @@
    Primitives — reusable classes the lobby, settings panel, and HUDs share.
    ============================================================================ */
 
+/* ── Visually hidden (screen-reader only) ────────────────────────────────── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* ── Label (section eyebrow) ─────────────────────────────────────────────── */
 .gw-label {
   font-size: var(--gw-fs-xs);
   font-weight: 700;
   letter-spacing: 0.1em;
-  color: var(--gw-text-faint);
+  color: var(--gw-text-muted);
   text-transform: uppercase;
   margin: 0 0 var(--gw-space-2);
 }
 
-/* ── Panel / card ────────────────────────────────────────────────────────── */
-.gw-panel {
-  background: var(--gw-surface);
-  border: 1px solid var(--gw-border);
-  border-radius: var(--gw-radius-2xl);
-  box-shadow: var(--gw-shadow-sm);
-}
-
-/* ── Button ──────────────────────────────────────────────────────────────── */
-.gw-btn {
-  font-family: inherit;
-  font-size: var(--gw-fs-sm);
-  font-weight: 600;
-  border: 1px solid var(--gw-border);
-  background: var(--gw-surface-2);
-  color: var(--gw-text-muted);
-  border-radius: var(--gw-radius-lg);
-  padding: var(--gw-space-3) var(--gw-space-4);
-  cursor: pointer;
-  transition:
-    border-color var(--gw-transition),
-    color var(--gw-transition),
-    background var(--gw-transition);
-}
-.gw-btn:hover:not(:disabled) {
-  border-color: var(--gw-accent);
-  color: var(--gw-text);
-}
-.gw-btn:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
-
-.gw-btn--primary {
-  border: none;
-  background: var(--gw-accent);
-  color: #fff;
-  padding: var(--gw-space-3) var(--gw-space-5);
-  letter-spacing: 0.03em;
-}
-.gw-btn--primary:hover:not(:disabled) {
-  background: var(--gw-accent-hover);
-  color: #fff;
-}
-
-.gw-btn--ghost {
-  background: transparent;
-}
-
-.gw-btn--sm {
-  padding: var(--gw-space-1) var(--gw-space-3);
-  font-size: var(--gw-fs-xs);
-}
-
-/* ── Selectable card (mode / rounds pickers) ─────────────────────────────── */
+/* ── Card / panel (config panel, seat chips, HUD readouts) ───────────────
+   A plain surface primitive — never interactive by itself. (The button
+   primitive `.gw-btn` and the config controls live in theme.css.) */
 .gw-card {
-  position: relative;
-  flex: 1;
-  border: 1px solid var(--gw-border);
-  background: var(--gw-surface-2);
-  color: var(--gw-text-muted);
-  border-radius: var(--gw-radius-lg);
-  padding: var(--gw-space-3) var(--gw-space-4);
-  font-size: var(--gw-fs-sm);
-  font-weight: 600;
-  text-align: center;
-  cursor: pointer;
-  transition:
-    border-color var(--gw-transition),
-    color var(--gw-transition),
-    background var(--gw-transition);
-}
-.gw-card:hover:not(:disabled) {
-  border-color: var(--gw-accent);
-  color: var(--gw-text);
-}
-.gw-card.is-active {
-  border-color: var(--gw-accent);
-  background: var(--gw-accent-tint);
-  color: var(--gw-text);
-}
-.gw-card:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
-.gw-card__hint {
-  display: block;
-  font-size: var(--gw-fs-xs);
-  font-weight: 400;
-  color: var(--gw-text-faint);
-  margin-top: 2px;
-}
-
-/* ── Field (labeled control: slider, input) ──────────────────────────────── */
-.gw-field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gw-space-1);
-  font-size: var(--gw-fs-xs);
-  color: var(--gw-text-muted);
-}
-.gw-field__head {
-  display: flex;
-  justify-content: space-between;
-}
-.gw-field__value {
-  color: var(--gw-accent);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-.gw-field input[type="range"] {
-  width: 100%;
-  accent-color: var(--gw-accent);
-}
-
-/* ── Toggle row (checkbox) ───────────────────────────────────────────────── */
-.gw-toggle {
-  display: flex;
-  align-items: center;
-  gap: var(--gw-space-3);
-}
-.gw-toggle input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-  accent-color: var(--gw-accent);
-}
-.gw-toggle label {
-  font-size: var(--gw-fs-sm);
-  color: var(--gw-text-muted);
-  cursor: pointer;
-}
-
-/* ── Pill / badge ────────────────────────────────────────────────────────── */
-.gw-pill {
-  display: inline-block;
   background: var(--gw-surface);
   border: 1px solid var(--gw-border);
-  border-radius: var(--gw-radius-pill);
-  padding: var(--gw-space-2) var(--gw-space-4);
-  white-space: nowrap;
-  font-size: var(--gw-fs-sm);
-  font-weight: 600;
-  color: var(--gw-text-muted);
-  letter-spacing: 0.03em;
-}
-.gw-badge {
-  display: inline-block;
-  background: var(--gw-border);
-  color: var(--gw-text-faint);
-  font-size: var(--gw-fs-2xs);
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  padding: 2px 5px;
-  border-radius: var(--gw-radius-sm);
-  text-transform: uppercase;
-}
-
-/* ── Inline code (room codes, seeds) ─────────────────────────────────────── */
-.gw-code {
-  font-family: var(--gw-font-mono);
-  background: var(--gw-surface-2);
-  border: 1px solid var(--gw-border);
-  border-radius: var(--gw-radius-sm);
-  padding: var(--gw-space-1) var(--gw-space-2);
-  color: var(--gw-text);
-  font-size: var(--gw-fs-xs);
-}
-
-/* ── Settings panel layout (live-preview section) ────────────────────────── */
-.gw-preview {
-  display: block;
-  width: 100%;
-  background: #0a0e14;
-  border: 1px solid var(--gw-border);
-  border-radius: var(--gw-radius-sm);
-}
-.gw-readout {
-  display: flex;
-  gap: var(--gw-space-4);
-  font-size: var(--gw-fs-xs);
-  color: var(--gw-text-muted);
-  font-variant-numeric: tabular-nums;
-  margin: var(--gw-space-2) 0;
-}
-.gw-seed-row {
-  display: flex;
-  align-items: center;
-  gap: var(--gw-space-2);
-  margin-bottom: var(--gw-space-3);
-}
-.gw-seed-row .gw-code {
-  flex: 1;
-}
-.gw-controls {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--gw-space-2) var(--gw-space-3);
+  border-radius: var(--gw-radius-lg);
+  padding: var(--gw-space-4);
+  backdrop-filter: blur(6px);
 }

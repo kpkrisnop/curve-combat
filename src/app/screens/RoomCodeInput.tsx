@@ -3,7 +3,7 @@ import { useState } from "react";
 /**
  * Reusable 4-letter room-code entry. Filters to letters, uppercases, and
  * auto-submits (navigates to `#room=CODE`) once 4 letters are entered.
- * Shared by the landing page's inline "Play Online" panel and `JoinRoom`.
+ * Used by the landing page's inline "Play Online" panel.
  */
 export function RoomCodeInput({ autoFocus = false }: { autoFocus?: boolean }) {
   const [value, setValue] = useState("");
@@ -24,8 +24,11 @@ export function RoomCodeInput({ autoFocus = false }: { autoFocus?: boolean }) {
       maxLength={4}
       value={value}
       onChange={handleChange}
-      placeholder="CODE"
+      placeholder="····"
       aria-label="Room code"
+      autoComplete="off"
+      autoCapitalize="characters"
+      spellCheck={false}
     />
   );
 }

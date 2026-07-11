@@ -201,7 +201,7 @@ export class LocalGame {
     const loserLabel = roundLoser === "red" ? "RED" : "BLUE";
     this.ui.showSplash(
       `Round ${m.round + 1} of ${this.config.rounds}<br>` +
-      `<span style="color:${roundLoser === "red" ? "var(--gw-blue)" : "var(--gw-red)"}">${winnerLabel} wins the round!</span><br>` +
+      `<span style="color:${roundLoser === "red" ? "var(--gw-blue)" : "var(--gw-red)"}">${winnerLabel} wins the round</span><br>` +
       `<small>${loserLabel} shoots first</small>`,
     );
     this.splashTimeout = setTimeout(() => {

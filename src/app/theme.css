@@ -1,13 +1,6 @@
 /* ── Phase-1 redesign: pitch black space-time ─────────────────────────── */
-:root {
-  --gw-bg: #000000;
-  --gw-surface: rgba(14, 18, 26, 0.82);
-  --gw-surface-2: rgba(8, 10, 15, 0.9);
-  --gw-border: #1c2530;
-  --gw-border-strong: #2e4256;
-  --gw-glow-red: 0 0 24px rgba(255, 68, 68, 0.35);
-  --gw-glow-blue: 0 0 24px rgba(68, 136, 255, 0.35);
-}
+/* Tokens (bg/surface/border/accent/glow) live in src/design/foundation.css,
+   the single source of truth — this file holds composed styles only. */
 
 html, body { margin: 0; background: var(--gw-bg); color: var(--gw-text); }
 body { font-family: var(--gw-font-sans); overflow: hidden; }
@@ -20,38 +13,210 @@ body { font-family: var(--gw-font-sans); overflow: hidden; }
 
 .gw-app { min-height: 100vh; }
 
-/* Landing */
+/* ── Landing — "cosmic, sleek, electric" (docs/superpowers/specs/landing-screen-redesign-brief.md) ── */
 .gw-landing {
-  min-height: 100vh; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: var(--gw-space-6);
+  position: relative;
+  min-height: 100vh;
+  display: grid;
+  /* Rows: spacer · title · tagline · actions · reserved panel slot · spacer.
+     The slot is pre-reserved so opening the online panel never reflows the
+     title block. Bottom spacer > top: optical center sits above geometric. */
+  grid-template-rows: 1fr auto auto auto minmax(150px, auto) 1.25fr;
+  justify-items: center;
 }
-.gw-landing h1 {
-  font-size: clamp(56px, 9vw, 128px); letter-spacing: 0.06em; margin: 0;
-  font-weight: 900;
+/* Content rides above the fixed z-0 background canvas (which must keep its
+   own position: fixed — no blanket child rule here) */
+.land-title, .land-tagline, .land-actions, .land-panel-slot {
+  position: relative; z-index: 1;
 }
-.gw-landing h1 .t-red  { color: var(--gw-red);  text-shadow: var(--gw-glow-red); }
-.gw-landing h1 .t-blue { color: var(--gw-blue); text-shadow: var(--gw-glow-blue); }
-.gw-landing .gw-tagline { color: var(--gw-text-muted); font-size: var(--gw-fs-md); }
 
-.gw-btn {
-  font: inherit; cursor: pointer; border-radius: var(--gw-radius-lg);
-  border: 1px solid var(--gw-border-strong); padding: 14px 36px;
-  background: var(--gw-surface); color: var(--gw-text);
-  font-size: var(--gw-fs-md); font-weight: 700; letter-spacing: 0.04em;
-  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+/* Edge field bleeds — the two sides of the arena, felt not shouted */
+.land-bleed {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(60% 90% at -12% 50%, oklch(0.63 0.235 27 / 0.09), transparent 62%),
+    radial-gradient(60% 90% at 112% 50%, oklch(0.66 0.19 258 / 0.10), transparent 62%);
 }
-.gw-btn:hover { transform: translateY(-1px); border-color: var(--gw-accent); }
-.gw-btn--primary { border-color: var(--gw-accent); box-shadow: var(--gw-glow-blue); }
+
+/* HUD corner chrome — quiet instrumentation, never competing with center */
+.land-chrome {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  font-family: var(--gw-font-tech);
+  font-size: 10px; font-weight: 500; letter-spacing: 0.14em;
+  color: var(--gw-text-muted);
+}
+.land-chrome span { position: absolute; padding: 22px 26px; white-space: nowrap; }
+.land-chrome .land-chrome__tl { top: 0; left: 0; }
+.land-chrome .land-chrome__tr { top: 0; right: 0; }
+.land-chrome .land-chrome__bl { bottom: 0; left: 0; }
+.land-chrome .land-chrome__br { bottom: 0; right: 0; }
+
+/* Title — Archivo wide + black, restrained two-layer ignition glow */
+.land-title {
+  grid-row: 2;
+  margin: 0;
+  font-family: var(--gw-font-display);
+  font-weight: 900;
+  font-variation-settings: "wdth" 125;
+  font-size: clamp(3.5rem, 8vw, 6rem);
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-align: center;
+  text-wrap: balance;
+}
+.land-title .t-red {
+  color: var(--gw-hero-red);
+  text-shadow: 0 0 16px oklch(0.63 0.235 27 / 0.28), 0 0 56px oklch(0.63 0.235 27 / 0.18);
+}
+.land-title .t-blue {
+  color: var(--gw-hero-blue);
+  text-shadow: 0 0 16px oklch(0.66 0.19 258 / 0.3), 0 0 56px oklch(0.66 0.19 258 / 0.2);
+}
+
+/* Tagline — a plotted annotation, tight to the title */
+.land-tagline {
+  grid-row: 3;
+  margin: 22px 0 0;
+  font-family: var(--gw-font-tech);
+  font-size: 0.875rem; font-weight: 400;
+  letter-spacing: 0.06em;
+  color: var(--gw-text-muted);
+}
+.land-tagline .land-tagline__eq { color: var(--gw-text); font-weight: 500; }
+.land-tagline .land-tagline__sep { margin: 0 0.75em; color: var(--gw-text-faint); }
+
+/* Actions — clear air between reading and acting */
+.land-actions {
+  grid-row: 4;
+  margin-top: 56px;
+  display: flex; gap: var(--gw-space-4);
+}
+
+.land-btn {
+  font-family: var(--gw-font-display);
+  font-size: 0.9375rem; font-weight: 600; letter-spacing: 0.02em;
+  padding: 14px 34px;
+  border-radius: var(--gw-radius-lg);
+  border: 1px solid var(--gw-border-strong);
+  background: transparent;
+  color: var(--gw-text);
+  cursor: pointer;
+  transition:
+    background 150ms var(--gw-ease-out-expo),
+    border-color 150ms var(--gw-ease-out-expo),
+    color 150ms var(--gw-ease-out-expo),
+    transform 150ms var(--gw-ease-out-expo),
+    box-shadow 150ms var(--gw-ease-out-expo);
+}
+.land-btn:hover {
+  border-color: oklch(1 0 0 / 0.4);
+  background: oklch(1 0 0 / 0.04);
+  transform: translateY(-1px);
+}
+.land-btn:active { transform: translateY(0) scale(0.98); }
+.land-btn:focus-visible {
+  outline: 2px solid oklch(0.9 0.01 250 / 0.9);
+  outline-offset: 3px;
+}
+.land-btn[aria-expanded="true"] {
+  border-color: oklch(1 0 0 / 0.45);
+  background: oklch(1 0 0 / 0.06);
+}
+
+/* Primary — solid light on pitch black; duel colors stay in the title */
+.land-btn--primary {
+  border-color: transparent;
+  background: oklch(0.93 0.008 250);
+  color: oklch(0.13 0.01 250);
+}
+.land-btn--primary:hover {
+  background: oklch(0.99 0.003 250);
+  border-color: transparent;
+  box-shadow: 0 8px 32px oklch(1 0 0 / 0.09);
+}
+
+/* Online panel — mounts inside the reserved slot; title never moves */
+.land-panel-slot {
+  grid-row: 5;
+  margin-top: 30px;
+  display: flex; align-items: flex-start; justify-content: center;
+}
+.land-panel {
+  display: flex; align-items: center; gap: var(--gw-space-5);
+}
+.land-panel__or {
+  font-family: var(--gw-font-tech);
+  font-size: 11px; letter-spacing: 0.1em;
+  color: var(--gw-text-muted);
+}
+.land-join { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.land-join__hint {
+  font-family: var(--gw-font-tech);
+  font-size: 10px; letter-spacing: 0.12em;
+  color: var(--gw-text-muted);
+}
+
+/* ── Entrance — one orchestrated ignition, ~800ms total ── */
+@media (prefers-reduced-motion: no-preference) {
+  .land-title { animation: land-ignite 700ms var(--gw-ease-out-expo) both; }
+  .land-tagline { animation: land-rise 500ms var(--gw-ease-out-expo) 180ms both; }
+  .land-actions { animation: land-rise 500ms var(--gw-ease-out-expo) 320ms both; }
+  .land-chrome { animation: land-fade 600ms var(--gw-ease-out-expo) 550ms both; }
+  .land-bleed { animation: land-fade 900ms var(--gw-ease-out-expo) 250ms both; }
+  .land-panel { animation: land-panel-in 240ms var(--gw-ease-out-expo) both; }
+}
+@keyframes land-ignite {
+  from { opacity: 0; filter: blur(10px); letter-spacing: 0.11em; }
+  to   { opacity: 1; filter: blur(0); letter-spacing: 0.06em; }
+}
+@keyframes land-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes land-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes land-panel-in {
+  from { opacity: 0; transform: translateY(-6px); filter: blur(4px); }
+  to   { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+/* Shared button primitive — product-register sibling of landing's .land-btn:
+   same voice (Archivo, expo-out motion, glow reserved for state not idle),
+   fixed rem scale instead of landing's display sizing. */
+.gw-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font-family: var(--gw-font-display, inherit); cursor: pointer;
+  border-radius: var(--gw-radius-lg);
+  border: 1px solid var(--gw-border-strong); padding: 10px 20px;
+  background: transparent; color: var(--gw-text);
+  font-size: var(--gw-fs-sm); font-weight: 600; letter-spacing: 0.02em;
+  transition:
+    background 150ms var(--gw-ease-out-expo, ease),
+    border-color 150ms var(--gw-ease-out-expo, ease),
+    color 150ms var(--gw-ease-out-expo, ease),
+    transform 150ms var(--gw-ease-out-expo, ease),
+    box-shadow 150ms var(--gw-ease-out-expo, ease);
+}
+.gw-btn:hover:not(:disabled) {
+  border-color: oklch(1 0 0 / 0.4); background: oklch(1 0 0 / 0.04);
+  transform: translateY(-1px);
+}
+.gw-btn:active:not(:disabled) { transform: translateY(0) scale(0.98); }
+.gw-btn:focus-visible {
+  outline: 2px solid oklch(0.9 0.01 250 / 0.9); outline-offset: 2px;
+}
+.gw-btn--primary {
+  border-color: transparent; background: oklch(0.93 0.008 250); color: oklch(0.13 0.01 250);
+}
+.gw-btn--primary:hover:not(:disabled) {
+  background: oklch(0.99 0.003 250); border-color: transparent;
+  box-shadow: 0 6px 24px oklch(1 0 0 / 0.1);
+}
 .gw-btn--danger  { border-color: var(--gw-red);   box-shadow: var(--gw-glow-red); }
 .gw-btn:disabled { opacity: 0.4; cursor: default; transform: none; box-shadow: none; }
-
-/* Card / seat / panel primitives (used by ConfigPanel, seats, HUD) */
-.gw-card {
-  background: var(--gw-surface); border: 1px solid var(--gw-border);
-  border-radius: var(--gw-radius-lg); padding: var(--gw-space-4);
-  backdrop-filter: blur(6px);
-}
-.gw-card.is-active { border-color: var(--gw-accent); box-shadow: var(--gw-glow-blue); }
+.gw-btn.is-confirmed { border-color: var(--gw-accent); color: var(--gw-accent); }
 
 /* Phone gate */
 .gw-phonegate {
@@ -83,10 +248,11 @@ body { font-family: var(--gw-font-sans); overflow: hidden; }
 }
 .arena-shell--open { grid-template-columns: 1fr var(--gw-panel-w); }
 
-/* Card primitive shared by MAP / SIDE PANEL / FOOTER */
+/* Card primitive shared by MAP / SIDE PANEL / FOOTER — the default hairline
+   (DESIGN.md: brighter borders are state, never resting chrome). */
 .comp {
   position: relative;
-  border: 2px solid var(--gw-border-strong);
+  border: 1px solid var(--gw-border);
   border-radius: var(--gw-radius-xl);
   background: var(--gw-surface);
   min-height: 0; min-width: 0;
@@ -100,70 +266,304 @@ body { font-family: var(--gw-font-sans); overflow: hidden; }
   overflow: hidden;
 }
 
-/* SIDE PANEL card — its own grid column; reserves a top strip so the fixed
-   gear (never part of the grid) sits visually on top of it. */
+/* SIDE PANEL card — its own grid column. A genuinely translucent floating
+   surface, so it carries the glass treatment: the warped spacetime backdrop
+   blurs through it (Blur-Is-For-Floating-Things rule). */
 .comp.side-panel {
   grid-column: 2 / 3; grid-row: 1 / 2;
   overflow-y: auto;
-  padding: 52px var(--gw-space-3) var(--gw-space-3);
+  /* Blur only — saturate() boosted the blue of the warped grid behind the
+     glass and tinted the whole panel. */
+  backdrop-filter: blur(14px);
+  scrollbar-width: thin;
+  scrollbar-color: var(--gw-border-strong) transparent;
+  padding: var(--gw-space-5) var(--gw-space-4) var(--gw-space-4);
   display: flex; flex-direction: column; gap: var(--gw-space-3);
+  /* Bottom scroll cue: a soft shadow that only shows while there's more
+     content below, gone once scrolled to the true end — the standard CSS
+     scroll-shadow trick (no JS). A `local`-attached cover (scrolls with the
+     content, so it only ever sits at the content's real bottom edge) paints
+     over a `scroll`-attached shadow (pinned to the viewport's bottom edge);
+     the cover hides the shadow exactly when there's nothing left to scroll to.
+     rgb(10,12,15) is --gw-surface (rgba(12,14,18,.85)) pre-composited over
+     the black --gw-bg behind it, so the cover matches the panel's actual
+     rendered color instead of doubling the translucent surface on itself. */
+  background:
+    linear-gradient(rgba(10, 12, 15, 0), rgb(10, 12, 15) 75%) 0 100% / 100% 40px local no-repeat,
+    radial-gradient(farthest-side at 50% 100%, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0)) 0 100% / 100% 18px scroll no-repeat,
+    var(--gw-surface);
 }
+/* Themed scrollbar (WebKit fallback for the standard props above) — thin,
+   border-toned thumb, no track chrome. */
+.comp.side-panel::-webkit-scrollbar { width: 8px; }
+.comp.side-panel::-webkit-scrollbar-track { background: transparent; }
+.comp.side-panel::-webkit-scrollbar-thumb {
+  background: var(--gw-border-strong); border-radius: 4px;
+}
+.comp.side-panel::-webkit-scrollbar-thumb:hover { background: oklch(1 0 0 / 0.25); }
 
-/* FOOTER card — spans the full width beneath the map (+ panel) */
+/* FOOTER card — spans the full width beneath the map (+ panel); same glass
+   as the side panel, over the same backdrop. */
 .comp.footer {
   grid-column: 1 / -1; grid-row: 2 / 3;
   display: flex; align-items: center; gap: var(--gw-space-3);
+  backdrop-filter: blur(14px);
   padding: 0 var(--gw-space-4);
 }
 .footer--ingame { justify-content: center; }
 .footer-sep { width: 1px; align-self: stretch; background: var(--gw-border); flex: none; }
-.footer-waiting { font-weight: 600; color: var(--gw-text-muted); }
+.footer-waiting {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--gw-font-display); font-weight: 600; color: var(--gw-text-muted);
+}
+.footer-waiting__icon { animation: gw-pulse 1.8s var(--gw-ease-out-expo, ease) infinite; }
+@keyframes gw-pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .footer-waiting__icon { animation: none; }
+}
 .footer-name { display: flex; align-items: center; gap: var(--gw-space-2); font-size: var(--gw-fs-xs); }
 .footer-name-input {
+  font-family: var(--gw-font-display);
   background: var(--gw-surface-2); border: 1px solid var(--gw-border);
-  border-radius: var(--gw-radius-sm); padding: 6px 10px; color: var(--gw-text);
+  border-radius: var(--gw-radius-sm); padding: 7px 10px; color: var(--gw-text);
+  transition: border-color 150ms var(--gw-ease-out-expo, ease);
 }
-
-/* Fixed config gear — a constant top-right SCREEN position; identical
-   whether the settings panel is open or closed; never moves with the map. */
-.gear {
-  position: absolute;
-  top: calc(var(--gw-gap) + 8px); right: calc(var(--gw-gap) + 8px);
-  z-index: 9; width: 38px; height: 38px; border-radius: 12px;
-  border: 2px solid var(--gw-accent); background: var(--gw-surface-2);
-  color: var(--gw-text); font-size: 17px; line-height: 1; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
+.footer-name-input:focus-visible {
+  outline: none; border-color: var(--gw-accent);
 }
 
 /* Room-code badge — out-of-flow (absolute) so it never becomes an implicit
-   grid item of .arena-shell; mirrors the gear's corner on the opposite side. */
+   grid item of .arena-shell; pinned to the shell's top-left corner. */
 .net-room-code {
   position: absolute;
   top: calc(var(--gw-gap) + 8px); left: calc(var(--gw-gap) + 8px);
-  z-index: 6; display: flex; align-items: center; gap: var(--gw-space-2);
+  z-index: 6; display: flex; align-items: center; gap: 10px;
+  padding: 8px 14px !important;
+}
+.net-room-code__label {
+  font-family: var(--gw-font-tech); font-size: 10px; letter-spacing: 0.1em;
+  color: var(--gw-text-faint); text-transform: uppercase;
+}
+.net-room-code__code {
+  font-family: var(--gw-font-tech); font-size: var(--gw-fs-sm); font-weight: 500;
+  letter-spacing: 0.15em; color: var(--gw-accent);
 }
 
 /* ── LocalFlow + ConfigPanel ────────────────────────────────────────────── */
-.seat { position: absolute; bottom: 18px; z-index: 6; font-size: var(--gw-fs-md); }
+.seat {
+  position: absolute; bottom: 18px; z-index: 6;
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--gw-font-display); font-size: var(--gw-fs-sm); font-weight: 600;
+  padding: 8px 14px;
+}
 .seat-red { left: 18px; } .seat-blue { right: 18px; }
-.cfg-row { display: flex; gap: var(--gw-space-2); }
-.cfg-opt { flex: 1; display: flex; flex-direction: column; gap: 4px; cursor: pointer; font-weight: 700; }
-.cfg-opt small { color: var(--gw-text-faint); font-weight: 400; }
-.cfg-toggle, .cfg-timer { display: flex; align-items: center; gap: var(--gw-space-2); margin: var(--gw-space-2) 0; }
-.cfg-arena { display: flex; flex-direction: column; gap: 6px; }
-.cfg-slider { display: grid; grid-template-columns: 130px minmax(0, 1fr); align-items: center; gap: 8px;
-  font-size: var(--gw-fs-xs); color: var(--gw-text-muted); }
-/* Range inputs bring their own UA-default intrinsic width, which is wider
-   than a 1fr grid track's default `auto` minimum — that mismatch is what
-   forced the panel to overflow horizontally (M1). Pin the input to its
-   track instead of its intrinsic content size. */
-.cfg-slider input[type="range"] { width: 100%; min-width: 0; }
-.cfg-seed { display: flex; align-items: center; justify-content: space-between; margin-top: var(--gw-space-2);
-  font-family: var(--gw-font-mono); color: var(--gw-text-code); }
+.seat__dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.seat-red .seat__dot  { background: var(--gw-hero-red, var(--gw-red));  box-shadow: 0 0 8px var(--gw-hero-red, var(--gw-red)); }
+.seat-blue .seat__dot { background: var(--gw-hero-blue, var(--gw-blue)); box-shadow: 0 0 8px var(--gw-hero-blue, var(--gw-blue)); }
+.seat__label { color: var(--gw-text-muted); font-weight: 500; }
+.seat-red b  { color: var(--gw-hero-red, var(--gw-red)); }
+.seat-blue b { color: var(--gw-hero-blue, var(--gw-blue)); }
+
+.config-panel { font-family: var(--gw-font-display); }
+.cfg-fields {
+  border: none; margin: 0; padding: 0; min-width: 0;
+  display: flex; flex-direction: column; gap: var(--gw-space-5);
+}
+.cfg-block { display: flex; flex-direction: column; gap: var(--gw-space-2); }
+.cfg-block--arena { gap: var(--gw-space-3); }
+
+/* Field label — the eyebrow that names a block control (DESIGN.md field-label).
+   One step up from the spec's ink-faint: 10px text on the panel surface needs
+   the muted rung to clear WCAG AA 4.5:1 (faint lands at ~4.2:1 on black). */
+.cfg-label {
+  margin: 0; font-family: var(--gw-font-tech);
+  font-size: 10px; font-weight: 500; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--gw-text-muted);
+}
+
+/* Selector — segmented, one active at a time. Selection is ivory, the same
+   neutral "important" treatment landing uses for its one primary button.
+   Never team-blue: blue reads as the BLUE team a few pixels away in the seat
+   chips, so re-using it here would blur "selected" into "Team Blue's setting". */
+.cfg-segment {
+  display: flex; gap: 2px; padding: 3px;
+  background: var(--gw-surface-2);
+  border: 1px solid var(--gw-border-strong); border-radius: var(--gw-radius-xl);
+}
+.cfg-segment__opt {
+  flex: 1; border: none; background: transparent; cursor: pointer;
+  font-family: var(--gw-font-display); font-size: var(--gw-fs-sm); font-weight: 600;
+  letter-spacing: 0.01em; line-height: 1.25; text-align: center;
+  padding: 9px 12px; border-radius: 9px; color: var(--gw-text-muted);
+  transition:
+    color 150ms var(--gw-ease-out-expo),
+    background 150ms var(--gw-ease-out-expo),
+    box-shadow 150ms var(--gw-ease-out-expo);
+}
+.cfg-segment__opt small {
+  display: block; font-weight: 400; font-size: 10px; letter-spacing: 0;
+  margin-top: 3px; color: var(--gw-text-muted);
+}
+.cfg-segment__opt:hover:not(:disabled) { color: var(--gw-text); }
+.cfg-segment__opt[aria-pressed="true"] {
+  color: var(--gw-accent); background: oklch(1 0 0 / 0.06);
+  box-shadow: inset 0 0 0 1px oklch(1 0 0 / 0.2);
+}
+.cfg-segment__opt:focus-visible { outline: 2px solid oklch(0.9 0.01 250 / 0.9); outline-offset: 2px; }
+.cfg-segment__opt:disabled { cursor: default; }
+
+/* Stepper — [− | value | +]; the value is a real, directly editable input */
+.cfg-timer { display: flex; align-items: center; gap: var(--gw-space-3); }
+.cfg-stepper {
+  display: inline-flex; align-items: stretch; width: max-content;
+  background: var(--gw-surface-2);
+  border: 1px solid var(--gw-border-strong); border-radius: var(--gw-radius-lg);
+  overflow: hidden;
+  transition: border-color 150ms var(--gw-ease-out-expo), opacity 150ms var(--gw-ease-out-expo);
+}
+.cfg-stepper:focus-within { border-color: oklch(1 0 0 / 0.4); }
+.cfg-stepper.is-disabled { opacity: 0.45; }
+.cfg-stepper.is-disabled .cfg-stepper__btn { cursor: default; }
+.cfg-stepper__btn {
+  width: 34px; border: none; background: transparent; color: var(--gw-text-muted);
+  font-family: var(--gw-font-tech); font-size: 16px; line-height: 1; cursor: pointer;
+  display: grid; place-items: center;
+  transition: color 150ms var(--gw-ease-out-expo), background 150ms var(--gw-ease-out-expo);
+}
+.cfg-stepper__btn:hover:not(:disabled) { color: var(--gw-text); background: oklch(1 0 0 / 0.06); }
+.cfg-stepper__btn:focus-visible { outline: 2px solid oklch(0.9 0.01 250 / 0.9); outline-offset: -2px; }
+.cfg-stepper__field {
+  display: inline-flex; align-items: baseline; justify-content: center; gap: 2px;
+  min-width: 4.5ch; padding: 8px 6px;
+  border-left: 1px solid var(--gw-border); border-right: 1px solid var(--gw-border);
+}
+.cfg-stepper__input {
+  width: 3ch; border: none; background: transparent; text-align: right; padding: 0;
+  font-family: var(--gw-font-tech); font-variant-numeric: tabular-nums;
+  font-size: var(--gw-fs-sm); font-weight: 500; color: var(--gw-text);
+  appearance: textfield; -moz-appearance: textfield;
+}
+.cfg-stepper__input::-webkit-outer-spin-button,
+.cfg-stepper__input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.cfg-stepper__input:focus-visible { outline: none; color: var(--gw-accent); }
+.cfg-stepper__unit { font-family: var(--gw-font-tech); font-size: var(--gw-fs-xs); color: var(--gw-text-muted); }
+.cfg-hint { font-family: var(--gw-font-tech); font-size: 10px; letter-spacing: 0.04em; color: var(--gw-text-muted); }
+
+/* Checkbox — custom box with an SVG check; the inline label brightens when on */
+.cfg-check {
+  display: inline-flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;
+  font-size: var(--gw-fs-sm); font-weight: 500; color: var(--gw-text-muted);
+}
+.cfg-check__input { position: absolute; width: 1px; height: 1px; margin: 0; opacity: 0; }
+.cfg-check__box {
+  width: 18px; height: 18px; flex: none; display: grid; place-items: center;
+  border: 1px solid var(--gw-border-strong); border-radius: 5px; background: var(--gw-surface-2);
+  transition: background 150ms var(--gw-ease-out-expo), border-color 150ms var(--gw-ease-out-expo);
+}
+.cfg-check__box svg {
+  width: 11px; height: 11px; fill: none;
+  stroke: oklch(0.13 0.01 250); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  opacity: 0; transform: scale(0.6);
+  transition: opacity 150ms var(--gw-ease-out-expo), transform 150ms var(--gw-ease-out-expo);
+}
+.cfg-check:hover .cfg-check__box { border-color: oklch(1 0 0 / 0.4); }
+.cfg-check__input:checked + .cfg-check__box { background: var(--gw-accent); border-color: var(--gw-accent); }
+.cfg-check__input:checked + .cfg-check__box svg { opacity: 1; transform: scale(1); }
+.cfg-check__input:checked ~ .cfg-check__label { color: var(--gw-text); }
+.cfg-check__input:focus-visible + .cfg-check__box { outline: 2px solid oklch(0.9 0.01 250 / 0.9); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .cfg-check__box svg { transition: none; }
+}
+
+/* A full sentence, not a section eyebrow — deliberately its own style
+   rather than reusing `.gw-label` (that's tracked/uppercase and meant for
+   short 1-2 word headers like "Game Mode"; stretching it over a sentence
+   reads as a formatting mismatch once you notice the same class elsewhere). */
+.cfg-arena-head { display: flex; flex-direction: column; }
+.cfg-arena-caption {
+  font-family: var(--gw-font-tech); font-size: var(--gw-fs-xs); font-weight: 400;
+  letter-spacing: 0.02em; line-height: 1.5; color: var(--gw-text-muted);
+  margin: 0 0 var(--gw-space-1);
+}
+/* Deliberately its own quiet, borderless affordance, on its own line below
+   the caption rather than the caption's own text width — set apart from
+   Reroll (a bordered .gw-btn down in the seed row) in placement and weight,
+   so resetting the arena's sliders never reads as "reset Reroll". */
+.cfg-arena-reset {
+  align-self: flex-end; display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--gw-font-tech); font-size: var(--gw-fs-2xs); font-weight: 500;
+  letter-spacing: 0.04em; color: var(--gw-text-muted);
+  background: transparent; border: none; padding: 2px 0; margin: 0 0 var(--gw-space-2);
+  cursor: pointer; transition: color 150ms var(--gw-ease-out-expo, ease);
+}
+.cfg-arena-reset:hover { color: var(--gw-text); }
+.cfg-arena-reset:focus-visible {
+  outline: 2px solid oklch(0.9 0.01 250 / 0.9); outline-offset: 2px; border-radius: var(--gw-radius-sm);
+}
+
+/* Dense-but-calm arena section: 13 sliders grouped into three labeled
+   clusters (Field → Planets → Spawns) instead of one flat list. Tight gap
+   within a cluster, generous gap between clusters. */
+.cfg-arena { display: flex; flex-direction: column; gap: var(--gw-space-5); }
+.cfg-cluster { display: flex; flex-direction: column; gap: var(--gw-space-3); }
+.cfg-slider {
+  display: grid; grid-template-columns: 118px minmax(0, 1fr);
+  align-items: center; gap: var(--gw-space-3);
+  font-size: var(--gw-fs-xs); font-weight: 400; color: var(--gw-text-muted);
+}
+/* Slider — thin 2px track (ivory fill up to --fill, set inline by React),
+   one outlined circular thumb, soft bloom on hover/focus. width:100% +
+   min-width:0 pin the input to its grid track instead of the UA-default
+   intrinsic width (that mismatch once forced horizontal overflow — M1).
+   No numeric readout here by design: the live terrain morph is the feedback. */
+.cfg-range {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; min-width: 0; height: 18px; margin: 0;
+  background: transparent; cursor: pointer;
+}
+.cfg-range::-webkit-slider-runnable-track {
+  height: 2px; border-radius: 2px;
+  background: linear-gradient(to right,
+    var(--gw-accent) 0 var(--fill, 50%),
+    var(--gw-border-strong) var(--fill, 50%) 100%);
+}
+.cfg-range::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 16px; height: 16px; margin-top: -7px; border-radius: 50%;
+  background: var(--gw-bg); border: 2px solid var(--gw-accent);
+  box-shadow: 0 0 0 0 oklch(1 0 0 / 0.10);
+  transition: box-shadow 150ms var(--gw-ease-out-expo);
+}
+.cfg-range:hover::-webkit-slider-thumb,
+.cfg-range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 5px oklch(1 0 0 / 0.10); }
+.cfg-range:focus-visible { outline: none; }
+.cfg-range::-moz-range-track { height: 2px; border-radius: 2px; background: var(--gw-border-strong); }
+.cfg-range::-moz-range-progress { height: 2px; border-radius: 2px; background: var(--gw-accent); }
+.cfg-range::-moz-range-thumb {
+  width: 16px; height: 16px; border: 2px solid var(--gw-accent); border-radius: 50%;
+  background: var(--gw-bg); box-shadow: 0 0 0 0 oklch(1 0 0 / 0.10);
+  transition: box-shadow 150ms var(--gw-ease-out-expo);
+}
+.cfg-range:hover::-moz-range-thumb,
+.cfg-range:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 5px oklch(1 0 0 / 0.10); }
+@media (prefers-reduced-motion: reduce) {
+  .cfg-range::-webkit-slider-thumb { transition: none; }
+  .cfg-range::-moz-range-thumb { transition: none; }
+}
+
+.cfg-seed {
+  display: flex; align-items: center; justify-content: space-between; margin-top: var(--gw-space-2);
+}
+.cfg-seed code {
+  font-family: var(--gw-font-tech); font-size: var(--gw-fs-xs);
+  color: var(--gw-text); letter-spacing: 0.04em;
+}
 .gw-countdown { z-index: 20; background: rgba(0, 0, 0, 0.35); }
+/* Ivory glow, not team-blue: the countdown belongs to neither team, and the
+   one-accent rule says "important" always glows near-white. */
 .gw-countdown-num {
   font-size: 220px; font-weight: 900; color: var(--gw-text);
-  text-shadow: 0 0 60px rgba(68, 136, 255, 0.5);
+  text-shadow: 0 0 24px oklch(1 0 0 / 0.3), 0 0 80px oklch(1 0 0 / 0.18);
   animation: gw-count-pop 900ms ease-out;
 }
 @keyframes gw-count-pop { from { transform: scale(1.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
@@ -188,99 +588,55 @@ body { font-family: var(--gw-font-sans); overflow: hidden; }
 
 /* Config-flash animation — pulse used by Task 4 when host changes config */
 @keyframes gw-config-flash {
-  0%   { border-color: var(--gw-border); }
-  30%  { border-color: #ffffff; box-shadow: 0 0 12px rgba(255,255,255,0.6); }
-  100% { border-color: var(--gw-border); box-shadow: none; }
+  0%   { border-color: var(--gw-border-strong); }
+  30%  { border-color: var(--gw-accent); box-shadow: var(--gw-glow-accent); }
+  100% { border-color: var(--gw-border-strong); box-shadow: none; }
 }
 
 /* ── Online screens ─────────────────────────────────────────────────────── */
 .gw-code-entry {
-  font-family: var(--gw-font-mono); font-size: 64px; letter-spacing: 0.4em;
-  text-align: center; width: 5ch;
-  background: var(--gw-surface-2); border: 1px solid var(--gw-border-strong);
-  border-radius: var(--gw-radius-lg); color: var(--gw-text-code);
-  padding: 12px 0 12px 0.4em;
+  font-family: var(--gw-font-tech, var(--gw-font-mono));
+  font-size: 1.5rem; font-weight: 500;
+  letter-spacing: 0.5em; text-align: center;
+  width: 8ch; padding: 8px 0 8px 0.5em;
+  background: var(--gw-surface-2);
+  border: 1px solid var(--gw-border-strong);
+  border-radius: var(--gw-radius-lg);
+  color: var(--gw-text);
+  caret-color: var(--gw-text);
+  text-transform: uppercase;
+  transition: border-color 150ms var(--gw-ease-out-expo, ease), box-shadow 150ms var(--gw-ease-out-expo, ease);
+}
+.gw-code-entry::placeholder { color: var(--gw-text-muted); }
+.gw-code-entry:focus-visible {
+  outline: none;
+  border-color: oklch(1 0 0 / 0.45);
+  box-shadow: 0 0 0 3px oklch(1 0 0 / 0.07);
 }
 
-/* ── TeamStrip — NvN player status rows ─────────────────────────────────── */
-.team-strip {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 20;
-  display: flex; justify-content: space-between; align-items: flex-start;
-  pointer-events: none;
-  padding: 6px 12px;
-  gap: 8px;
-}
-
-.team-strip__team {
-  display: flex; flex-direction: column; gap: 2px;
-  min-width: 140px;
-}
-
-.team-strip__team--red  { align-items: flex-start; }
-.team-strip__team--blue { align-items: flex-end; }
-
-.team-strip__row {
-  display: flex; align-items: center; gap: 6px;
-  font-size: var(--gw-fs-xs, 11px);
-  padding: 3px 8px;
-  border-radius: 4px;
-  background: rgba(0,0,0,0.55);
-  border: 1px solid transparent;
-  color: var(--gw-text-muted, rgba(180,190,210,0.8));
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-
-.team-strip__row--red  { border-left: 3px solid var(--gw-red, #ff4444); }
-.team-strip__row--blue { border-right: 3px solid var(--gw-blue, #4488ff); border-left: none; }
-
-.team-strip__row.is-dead {
-  opacity: 0.45;
-  text-decoration: line-through;
-}
-
-.team-strip__row.is-active {
-  border-color: rgba(255,255,255,0.5);
-  box-shadow: 0 0 8px rgba(255,255,255,0.2);
-  color: var(--gw-text, #e8eaf0);
-}
-
-.team-strip__row.is-me {
-  font-weight: 700;
-  color: var(--gw-text, #e8eaf0);
-}
-
-.team-strip__ring {
-  display: inline-block; width: 8px; height: 8px;
-  border-radius: 50%;
-  background: transparent;
-  border: 2px solid rgba(255,255,255,0.8);
-  flex-shrink: 0;
-}
-
-.team-strip__name  { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.team-strip__skull { font-size: 0.9em; }
-.team-strip__hp    { display: flex; align-items: center; gap: 2px; white-space: nowrap; }
-.team-strip__hp-icon { color: #ff6680; }
+/* TeamStrip (the old NvN status rows) is retired — player names + HP now live
+   in the on-map name badges drawn by GameRenderer (src/game/badge.ts). Its
+   styles were removed with the component; see git history if ever revived. */
 
 /* ── ReconnectOverlays ───────────────────────────────────────────────────── */
 .reconnect-overlay--blocking {
   position: fixed; inset: 0; z-index: 200;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(0,0,0,0.78);
+  background: oklch(0 0 0 / 0.78);
   backdrop-filter: blur(4px);
 }
 
 .reconnect-overlay__inner {
-  display: flex; flex-direction: column; align-items: center; gap: 16px;
-  color: var(--gw-text, #e8eaf0);
-  font-size: var(--gw-fs-md, 18px);
+  display: flex; flex-direction: column; align-items: center; gap: var(--gw-space-4);
+  color: var(--gw-text);
+  font-size: var(--gw-fs-md);
   font-weight: 600;
 }
 
 .reconnect-overlay__spinner {
   display: inline-block; width: 36px; height: 36px;
-  border: 3px solid rgba(255,255,255,0.2);
-  border-top-color: rgba(255,255,255,0.9);
+  border: 3px solid oklch(1 0 0 / 0.15);
+  border-top-color: var(--gw-accent);
   border-radius: 50%;
   animation: gw-spin 0.8s linear infinite;
 }
@@ -289,30 +645,41 @@ body { font-family: var(--gw-font-sans); overflow: hidden; }
   to { transform: rotate(360deg); }
 }
 
+/* Non-blocking status banner (peer down / forfeit notice) — a floating pill,
+   so it carries the same glass + soft glow as the other overlays. */
 .reconnect-overlay--banner {
-  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+  position: fixed; bottom: 96px; left: 50%; transform: translateX(-50%);
   z-index: 100;
-  background: rgba(14,18,26,0.92);
-  border: 1px solid var(--gw-border-strong, #2e4256);
-  border-radius: 8px;
+  background: var(--gw-surface);
+  border: 1px solid var(--gw-border-strong);
+  border-radius: var(--gw-radius-pill);
   padding: 10px 20px;
-  color: var(--gw-text, #e8eaf0);
-  font-size: var(--gw-fs-sm, 13px);
+  color: var(--gw-text);
+  font-size: var(--gw-fs-sm);
   white-space: nowrap;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 12px 32px oklch(0 0 0 / 0.45);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .reconnect-overlay--banner { animation: gw-banner-in 260ms var(--gw-ease-out-expo) both; }
+}
+@keyframes gw-banner-in {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
 }
 
 /* ── Spectator badge + leave button ─────────────────────────────────────── */
 .spectator-badge {
   position: fixed; top: 48px; left: 50%; transform: translateX(-50%);
   z-index: 30;
-  background: rgba(0,0,0,0.7);
-  border: 1px solid var(--gw-border-strong, #2e4256);
-  border-radius: 6px;
-  padding: 4px 14px;
-  font-size: var(--gw-fs-xs, 11px);
-  color: var(--gw-text-muted, rgba(180,190,210,0.8));
-  letter-spacing: 0.04em;
+  background: var(--gw-surface);
+  border: 1px solid var(--gw-border);
+  border-radius: var(--gw-radius-pill);
+  padding: 5px 14px;
+  font-family: var(--gw-font-tech); font-size: var(--gw-fs-xs);
+  color: var(--gw-text-muted);
+  letter-spacing: 0.08em; text-transform: uppercase;
+  backdrop-filter: blur(6px);
   pointer-events: none;
 }
 

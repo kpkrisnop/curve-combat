@@ -140,7 +140,8 @@ describe("HudOverlays", () => {
     hudController.onReset(reset);
     render(<HudOverlays />);
     act(() => hudController.showWin("blue", "Health depleted."));
-    expect(screen.getByText(/BLUE WINS/)).toBeTruthy();
+    // Copy is lowercase in the DOM; the uppercase look is CSS text-transform.
+    expect(screen.getByText(/blue wins/i)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /Back to Lobby/ }));
     expect(reset).toHaveBeenCalled();
   });

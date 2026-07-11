@@ -3,7 +3,9 @@
 // ADR-0003: OnlineFlow — arena-as-waiting-room.
 // Replaces OnlineParity. Coordinates lobby → countdown → play for online matches.
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useCallback } from "react";
+import { Icon } from "../mdiIcon";
+import { mdiRefresh } from "@mdi/js";
 import { ArenaStage } from "../arena/ArenaStage";
 import { Footer } from "../hud/Footer";
 import { HudOverlays } from "../hud/Overlays";
@@ -35,9 +37,6 @@ export function OnlineFlow({ code }: Props) {
   const nameDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startedRef = useRef(false);
 
-  // ── Settings panel open/close state (fixed gear toggles this) ─────────────
-  const [settingsOpen, setSettingsOpen] = useState(true);
-
   // ── Store subscriptions ────────────────────────────────────────────────────
   const phase = useStore(netLobbyStore, (s) => s.phase);
   const players = useStore(netLobbyStore, (s) => s.players);
@@ -52,10 +51,10 @@ export function OnlineFlow({ code }: Props) {
   const matchPlayers = useStore(netLobbyStore, (s) => s.matchPlayers);
 
   // ── Config flash ref (for toggling CSS class) ─────────────────────────────
-  // L2 fix: attached to the always-rendered gear button (not the
-  // conditionally-rendered .side-panel) so the cue fires even with the
-  // settings panel collapsed — see the gear button below.
-  const configFlashRef = useRef<HTMLButtonElement | null>(null);
+  // Attached to the lobby side panel: a guest sees its border pulse when the
+  // host changes a setting. The panel is always present in the lobby (ADR-0007,
+  // no gear toggle), so this is a stable target for the cue.
+  const configFlashRef = useRef<HTMLDivElement | null>(null);
   const prevFlashRef = useRef(0);
 
   // ── Team counts ────────────────────────────────────────────────────────────
@@ -270,9 +269,11 @@ export function OnlineFlow({ code }: Props) {
   const isCountdown = phase === "countdown";
   const isPlay = phase === "play";
 
+  // The config panel is always open in the lobby and never present in-game —
+  // its presence alone distinguishes the two states (ADR-0007).
   const shellClass = [
     "online-flow", "gw-layer", "arena-shell",
-    isLobby && settingsOpen ? "arena-shell--open" : "",
+    isLobby ? "arena-shell--open" : "",
   ].filter(Boolean).join(" ");
 
   return (
@@ -290,48 +291,35 @@ export function OnlineFlow({ code }: Props) {
             <span className="net-room-code__code">{roomCode}</span>
           </div>
 
-          {/* SIDE PANEL — arena settings, second grid column when open */}
-          {settingsOpen && (
-            <div className="comp side-panel">
-              {amHost ? (
-                <>
-                  <ConfigPanel
-                    value={config}
-                    onChange={onConfigChange}
-                    seed={round1Seed ?? 0}
-                    onReroll={onReroll}
-                    hideSeedRow
-                  />
-                  <button className="gw-btn" onClick={onReroll}>Reroll terrain</button>
-                </>
-              ) : (
+          {/* SIDE PANEL — arena settings, always the lobby's second grid column.
+              configFlashRef lives on the panel border: a guest sees it pulse
+              when the host changes a setting (ADR-0007). */}
+          <div className="comp side-panel" ref={configFlashRef}>
+            {amHost ? (
+              <>
                 <ConfigPanel
                   value={config}
-                  onChange={() => { /* guest: no-op */ }}
+                  onChange={onConfigChange}
                   seed={round1Seed ?? 0}
-                  onReroll={() => { /* guest: no-op */ }}
-                  readOnly
+                  onReroll={onReroll}
                   hideSeedRow
                 />
-              )}
-            </div>
-          )}
-
-          {/* Fixed config gear — constant top-right position, pre-game only.
-              L2 fix: configFlashRef lives HERE (not on the conditionally-
-              rendered .comp.side-panel) so the config-change cue still fires
-              for a client with the settings panel collapsed — this button is
-              always in the DOM whenever isLobby is true, regardless of
-              settingsOpen. */}
-          <button
-            type="button"
-            className="gear"
-            ref={configFlashRef}
-            aria-label={settingsOpen ? "Close settings" : "Open settings"}
-            onClick={() => setSettingsOpen((v) => !v)}
-          >
-            ⚙
-          </button>
+                <button className="gw-btn" onClick={onReroll}>
+                  <Icon path={mdiRefresh} size="14px" color="currentColor" />
+                  Reroll terrain
+                </button>
+              </>
+            ) : (
+              <ConfigPanel
+                value={config}
+                onChange={() => { /* guest: no-op */ }}
+                seed={round1Seed ?? 0}
+                onReroll={() => { /* guest: no-op */ }}
+                readOnly
+                hideSeedRow
+              />
+            )}
+          </div>
 
           {/* FOOTER — Start (host) / Waiting… (guest), name, switch, copy */}
           <Footer

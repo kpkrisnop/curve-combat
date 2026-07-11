@@ -17,9 +17,9 @@ describe("ConfigPanel", () => {
   it("timer stepper clamps at 15s and steps by 5", () => {
     const onChange = vi.fn();
     render(<ConfigPanel value={{ ...base, turnSeconds: 15 }} onChange={onChange} seed={7} onReroll={vi.fn()} />);
-    fireEvent.click(screen.getByRole("button", { name: "−" }));
+    fireEvent.click(screen.getByRole("button", { name: /Decrease turn timer/i }));
     expect(onChange).toHaveBeenCalledWith({ turnSeconds: 15 });   // clamped
-    fireEvent.click(screen.getByRole("button", { name: "+" }));
+    fireEvent.click(screen.getByRole("button", { name: /Increase turn timer/i }));
     expect(onChange).toHaveBeenCalledWith({ turnSeconds: 20 });
   });
   it("arena sliders have no numeric value text (ADR-0003)", () => {

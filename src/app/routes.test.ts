@@ -28,7 +28,7 @@ describe("parseRoute", () => {
   it("#online → landing with online panel open", () => {
     expect(parseRoute("#online")).toEqual({ screen: "landing", onlinePanelOpen: true });
   });
-  it("#join → join", () => {
-    expect(parseRoute("#join").screen).toBe("join");
+  it("#join (retired) → landing", () => {
+    expect(parseRoute("#join").screen).toBe("landing");
   });
 });
