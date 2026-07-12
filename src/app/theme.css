@@ -244,7 +244,7 @@ body { font-family: var(--gw-font-sans); overflow: hidden; }
   gap: var(--gw-gap);
   padding: var(--gw-gap);
   grid-template-columns: 1fr;
-  grid-template-rows: minmax(0, 1fr) minmax(var(--gw-footer-min), auto);
+  grid-template-rows: minmax(var(--gw-map-min), 1fr) minmax(var(--gw-footer-min), auto);
 }
 .arena-shell--open { grid-template-columns: 1fr var(--gw-panel-w); }
 
@@ -308,7 +308,7 @@ body { font-family: var(--gw-font-sans); overflow: hidden; }
   grid-column: 1 / -1; grid-row: 2 / 3;
   display: flex; align-items: center; gap: var(--gw-space-3);
   backdrop-filter: blur(14px);
-  padding: 0 var(--gw-space-4);
+  padding: var(--gw-space-5) var(--gw-space-6);
 }
 .footer--ingame { justify-content: center; }
 .footer-sep { width: 1px; align-self: stretch; background: var(--gw-border); flex: none; }
@@ -331,6 +331,21 @@ body { font-family: var(--gw-font-sans); overflow: hidden; }
 .footer-name-input:focus-visible {
   outline: none; border-color: var(--gw-accent);
 }
+
+/* ── Ingame Quit — quiet card-level utility, pinned to the top-left corner of
+   the footer card, absolutely positioned (removed from the flex flow, so
+   `.footer--ingame`'s justify-content:center centers only the console) — and
+   an inline confirm instead of a native window.confirm, which breaks the
+   pitch-black premium frame. */
+.footer-quit { position: absolute; left: var(--gw-space-5); top: var(--gw-space-4); }
+.footer-quit__btn {
+  border-color: transparent; color: var(--gw-text-faint);
+  padding: 8px 14px; font-size: var(--gw-fs-xs);
+}
+.footer-quit__btn:hover:not(:disabled) { color: var(--gw-text); border-color: var(--gw-border-strong); background: transparent; }
+.footer-quit__confirm { display: inline-flex; align-items: center; gap: var(--gw-space-2); }
+.footer-quit__q { font-size: var(--gw-fs-xs); color: var(--gw-text-muted); }
+.footer-quit__yes, .footer-quit__no { padding: 6px 12px; font-size: var(--gw-fs-xs); }
 
 /* Room-code badge — out-of-flow (absolute) so it never becomes an implicit
    grid item of .arena-shell; pinned to the shell's top-left corner. */

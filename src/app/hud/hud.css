@@ -94,3 +94,98 @@
   from { opacity: 0; transform: translateY(8px) scale(0.97); filter: blur(6px); }
   to   { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
 }
+
+/* ── FiringConsole (redesigned turn-based footer, arena-shell-redesign
+   follow-up) — a single team-swapping console replacing the always-both-
+   visible dual panel for turn-based play. `noTurn` mode is unaffected and
+   keeps the `.hud-bar`/`.player-panel` layout above, unchanged. */
+
+/* The whole footer CARD glows with whoever's turn it is — set by Footer.tsx
+   on `.comp.footer` itself (not on `.hud-console`), so the full card edge
+   lights up exactly like the dual-panel's per-side border already does.
+   Mixed `in srgb`, not `in oklch`: OKLCH interpolates hue around the polar
+   wheel, and red (~25°) vs this border's cool blue-gray (~250°) are far
+   enough apart that the browser swings through magenta on the way. */
+.comp.footer.is-red   { border-color: color-mix(in srgb, var(--gw-red) 45%, var(--gw-border)); box-shadow: 0 0 40px -8px rgba(255, 68, 68, 0.28); }
+.comp.footer.is-blue  { border-color: color-mix(in srgb, var(--gw-blue) 45%, var(--gw-border)); box-shadow: 0 0 40px -8px rgba(68, 136, 255, 0.28); }
+/* Waiting (online, not your turn): a dimmer version of the opponent's glow —
+   reassurance during the anxious "watching for your turn" moment, without
+   competing with the full-strength glow that means "act now". */
+.comp.footer.is-waiting.is-red  { border-color: color-mix(in srgb, var(--gw-red) 22%, var(--gw-border)); box-shadow: 0 0 24px -10px rgba(255, 68, 68, 0.18); }
+.comp.footer.is-waiting.is-blue { border-color: color-mix(in srgb, var(--gw-blue) 22%, var(--gw-border)); box-shadow: 0 0 24px -10px rgba(68, 136, 255, 0.18); }
+.comp.footer { transition: border-color 220ms var(--gw-ease-out-expo, ease), box-shadow 220ms var(--gw-ease-out-expo, ease); }
+@media (prefers-reduced-motion: reduce) { .comp.footer { transition: none; } }
+
+.hud-console { width: 100%; max-width: 720px; display: flex; flex-direction: column; gap: var(--gw-space-3); }
+
+.hud-console__turnline { display: flex; align-items: center; justify-content: space-between; }
+.hud-console__turn {
+  display: inline-flex; align-items: center; gap: var(--gw-space-2);
+  font-family: var(--gw-font-tech); font-size: var(--gw-fs-xs);
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--gw-text-muted);
+}
+.hud-console__dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.hud-console__dot.is-red  { background: var(--gw-red);  box-shadow: 0 0 8px var(--gw-red); }
+.hud-console__dot.is-blue { background: var(--gw-blue); box-shadow: 0 0 8px var(--gw-blue); }
+
+.hud-console__inputrow { display: flex; align-items: center; gap: var(--gw-space-2); }
+.hud-console__inputrow.is-locked { opacity: 0.6; }
+.hud-console__fields { position: relative; flex: 1; min-width: 0; display: flex; }
+.hud-console-field {
+  flex: 1; min-width: 0;
+  background: var(--gw-surface); border: 1px solid var(--gw-border);
+  border-radius: var(--gw-radius-sm);
+  padding: 8px 12px; font-size: 18px;
+  transition: border-color 150ms var(--gw-ease-out-expo, ease);
+  /* A deeply nested equation (stacked fractions, etc.) would otherwise grow
+     the footer without bound. Cap it and let the field scroll internally
+     past that point instead — the arena-shell's own map-row floor (Step 2)
+     is the second half of this guarantee. */
+  max-height: 220px; overflow-y: auto;
+  scrollbar-width: thin; scrollbar-color: var(--gw-border-strong) transparent;
+}
+.hud-console-field::-webkit-scrollbar { width: 8px; }
+.hud-console-field::-webkit-scrollbar-track { background: transparent; }
+.hud-console-field::-webkit-scrollbar-thumb { background: var(--gw-border-strong); border-radius: 4px; }
+.hud-console-field--hidden { display: none; }
+.hud-console-field--locked {
+  color: var(--gw-text-faint); font-family: var(--gw-font-tech);
+  font-size: var(--gw-fs-sm); display: flex; align-items: center;
+}
+.comp.footer.is-red  .hud-console-field:focus-within { border-color: color-mix(in srgb, var(--gw-red) 60%, var(--gw-border-strong)); }
+.comp.footer.is-blue .hud-console-field:focus-within { border-color: color-mix(in srgb, var(--gw-blue) 60%, var(--gw-border-strong)); }
+
+.hud-console__clear {
+  flex: none; width: 30px; height: 30px; border-radius: var(--gw-radius-sm);
+  border: 1px solid var(--gw-border); background: transparent;
+  color: var(--gw-text-muted); font-size: 18px; line-height: 1; cursor: pointer;
+  transition: color 150ms, border-color 150ms;
+}
+.hud-console__clear:hover:not(:disabled) { color: var(--gw-text); border-color: var(--gw-border-strong); }
+.hud-console__clear:disabled { opacity: 0.3; cursor: default; }
+
+.hud-console__fire { flex: none; padding: 10px 22px; }
+.hud-console__fire-key {
+  font-family: var(--gw-font-tech); font-size: var(--gw-fs-2xs);
+  opacity: 0.55; margin-left: 2px;
+  border: 1px solid currentColor; border-radius: var(--gw-radius-sm); padding: 0 4px; line-height: 1.4;
+}
+
+.hud-console__chiprow { display: flex; align-items: center; justify-content: space-between; gap: var(--gw-space-3); }
+.hud-console__chips { display: flex; flex-wrap: wrap; gap: var(--gw-space-3); }
+.hud-console-chip-group { display: flex; flex-wrap: wrap; gap: 6px; }
+.hud-console-chip {
+  font-family: var(--gw-font-tech); font-size: var(--gw-fs-xs);
+  color: var(--gw-text-muted); background: var(--gw-surface-2);
+  border: 1px solid var(--gw-border); border-radius: var(--gw-radius-sm);
+  padding: 4px 9px; cursor: pointer;
+  transition: color 120ms, border-color 120ms, background 120ms;
+}
+.hud-console-chip:hover:not(:disabled) { color: var(--gw-text); border-color: var(--gw-border-strong); background: oklch(1 0 0 / 0.04); }
+.hud-console-chip:active:not(:disabled) { transform: scale(0.94); }
+.hud-console-chip:disabled { opacity: 0.35; cursor: default; }
+.hud-console-chip:focus-visible { outline: 2px solid oklch(0.9 0.01 250 / 0.9); outline-offset: 2px; }
+.hud-console__hint {
+  flex: none; font-family: var(--gw-font-tech); font-size: var(--gw-fs-2xs);
+  letter-spacing: 0.1em; color: var(--gw-text-faint); white-space: nowrap;
+}

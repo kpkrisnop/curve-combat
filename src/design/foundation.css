@@ -85,6 +85,11 @@
      sliver next to an ever-larger map, capped so it never gets absurd. */
   --gw-panel-w: clamp(340px, 16vw, 420px);
   --gw-footer-min: 78px;
+  /* Floor for the MAP grid row (arena-shell) — the row can shrink to make
+     room for a tall footer (deeply nested equation), but must never reach 0;
+     the board is the one thing that has to stay legible regardless of what's
+     being typed below it. */
+  --gw-map-min: 200px;
 }
 
 /* ============================================================================
