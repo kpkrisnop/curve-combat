@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup, act } from "@testing-library/react";
 import { Footer, roomLink } from "./Footer";
-import { hudStore, initialHudState } from "./hudStore";
+import { hudStore, hudController, initialHudState } from "./hudStore";
 
 const makeInput = () => {
   const el = document.createElement("span");
@@ -114,22 +114,39 @@ describe("Footer", () => {
     expect(onLeave).toHaveBeenCalledTimes(1);
   });
 
-  it("ingame Quit Match confirms before calling onLeave", () => {
+  it("ingame Quit shows an inline confirm (no native window.confirm) and calls onLeave on Quit", () => {
     const onLeave = vi.fn();
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
-    render(<Footer mode="ingame" onLeave={onLeave} />);
-    fireEvent.click(screen.getByRole("button", { name: /quit match/i }));
-    expect(confirmSpy).toHaveBeenCalled();
+    const confirmSpy = vi.spyOn(window, "confirm");
+    render(<Footer mode="ingame" onLeave={onLeave} makeInput={makeInput} />);
+    fireEvent.click(screen.getByRole("button", { name: /^quit$/i }));
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(screen.getByText(/quit match\?/i)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /^quit$/i }));
     expect(onLeave).toHaveBeenCalledTimes(1);
     confirmSpy.mockRestore();
   });
 
-  it("ingame Quit Match does nothing if the confirm is dismissed", () => {
+  it("ingame Quit inline confirm: Stay dismisses without calling onLeave", () => {
     const onLeave = vi.fn();
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
-    render(<Footer mode="ingame" onLeave={onLeave} />);
-    fireEvent.click(screen.getByRole("button", { name: /quit match/i }));
+    render(<Footer mode="ingame" onLeave={onLeave} makeInput={makeInput} />);
+    fireEvent.click(screen.getByRole("button", { name: /^quit$/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^stay$/i }));
     expect(onLeave).not.toHaveBeenCalled();
-    confirmSpy.mockRestore();
+    expect(screen.queryByText(/quit match\?/i)).toBeNull();
+  });
+
+  it("ingame footer card carries the active team's glow class, reading turn from hudStore", () => {
+    render(<Footer mode="ingame" makeInput={makeInput} />);
+    act(() => hudController.setTurn("blue"));
+    expect(document.querySelector(".footer--ingame.is-blue")).toBeTruthy();
+    act(() => hudController.setTurn("red"));
+    expect(document.querySelector(".footer--ingame.is-red")).toBeTruthy();
+  });
+
+  it("ingame footer card has no team-glow class in noTurn mode", () => {
+    act(() => hudController.setNoTurnMode(true));
+    render(<Footer mode="ingame" makeInput={makeInput} />);
+    expect(document.querySelector(".footer--ingame.is-red")).toBeNull();
+    expect(document.querySelector(".footer--ingame.is-blue")).toBeNull();
   });
 });

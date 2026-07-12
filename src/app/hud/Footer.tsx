@@ -20,7 +20,8 @@ import { useEffect, useRef, useState } from "react";
 import { Icon } from "../mdiIcon";
 import { mdiPlay, mdiClockOutline, mdiSwapHorizontal, mdiContentCopy, mdiCheck } from "@mdi/js";
 import { HudBar } from "./HudBar";
-import type { Team } from "./hudStore";
+import { useStore } from "../store";
+import { hudStore, type Team } from "./hudStore";
 
 export type FooterMode = "pregame-local" | "pregame-online" | "ingame";
 
@@ -77,15 +78,7 @@ export function Footer(props: FooterProps) {
   }
 
   if (props.mode === "ingame") {
-    const quit = () => { if (window.confirm("Quit match?")) props.onLeave?.(); };
-    return (
-      <div className="comp footer footer--ingame" data-testid="arena-footer">
-        <HudBar makeInput={props.makeInput} singleTeam={props.singleTeam} />
-        <button type="button" className="gw-btn footer-leave" onClick={quit}>
-          Quit Match
-        </button>
-      </div>
-    );
+    return <IngameFooter onLeave={props.onLeave} makeInput={props.makeInput} singleTeam={props.singleTeam} />;
   }
 
   const isOnline = props.mode === "pregame-online";
@@ -156,6 +149,34 @@ export function Footer(props: FooterProps) {
           </button>
         </>
       )}
+    </div>
+  );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function IngameFooter({ onLeave, makeInput, singleTeam }: { onLeave?: () => void; makeInput?: () => any; singleTeam?: Team }) {
+  const [quitConfirm, setQuitConfirm] = useState(false);
+  const turn = useStore(hudStore, (s) => s.turn);
+  const noTurn = useStore(hudStore, (s) => s.noTurn);
+  const waiting = singleTeam !== undefined && turn !== singleTeam;
+  const glowTeam: Team = waiting ? (singleTeam === "red" ? "blue" : "red") : turn;
+  const teamClass = noTurn ? "" : `is-${glowTeam}`;
+  const waitingClass = !noTurn && waiting ? "is-waiting" : "";
+
+  return (
+    <div className={`comp footer footer--ingame ${teamClass} ${waitingClass}`} data-testid="arena-footer">
+      <div className="footer-quit">
+        {quitConfirm ? (
+          <span className="footer-quit__confirm">
+            <span className="footer-quit__q">Quit match?</span>
+            <button type="button" className="gw-btn gw-btn--danger footer-quit__yes" onClick={onLeave}>Quit</button>
+            <button type="button" className="gw-btn footer-quit__no" onClick={() => setQuitConfirm(false)}>Stay</button>
+          </span>
+        ) : (
+          <button type="button" className="gw-btn footer-quit__btn" onClick={() => setQuitConfirm(true)}>Quit</button>
+        )}
+      </div>
+      <HudBar makeInput={makeInput} singleTeam={singleTeam} />
     </div>
   );
 }
