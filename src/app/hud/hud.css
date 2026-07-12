@@ -170,6 +170,13 @@
 .hud-console-field .mq-selection, .hud-console-field .mq-selection .mq-non-leaf {
   background: var(--gw-accent); color: #fff;
 }
+/* MathField always renders its host span with the OLD dual-panel `.hud-input`
+   class (border/background/padding meant to BE the box for that layout).
+   Inside `.hud-console-field`, the outer div is already the box, so the
+   inner span's own box decoration must be neutralized — otherwise its
+   border shows as a second, nested rectangle just inside the outer one
+   (visible as a stray line inside the team-color focus ring). */
+.hud-console-field .hud-input { border: none; background: transparent; padding: 0; }
 .hud-console-field .mq-input { position: relative; display: block; }
 .hud-console-field .mq-placeholder {
   position: absolute; left: 0; top: 50%; transform: translateY(-50%);
