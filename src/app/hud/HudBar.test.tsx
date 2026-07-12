@@ -12,8 +12,11 @@ const fakeInput = (latex: string) => ({
 // HudBar renders MathFields with a test factory via prop
 const makeInput = () => {
   const el = document.createElement("span");
-  return { el, getLatex: () => "x", setLatex: vi.fn(), focus: vi.fn(),
-           setEnabled: vi.fn(), insertText: vi.fn(), reflow: vi.fn(), onEnter: vi.fn() };
+  return {
+    el, getLatex: () => "x", setLatex: vi.fn(), focus: vi.fn(),
+    setEnabled: vi.fn(), reflow: vi.fn(), insertText: vi.fn(),
+    onEnter: vi.fn(), onEdit: vi.fn(), onUpOutOf: vi.fn(), onDownOutOf: vi.fn(),
+  };
 };
 
 describe("HudBar", () => {
