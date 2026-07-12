@@ -155,6 +155,28 @@
 .comp.footer.is-red  .hud-console-field:focus-within { border-color: color-mix(in srgb, var(--gw-red) 60%, var(--gw-border-strong)); }
 .comp.footer.is-blue .hud-console-field:focus-within { border-color: color-mix(in srgb, var(--gw-blue) 60%, var(--gw-border-strong)); }
 
+/* MathQuill chrome overrides — carried over from the prototype, missed when
+   Task 3 first ported the `.hud-console*` block. Without these the field
+   renders MathQuill's own light-theme defaults (grey border, black caret)
+   and the placeholder renders fully unstyled (MathQuill's raw serif math
+   font, full-bright ink color, static position) instead of the intended
+   faint, mono, vertically-centered placeholder. */
+.hud-console-field .mq-editable-field {
+  border: none; background: transparent; color: var(--gw-text); box-shadow: none;
+}
+.hud-console-field .mq-editable-field.mq-focused { border: none; box-shadow: none; }
+.hud-console-field .mq-editable-field .mq-cursor { border-color: #fff; }
+.hud-console-field .mq-input.mq-locked { pointer-events: none; }
+.hud-console-field .mq-selection, .hud-console-field .mq-selection .mq-non-leaf {
+  background: var(--gw-accent); color: #fff;
+}
+.hud-console-field .mq-input { position: relative; display: block; }
+.hud-console-field .mq-placeholder {
+  position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+  color: var(--gw-text-faint); pointer-events: none;
+  font-family: var(--gw-font-tech); font-size: var(--gw-fs-sm);
+}
+
 .hud-console__clear {
   flex: none; width: 30px; height: 30px; border-radius: var(--gw-radius-sm);
   border: 1px solid var(--gw-border); background: transparent;

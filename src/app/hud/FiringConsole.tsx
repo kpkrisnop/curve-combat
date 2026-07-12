@@ -119,6 +119,7 @@ export function FiringConsole({ makeInput, singleTeam }: { makeInput?: () => any
                 team={t}
                 registry={hudInputs}
                 makeInput={makeInput}
+                placeholder="e.g. sin(x)"
                 onEnter={() => hudController.requestFire(t)}
                 onEdit={() => onEdit(t)}
                 onUpOutOf={() => recallStep(t, -1)}
