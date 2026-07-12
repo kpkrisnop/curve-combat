@@ -1,0 +1,146 @@
+// @vitest-environment jsdom
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, act, cleanup } from "@testing-library/react";
+import { FiringConsole } from "./FiringConsole";
+import { hudStore, hudController, initialHudState } from "./hudStore";
+
+function makeTrackedInput() {
+  let latex = "";
+  let enterCb: (() => void) | null = null;
+  let editCb: (() => void) | null = null;
+  let upCb: (() => void) | null = null;
+  let downCb: (() => void) | null = null;
+  const el = document.createElement("span");
+  return {
+    el,
+    getLatex: () => latex,
+    setLatex: vi.fn((v: string) => { latex = v; editCb?.(); }),
+    focus: vi.fn(),
+    setEnabled: vi.fn(),
+    reflow: vi.fn(),
+    insertText: vi.fn((chars: string) => { latex += chars; editCb?.(); }),
+    onEnter: (cb: () => void) => { enterCb = cb; },
+    onEdit: (cb: () => void) => { editCb = cb; },
+    onUpOutOf: (cb: () => void) => { upCb = cb; },
+    onDownOutOf: (cb: () => void) => { downCb = cb; },
+    fireEnter: () => enterCb?.(),
+    fireUpOutOf: () => upCb?.(),
+    fireDownOutOf: () => downCb?.(),
+    typeLatex: (v: string) => { latex = v; editCb?.(); },
+  };
+}
+
+describe("FiringConsole", () => {
+  let inputs: ReturnType<typeof makeTrackedInput>[];
+  const makeInput = () => { const i = makeTrackedInput(); inputs.push(i); return i; };
+
+  beforeEach(() => {
+    hudStore.set(initialHudState());
+    inputs = [];
+  });
+  afterEach(() => cleanup());
+
+  it("local (no singleTeam): mounts both teams' fields, shows only the active one", () => {
+    act(() => hudController.setTurn("red"));
+    render(<FiringConsole makeInput={makeInput} />);
+    const fields = document.querySelectorAll(".hud-console-field");
+    expect(fields).toHaveLength(2);
+    expect(fields[0].classList.contains("hud-console-field--hidden")).toBe(false); // red first-registered
+    expect(fields[1].classList.contains("hud-console-field--hidden")).toBe(true);
+    act(() => hudController.setTurn("blue"));
+    expect(fields[0].classList.contains("hud-console-field--hidden")).toBe(true);
+    expect(fields[1].classList.contains("hud-console-field--hidden")).toBe(false);
+  });
+
+  it("turn line shows the active team and swaps the team-dot class", () => {
+    act(() => hudController.setTurn("red"));
+    render(<FiringConsole makeInput={makeInput} />);
+    expect(screen.getByText(/RED TO FIRE/i)).toBeTruthy();
+    expect(document.querySelector(".hud-console__dot.is-red")).toBeTruthy();
+    act(() => hudController.setTurn("blue"));
+    expect(screen.getByText(/BLUE TO FIRE/i)).toBeTruthy();
+    expect(document.querySelector(".hud-console__dot.is-blue")).toBeTruthy();
+  });
+
+  it("turn label has aria-live=polite so screen readers hear the swap", () => {
+    render(<FiringConsole makeInput={makeInput} />);
+    expect(document.querySelector(".hud-console__turn")?.getAttribute("aria-live")).toBe("polite");
+  });
+
+  it("singleTeam='blue': mounts exactly one field; shows locked placeholder when it's not blue's turn", () => {
+    act(() => hudController.setTurn("red"));
+    render(<FiringConsole makeInput={makeInput} singleTeam="blue" />);
+    expect(document.querySelectorAll(".hud-console-field")).toHaveLength(1);
+    expect(document.querySelector(".hud-console-field--locked")).toBeTruthy();
+    expect(screen.getByText(/opponent is choosing a curve/i)).toBeTruthy();
+    act(() => hudController.setTurn("blue"));
+    expect(document.querySelector(".hud-console-field--locked")).toBeNull();
+  });
+
+  it("Fire is disabled until the active field has content, then fires with that latex", () => {
+    const cb = vi.fn();
+    hudController.onFire(cb);
+    act(() => hudController.setTurn("red"));
+    render(<FiringConsole makeInput={makeInput} />);
+    const fire = screen.getByRole("button", { name: /Fire/i });
+    expect((fire as HTMLButtonElement).disabled).toBe(true);
+    act(() => inputs[0].typeLatex("\\sin(x)"));
+    expect((fire as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(fire);
+    expect(cb).toHaveBeenCalledWith("red", "\\sin(x)");
+  });
+
+  it("Clear empties the active field and refocuses it", () => {
+    act(() => hudController.setTurn("red"));
+    render(<FiringConsole makeInput={makeInput} />);
+    act(() => inputs[0].typeLatex("x^2"));
+    fireEvent.click(screen.getByRole("button", { name: /clear equation/i }));
+    expect(inputs[0].setLatex).toHaveBeenLastCalledWith("");
+    expect(inputs[0].focus).toHaveBeenCalled();
+  });
+
+  it("clicking a chip inserts its text into the active team's field", () => {
+    act(() => hudController.setTurn("red"));
+    render(<FiringConsole makeInput={makeInput} />);
+    fireEvent.click(screen.getByRole("button", { name: "sin" }));
+    expect(inputs[0].insertText).toHaveBeenCalledWith("sin(");
+    fireEvent.click(screen.getByRole("button", { name: "logₐ" }));
+    expect(inputs[0].insertText).toHaveBeenCalledWith("log_");
+  });
+
+  it("recall: upOutOf walks older shots, downOutOf walks back to the live draft without blanking it", () => {
+    act(() => hudController.setTurn("red"));
+    render(<FiringConsole makeInput={makeInput} />);
+    inputs[0].typeLatex("2x");
+    act(() => hudController.pushHistory("red", "2x"));
+    inputs[0].typeLatex("x^2");
+    act(() => hudController.pushHistory("red", "x^2")); // history: [x^2, 2x]
+    act(() => inputs[0].typeLatex("draft"));
+
+    act(() => inputs[0].fireUpOutOf()); // -> x^2 (newest)
+    expect(inputs[0].setLatex).toHaveBeenLastCalledWith("x^2");
+    act(() => inputs[0].fireUpOutOf()); // -> 2x (older)
+    expect(inputs[0].setLatex).toHaveBeenLastCalledWith("2x");
+    act(() => inputs[0].fireUpOutOf()); // nothing older — no-op, still 2x
+    expect(inputs[0].setLatex).toHaveBeenLastCalledWith("2x");
+
+    act(() => inputs[0].fireDownOutOf()); // -> x^2
+    expect(inputs[0].setLatex).toHaveBeenLastCalledWith("x^2");
+    act(() => inputs[0].fireDownOutOf()); // -> back to the saved draft, NOT blanked
+    expect(inputs[0].setLatex).toHaveBeenLastCalledWith("draft");
+    act(() => inputs[0].fireDownOutOf()); // already on draft — no-op, must stay "draft"
+    expect(inputs[0].setLatex).toHaveBeenLastCalledWith("draft");
+  });
+
+  it("recall is scoped per team", () => {
+    act(() => hudController.setTurn("red"));
+    render(<FiringConsole makeInput={makeInput} />);
+    act(() => hudController.pushHistory("red", "redshot"));
+    act(() => hudController.pushHistory("blue", "blueshot"));
+    act(() => inputs[0].fireUpOutOf());
+    expect(inputs[0].setLatex).toHaveBeenLastCalledWith("redshot");
+    act(() => hudController.setTurn("blue"));
+    act(() => inputs[1].fireUpOutOf());
+    expect(inputs[1].setLatex).toHaveBeenLastCalledWith("blueshot");
+  });
+});
