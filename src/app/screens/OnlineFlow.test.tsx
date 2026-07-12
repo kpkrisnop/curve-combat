@@ -480,7 +480,6 @@ describe("OnlineFlow", () => {
   // ── Task 9: Leave/Quit wiring ──────────────────────────────────────────────
 
   it("ingame Quit Match sends forfeit then navigates away", async () => {
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     await act(async () => {
       render(<OnlineFlow code="ROOM1" />);
     });
@@ -500,9 +499,9 @@ describe("OnlineFlow", () => {
       });
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /quit match/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^quit$/i }));
+    expect(screen.getByText(/quit match\?/i)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /^quit$/i }));
     expect(mockNet.sendForfeit).toHaveBeenCalledTimes(1);
-
-    confirmSpy.mockRestore();
   });
 });
