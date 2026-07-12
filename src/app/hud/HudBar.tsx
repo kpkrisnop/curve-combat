@@ -3,15 +3,10 @@ import "./hud.css";
 import { useStore } from "../store";
 import { hudStore, hudController, hudInputs, type Team } from "./hudStore";
 import { MathField } from "./MathField";
+import { TimerBadge } from "./TimerBadge";
+import { FiringConsole } from "./FiringConsole";
 
-function TimerBadge() {
-  const timer = useStore(hudStore, (s) => s.timer);
-  const noTurn = useStore(hudStore, (s) => s.noTurn);
-  if (timer === null || noTurn) return null;
-  const cls = timer <= 5 ? "hud-timer crit" : timer <= 10 ? "hud-timer warn" : "hud-timer";
-  return <span className={cls}>{timer}s</span>;
-}
-
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function PlayerPanel({ team, makeInput }: { team: Team; makeInput?: () => any }) {
   const turn = useStore(hudStore, (s) => s.turn);
   const noTurn = useStore(hudStore, (s) => s.noTurn);
@@ -19,9 +14,6 @@ function PlayerPanel({ team, makeInput }: { team: Team; makeInput?: () => any })
   const status = useStore(hudStore, (s) => s.status);
   const active = noTurn || turn === team;
   const canFire = active && !busy;
-  // MathInput's own textarea-disable exists but nothing called it — the
-  // dimmed "inactive" panel look was purely cosmetic and the field stayed
-  // typeable. Mirror the same condition the Fire button already uses.
   useEffect(() => {
     hudInputs.get(team)?.setEnabled(canFire);
   }, [team, canFire]);
@@ -40,7 +32,19 @@ function PlayerPanel({ team, makeInput }: { team: Team; makeInput?: () => any })
   );
 }
 
+/**
+ * `noTurn` (simultaneous-fire) mode keeps the original always-both-visible
+ * dual layout — there's no "whose turn" concept to swap a single console on.
+ * Turn-based play (the default) delegates to the redesigned FiringConsole.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function HudBar({ makeInput, singleTeam }: { makeInput?: () => any; singleTeam?: Team }) {
+  const noTurn = useStore(hudStore, (s) => s.noTurn);
+
+  if (!noTurn) {
+    return <FiringConsole makeInput={makeInput} singleTeam={singleTeam} />;
+  }
+
   return (
     <div className={singleTeam ? "hud-bar hud-bar--single" : "hud-bar"}>
       {singleTeam ? (
