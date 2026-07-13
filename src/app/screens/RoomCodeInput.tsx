@@ -18,7 +18,7 @@ export function RoomCodeInput({ autoFocus = false }: { autoFocus?: boolean }) {
 
   return (
     <input
-      className="gw-code-entry"
+      className="cc-code-entry"
       type="text"
       autoFocus={autoFocus}
       maxLength={4}

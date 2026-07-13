@@ -10,8 +10,8 @@ export function CountdownOverlay({ seconds, onDone }: { seconds: number; onDone:
   }, [n]);
   if (n <= 0) return null;
   return (
-    <div className="gw-overlay-center gw-countdown">
-      <span key={n} className="gw-countdown-num">{n}</span>
+    <div className="cc-overlay-center cc-countdown">
+      <span key={n} className="cc-countdown-num">{n}</span>
     </div>
   );
 }

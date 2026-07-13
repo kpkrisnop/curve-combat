@@ -1,4 +1,4 @@
-# Graph War — Feature Roadmap
+# CurveCombat — Feature Roadmap
 
 Each group below is independently implementable in the listed order.
 Later groups may depend on earlier ones (noted in Dependencies).
@@ -65,7 +65,7 @@ a between-round screen, a match winner declaration, and a first-run tutorial.
   2. Player types anything → "Press Enter or Fire to shoot."
   3. Shot plays out on the real field.
   4. Tutorial ends; match begins normally.
-  Stored in `localStorage` (`graphwar.tutorialDone`) so it only runs once.
+  Stored in `localStorage` (`curvecombat.tutorialDone`) so it only runs once.
   No tutorial in subsequent sessions.
 
 ### Key changes
@@ -162,7 +162,7 @@ shared URL. Local hot-seat available without any room code.
      + round picker (3 or 5) → "Start" → `/#game` (no server).
   3. Play Online → "Create Room" → 4-letter human-readable code generated
      (e.g. `WOLF`) → host sees waiting screen with large room code +
-     copyable URL (`https://graphwar.app/#game?room=WOLF`) → guest opens
+     copyable URL (`https://curvecombat.app/#game?room=WOLF`) → guest opens
      URL → auto-joins → host presses "Start".
 - Settings locked once guest joins. Guest sees read-only match config.
 - Same dark theme as the game. Mode cards show one-line descriptions.

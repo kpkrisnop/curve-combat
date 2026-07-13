@@ -8,7 +8,7 @@ import { parseConfigFromHash } from "../game/configRouter";
 export function App() {
   const route = useHashRoute();
   return (
-    <div className="gw-app">
+    <div className="cc-app">
       {route.screen === "landing" && <LandingScreen initialPanelOpen={route.onlinePanelOpen} />}
       {route.screen === "local" && <LocalFlow initial={parseConfigFromHash("#game")} />}
       {route.screen === "game" && <LocalFlow key={location.hash} initial={route.config} autostart />}

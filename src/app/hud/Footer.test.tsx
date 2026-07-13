@@ -68,8 +68,8 @@ describe("Footer", () => {
   });
 
   it("roomLink (L3) preserves a sub-path base instead of hardcoding the bare origin", () => {
-    expect(roomLink("ABCD", "https://example.com/graph-war/")).toBe(
-      "https://example.com/graph-war/#room=ABCD",
+    expect(roomLink("ABCD", "https://example.com/curve-combat/")).toBe(
+      "https://example.com/curve-combat/#room=ABCD",
     );
     // Root-path base still works.
     expect(roomLink("ABCD", "https://example.com/")).toBe("https://example.com/#room=ABCD");

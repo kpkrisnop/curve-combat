@@ -74,7 +74,7 @@ export function LocalFlow({ initial, autostart = false }: Props) {
   // The config panel is always open pre-game and never present in-game —
   // its presence alone distinguishes the two states (ADR-0007).
   const shellClass = [
-    "local-flow", "gw-layer", "arena-shell",
+    "local-flow", "cc-layer", "arena-shell",
     phase === "config" ? "arena-shell--open" : "",
   ].filter(Boolean).join(" ");
 
@@ -88,8 +88,8 @@ export function LocalFlow({ initial, autostart = false }: Props) {
         {phase === "config" && (
           <>
             {/* proto-HUD seats: same edges the player panels will occupy */}
-            <div className="seat seat-red gw-card"><span className="seat__dot" aria-hidden="true" /><span className="seat__label">P1</span> · <b>RED</b></div>
-            <div className="seat seat-blue gw-card"><span className="seat__dot" aria-hidden="true" /><span className="seat__label">P2</span> · <b>BLUE</b></div>
+            <div className="seat seat-red cc-card"><span className="seat__dot" aria-hidden="true" /><span className="seat__label">P1</span> · <b>RED</b></div>
+            <div className="seat seat-blue cc-card"><span className="seat__dot" aria-hidden="true" /><span className="seat__label">P2</span> · <b>BLUE</b></div>
           </>
         )}
       </div>

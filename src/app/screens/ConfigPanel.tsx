@@ -187,7 +187,7 @@ export function ConfigPanel({ value, onChange, seed, onReroll, readOnly, hideSee
         {!hideSeedRow && (
           <div className="cfg-seed">
             <code>seed {seed}</code>
-            <button type="button" className="gw-btn" onClick={onReroll}>
+            <button type="button" className="cc-btn" onClick={onReroll}>
               <Icon path={mdiRefresh} size="14px" color="currentColor" />
               Reroll
             </button>

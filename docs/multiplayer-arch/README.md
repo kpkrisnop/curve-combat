@@ -1,6 +1,6 @@
-# Graph War — Online Multiplayer Architecture Mockups
+# CurveCombat — Online Multiplayer Architecture Mockups
 
-Three full-pipeline designs for taking Graph War online with friends (2–10 players, teams, invite link, desktop + tablet). Each is mocked up as its own Obsidian canvas — open the folder in Obsidian and double-click a `.canvas` file.
+Three full-pipeline designs for taking CurveCombat online with friends (2–10 players, teams, invite link, desktop + tablet). Each is mocked up as its own Obsidian canvas — open the folder in Obsidian and double-click a `.canvas` file.
 
 **The core gameplay never changes in any of them:** type a function → `engine.fire` traces the curve → collision resolves a hit. `src/sim/*` and `src/math/*` stay untouched. The designs differ **only in where the simulation runs and how state propagates.**
 

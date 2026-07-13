@@ -19,11 +19,11 @@ function WinBanner() {
   const win = useStore(hudStore, (s) => s.win);
   if (!win) return null;
   return (
-    <div className="gw-overlay-center gw-overlay-center--modal">
+    <div className="cc-overlay-center cc-overlay-center--modal">
       <div className="win-banner">
         <h2 className={`w-${win.winner}`}>{win.winner} wins</h2>
         <p>{win.detail}</p>
-        <button className="gw-btn gw-btn--primary" onClick={() => hudController.requestReset()}>
+        <button className="cc-btn cc-btn--primary" onClick={() => hudController.requestReset()}>
           Back to Lobby
         </button>
       </div>
@@ -35,7 +35,7 @@ function RoundSplash() {
   const splash = useStore(hudStore, (s) => s.splash);
   if (!splash) return null;
   return (
-    <div className="gw-overlay-center">
+    <div className="cc-overlay-center">
       {/* splash html is app-generated (LocalGame), never user input */}
       <div className="round-splash" dangerouslySetInnerHTML={{ __html: splash }} />
     </div>
@@ -46,12 +46,12 @@ function TutorialOverlay() {
   const tutorial = useStore(hudStore, (s) => s.tutorial);
   if (!tutorial) return null;
   return (
-    <div className="gw-overlay-center gw-overlay-center--modal">
+    <div className="cc-overlay-center cc-overlay-center--modal">
       <div className="tutorial-box">
         <p>{tutorial.text}</p>
         <div className="tutorial-actions">
-          <button className="gw-btn" onClick={() => hudController.tutorialSkip()}>Skip tutorial</button>
-          <button className="gw-btn gw-btn--primary" onClick={() => hudController.tutorialNext()}>OK</button>
+          <button className="cc-btn" onClick={() => hudController.tutorialSkip()}>Skip tutorial</button>
+          <button className="cc-btn cc-btn--primary" onClick={() => hudController.tutorialNext()}>OK</button>
         </div>
       </div>
     </div>

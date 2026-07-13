@@ -89,11 +89,11 @@ export function OnlineFlow({ code }: Props) {
     prevFlashRef.current = configFlash;
     const el = configFlashRef.current;
     if (!el) return;
-    el.classList.remove("gw-config-flash");
+    el.classList.remove("cc-config-flash");
     // Force reflow to restart animation
     void el.offsetWidth;
-    el.classList.add("gw-config-flash");
-    const tid = setTimeout(() => el.classList.remove("gw-config-flash"), 700);
+    el.classList.add("cc-config-flash");
+    const tid = setTimeout(() => el.classList.remove("cc-config-flash"), 700);
     return () => clearTimeout(tid);
   }, [configFlash]);
 
@@ -272,7 +272,7 @@ export function OnlineFlow({ code }: Props) {
   // The config panel is always open in the lobby and never present in-game —
   // its presence alone distinguishes the two states (ADR-0007).
   const shellClass = [
-    "online-flow", "gw-layer", "arena-shell",
+    "online-flow", "cc-layer", "arena-shell",
     isLobby ? "arena-shell--open" : "",
   ].filter(Boolean).join(" ");
 
@@ -286,7 +286,7 @@ export function OnlineFlow({ code }: Props) {
       {isLobby && (
         <>
           {/* Room code badge — out-of-flow, doesn't become a grid item */}
-          <div className="net-room-code gw-card">
+          <div className="net-room-code cc-card">
             <span className="net-room-code__label">Room</span>
             <span className="net-room-code__code">{roomCode}</span>
           </div>
@@ -304,7 +304,7 @@ export function OnlineFlow({ code }: Props) {
                   onReroll={onReroll}
                   hideSeedRow
                 />
-                <button className="gw-btn" onClick={onReroll}>
+                <button className="cc-btn" onClick={onReroll}>
                   <Icon path={mdiRefresh} size="14px" color="currentColor" />
                   Reroll terrain
                 </button>
@@ -352,7 +352,7 @@ export function OnlineFlow({ code }: Props) {
             Spectating · {roomCode}
           </div>
           <button
-            className="gw-btn spectator-leave"
+            className="cc-btn spectator-leave"
             onClick={() => { location.hash = ""; }}
           >
             Leave

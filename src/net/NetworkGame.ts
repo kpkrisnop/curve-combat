@@ -23,7 +23,7 @@ export interface LobbySnapshot {
   round1Seed?: number;
 }
 
-const SESSION_KEY = "graphwar-session";
+const SESSION_KEY = "curvecombat-session";
 
 export class NetworkGame {
   private countdownInterval: ReturnType<typeof setInterval> | null = null;

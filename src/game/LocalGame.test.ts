@@ -68,7 +68,7 @@ function fakeUi(): GameUiPort & {
 describe("LocalGame", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    localStorage.setItem("graphwar.tutorialDone", "1"); // skip tutorial in tests
+    localStorage.setItem("curvecombat.tutorialDone", "1"); // skip tutorial in tests
   });
   afterEach(() => vi.useRealTimers());
 

@@ -1,4 +1,4 @@
-# Graph War — Component Design (Simulation Layer)
+# CurveCombat — Component Design (Simulation Layer)
 
 > Resolves the open questions in [architecture-decisions.md §9](./architecture-decisions.md).
 > Scope: the **pure simulation layer** and the narrow interfaces it exposes to the

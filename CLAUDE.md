@@ -1,4 +1,4 @@
-# Graph War
+# CurveCombat
 
 A browser game where two teams fire mathematical function curves across a planet-scattered arena to hit each other. React + TypeScript + Vite client, Pixi.js canvas rendering, and an authoritative WebSocket server for online play. Supports local hotseat and online NvN (two teams). Desktop/landscape only (phone-gated, ~≥1024px).
 

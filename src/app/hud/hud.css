@@ -1,7 +1,7 @@
 /* Embedded inside the FOOTER card (arena-shell-redesign C3) — in-flow, not an
    absolute viewport overlay, so the footer row can grow for tall equations. */
 .hud-bar {
-  display: grid; grid-template-columns: 1fr 1fr; gap: var(--gw-space-3);
+  display: grid; grid-template-columns: 1fr 1fr; gap: var(--cc-space-3);
   align-items: center; width: 100%;
 }
 /* Single-team (online) in-game layout: one player panel, no second grid
@@ -16,24 +16,24 @@
   max-width: 640px;
 }
 .player-panel {
-  background: var(--gw-surface-2); border: 1px solid var(--gw-border);
-  border-radius: var(--gw-radius-lg); padding: var(--gw-space-3);
+  background: var(--cc-surface-2); border: 1px solid var(--cc-border);
+  border-radius: var(--cc-radius-lg); padding: var(--cc-space-3);
   backdrop-filter: blur(8px); transition: border-color 200ms, box-shadow 200ms, opacity 200ms;
 }
-.player-panel.is-red.is-active  { border-color: var(--gw-red);  box-shadow: var(--gw-glow-red); }
-.player-panel.is-blue.is-active { border-color: var(--gw-blue); box-shadow: var(--gw-glow-blue); }
+.player-panel.is-red.is-active  { border-color: var(--cc-red);  box-shadow: var(--cc-glow-red); }
+.player-panel.is-blue.is-active { border-color: var(--cc-blue); box-shadow: var(--cc-glow-blue); }
 .player-panel.is-inactive { opacity: 0.45; }
-.fire-row { display: flex; align-items: center; gap: var(--gw-space-2); }
-.hud-prompt { font-family: var(--gw-font-mono); color: var(--gw-text-muted); }
-.hud-input { flex: 1; min-width: 0; background: var(--gw-surface);
-  border: 1px solid var(--gw-border); border-radius: var(--gw-radius-sm);
+.fire-row { display: flex; align-items: center; gap: var(--cc-space-2); }
+.hud-prompt { font-family: var(--cc-font-mono); color: var(--cc-text-muted); }
+.hud-input { flex: 1; min-width: 0; background: var(--cc-surface);
+  border: 1px solid var(--cc-border); border-radius: var(--cc-radius-sm);
   padding: 6px 10px; display: block; }
 /* MathQuill ships its own light-theme chrome (grey border, black caret) that
    otherwise leaks through into this dark box — override to match. (This used
    to live in src/styles.css, a stylesheet the live app never actually loads;
    moved here, the file the game HUD really uses.) */
 .hud-input .mq-editable-field {
-  border: none; background: transparent; color: var(--gw-text); box-shadow: none;
+  border: none; background: transparent; color: var(--cc-text); box-shadow: none;
 }
 .hud-input .mq-editable-field.mq-focused { border: none; box-shadow: none; }
 /* Three selectors deliberately outrank mathquill.css's own two-selector
@@ -43,54 +43,54 @@
    See setFieldEnabled — the lock deliberately avoids `disabled`. */
 .hud-input .mq-input.mq-locked { pointer-events: none; }
 .hud-input .mq-selection, .hud-input .mq-selection .mq-non-leaf {
-  background: var(--gw-accent); color: #fff;
+  background: var(--cc-accent); color: #fff;
 }
-.hud-status { min-height: 18px; font-size: var(--gw-fs-xs); color: var(--gw-text-faint); }
-.hud-timer { font-family: var(--gw-font-mono); font-weight: 800; min-width: 44px; text-align: center; }
+.hud-status { min-height: 18px; font-size: var(--cc-fs-xs); color: var(--cc-text-faint); }
+.hud-timer { font-family: var(--cc-font-mono); font-weight: 800; min-width: 44px; text-align: center; }
 .hud-timer.warn { color: #ffb020; }
-.hud-timer.crit { color: var(--gw-red); animation: gw-pulse 0.6s infinite alternate; }
-@keyframes gw-pulse { from { opacity: 1; } to { opacity: 0.4; } }
+.hud-timer.crit { color: var(--cc-red); animation: cc-pulse 0.6s infinite alternate; }
+@keyframes cc-pulse { from { opacity: 1; } to { opacity: 0.4; } }
 /* Overlays */
 /* Standalone top-center round/score readout (arena-shell-redesign D3, spec §9).
    Floats over the MAP card — positioned relative to the arena shell (the
    nearest positioned ancestor of HudOverlays' contents), which in-game spans
    only the map column (no side panel), so top-center here == top-center of
    the map. Not a bar: a single self-contained pill, in-game only. */
-.round-status { position: absolute; top: var(--gw-gap); left: 50%; transform: translateX(-50%);
-  z-index: 6; background: var(--gw-surface); border: 1px solid var(--gw-border);
-  border-radius: var(--gw-radius-pill); padding: 8px 18px; font-weight: 800;
+.round-status { position: absolute; top: var(--cc-gap); left: 50%; transform: translateX(-50%);
+  z-index: 6; background: var(--cc-surface); border: 1px solid var(--cc-border);
+  border-radius: var(--cc-radius-pill); padding: 8px 18px; font-weight: 800;
   font-variant-numeric: tabular-nums; white-space: nowrap;
   backdrop-filter: blur(6px); pointer-events: none; }
-.gw-overlay-center { position: absolute; inset: 0; z-index: 10;
+.cc-overlay-center { position: absolute; inset: 0; z-index: 10;
   display: flex; align-items: center; justify-content: center; }
 /* Modal overlays (win, tutorial) dim the arena behind them so the card holds
    focus; transient ones (round splash) skip the scrim to stay lightweight. */
-.gw-overlay-center--modal { background: oklch(0 0 0 / 0.55); backdrop-filter: blur(2px); }
+.cc-overlay-center--modal { background: oklch(0 0 0 / 0.55); backdrop-filter: blur(2px); }
 .win-banner, .round-splash, .tutorial-box {
-  background: var(--gw-surface); border: 1px solid var(--gw-border-strong);
-  border-radius: var(--gw-radius-2xl); padding: var(--gw-space-6) var(--gw-space-7);
+  background: var(--cc-surface); border: 1px solid var(--cc-border-strong);
+  border-radius: var(--cc-radius-2xl); padding: var(--cc-space-6) var(--cc-space-7);
   text-align: center; backdrop-filter: blur(12px);
   box-shadow: 0 24px 64px oklch(0 0 0 / 0.5);
 }
 .win-banner h2 {
-  margin: 0 0 var(--gw-space-2); font-size: var(--gw-fs-xl); font-weight: 800;
+  margin: 0 0 var(--cc-space-2); font-size: var(--cc-fs-xl); font-weight: 800;
   letter-spacing: 0.02em; text-transform: uppercase;
 }
-.win-banner p { margin: 0 0 var(--gw-space-5); color: var(--gw-text-muted); }
-.win-banner .w-red { color: var(--gw-red); } .win-banner .w-blue { color: var(--gw-blue); }
-.tutorial-box p { margin: 0; color: var(--gw-text); }
-.tutorial-actions { display: flex; gap: var(--gw-space-3); justify-content: center; margin-top: var(--gw-space-5); }
+.win-banner p { margin: 0 0 var(--cc-space-5); color: var(--cc-text-muted); }
+.win-banner .w-red { color: var(--cc-red); } .win-banner .w-blue { color: var(--cc-blue); }
+.tutorial-box p { margin: 0; color: var(--cc-text); }
+.tutorial-actions { display: flex; gap: var(--cc-space-3); justify-content: center; margin-top: var(--cc-space-5); }
 
 /* Entrance — a quiet lift into focus, the app's expo-out language. Scrim fades
    first, the card rises through it. */
 @media (prefers-reduced-motion: no-preference) {
-  .gw-overlay-center--modal { animation: gw-scrim-in 200ms var(--gw-ease-out-expo) both; }
+  .cc-overlay-center--modal { animation: cc-scrim-in 200ms var(--cc-ease-out-expo) both; }
   .win-banner, .round-splash, .tutorial-box {
-    animation: gw-overlay-in 280ms var(--gw-ease-out-expo) 60ms both;
+    animation: cc-overlay-in 280ms var(--cc-ease-out-expo) 60ms both;
   }
 }
-@keyframes gw-scrim-in { from { opacity: 0; } to { opacity: 1; } }
-@keyframes gw-overlay-in {
+@keyframes cc-scrim-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes cc-overlay-in {
   from { opacity: 0; transform: translateY(8px) scale(0.97); filter: blur(6px); }
   to   { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
 }
@@ -106,54 +106,54 @@
    Mixed `in srgb`, not `in oklch`: OKLCH interpolates hue around the polar
    wheel, and red (~25°) vs this border's cool blue-gray (~250°) are far
    enough apart that the browser swings through magenta on the way. */
-.comp.footer.is-red   { border-color: color-mix(in srgb, var(--gw-red) 45%, var(--gw-border)); box-shadow: 0 0 40px -8px rgba(255, 68, 68, 0.28); }
-.comp.footer.is-blue  { border-color: color-mix(in srgb, var(--gw-blue) 45%, var(--gw-border)); box-shadow: 0 0 40px -8px rgba(68, 136, 255, 0.28); }
+.comp.footer.is-red   { border-color: color-mix(in srgb, var(--cc-red) 45%, var(--cc-border)); box-shadow: 0 0 40px -8px rgba(255, 68, 68, 0.28); }
+.comp.footer.is-blue  { border-color: color-mix(in srgb, var(--cc-blue) 45%, var(--cc-border)); box-shadow: 0 0 40px -8px rgba(68, 136, 255, 0.28); }
 /* Waiting (online, not your turn): a dimmer version of the opponent's glow —
    reassurance during the anxious "watching for your turn" moment, without
    competing with the full-strength glow that means "act now". */
-.comp.footer.is-waiting.is-red  { border-color: color-mix(in srgb, var(--gw-red) 22%, var(--gw-border)); box-shadow: 0 0 24px -10px rgba(255, 68, 68, 0.18); }
-.comp.footer.is-waiting.is-blue { border-color: color-mix(in srgb, var(--gw-blue) 22%, var(--gw-border)); box-shadow: 0 0 24px -10px rgba(68, 136, 255, 0.18); }
-.comp.footer { transition: border-color 220ms var(--gw-ease-out-expo, ease), box-shadow 220ms var(--gw-ease-out-expo, ease); }
+.comp.footer.is-waiting.is-red  { border-color: color-mix(in srgb, var(--cc-red) 22%, var(--cc-border)); box-shadow: 0 0 24px -10px rgba(255, 68, 68, 0.18); }
+.comp.footer.is-waiting.is-blue { border-color: color-mix(in srgb, var(--cc-blue) 22%, var(--cc-border)); box-shadow: 0 0 24px -10px rgba(68, 136, 255, 0.18); }
+.comp.footer { transition: border-color 220ms var(--cc-ease-out-expo, ease), box-shadow 220ms var(--cc-ease-out-expo, ease); }
 @media (prefers-reduced-motion: reduce) { .comp.footer { transition: none; } }
 
-.hud-console { width: 100%; max-width: 720px; display: flex; flex-direction: column; gap: var(--gw-space-3); }
+.hud-console { width: 100%; max-width: 720px; display: flex; flex-direction: column; gap: var(--cc-space-3); }
 
 .hud-console__turnline { display: flex; align-items: center; justify-content: space-between; }
 .hud-console__turn {
-  display: inline-flex; align-items: center; gap: var(--gw-space-2);
-  font-family: var(--gw-font-tech); font-size: var(--gw-fs-xs);
-  letter-spacing: 0.12em; text-transform: uppercase; color: var(--gw-text-muted);
+  display: inline-flex; align-items: center; gap: var(--cc-space-2);
+  font-family: var(--cc-font-tech); font-size: var(--cc-fs-xs);
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--cc-text-muted);
 }
 .hud-console__dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
-.hud-console__dot.is-red  { background: var(--gw-red);  box-shadow: 0 0 8px var(--gw-red); }
-.hud-console__dot.is-blue { background: var(--gw-blue); box-shadow: 0 0 8px var(--gw-blue); }
+.hud-console__dot.is-red  { background: var(--cc-red);  box-shadow: 0 0 8px var(--cc-red); }
+.hud-console__dot.is-blue { background: var(--cc-blue); box-shadow: 0 0 8px var(--cc-blue); }
 
-.hud-console__inputrow { display: flex; align-items: center; gap: var(--gw-space-2); }
+.hud-console__inputrow { display: flex; align-items: center; gap: var(--cc-space-2); }
 .hud-console__inputrow.is-locked { opacity: 0.6; }
 .hud-console__fields { position: relative; flex: 1; min-width: 0; display: flex; }
 .hud-console-field {
   flex: 1; min-width: 0;
-  background: var(--gw-surface); border: 1px solid var(--gw-border);
-  border-radius: var(--gw-radius-sm);
+  background: var(--cc-surface); border: 1px solid var(--cc-border);
+  border-radius: var(--cc-radius-sm);
   padding: 8px 12px; font-size: 18px;
-  transition: border-color 150ms var(--gw-ease-out-expo, ease);
+  transition: border-color 150ms var(--cc-ease-out-expo, ease);
   /* A deeply nested equation (stacked fractions, etc.) would otherwise grow
      the footer without bound. Cap it and let the field scroll internally
      past that point instead — the arena-shell's own map-row floor (Step 2)
      is the second half of this guarantee. */
   max-height: 220px; overflow-y: auto;
-  scrollbar-width: thin; scrollbar-color: var(--gw-border-strong) transparent;
+  scrollbar-width: thin; scrollbar-color: var(--cc-border-strong) transparent;
 }
 .hud-console-field::-webkit-scrollbar { width: 8px; }
 .hud-console-field::-webkit-scrollbar-track { background: transparent; }
-.hud-console-field::-webkit-scrollbar-thumb { background: var(--gw-border-strong); border-radius: 4px; }
+.hud-console-field::-webkit-scrollbar-thumb { background: var(--cc-border-strong); border-radius: 4px; }
 .hud-console-field--hidden { display: none; }
 .hud-console-field--locked {
-  color: var(--gw-text-faint); font-family: var(--gw-font-tech);
-  font-size: var(--gw-fs-sm); display: flex; align-items: center;
+  color: var(--cc-text-faint); font-family: var(--cc-font-tech);
+  font-size: var(--cc-fs-sm); display: flex; align-items: center;
 }
-.comp.footer.is-red  .hud-console-field:focus-within { border-color: color-mix(in srgb, var(--gw-red) 60%, var(--gw-border-strong)); }
-.comp.footer.is-blue .hud-console-field:focus-within { border-color: color-mix(in srgb, var(--gw-blue) 60%, var(--gw-border-strong)); }
+.comp.footer.is-red  .hud-console-field:focus-within { border-color: color-mix(in srgb, var(--cc-red) 60%, var(--cc-border-strong)); }
+.comp.footer.is-blue .hud-console-field:focus-within { border-color: color-mix(in srgb, var(--cc-blue) 60%, var(--cc-border-strong)); }
 
 /* MathQuill chrome overrides — carried over from the prototype, missed when
    Task 3 first ported the `.hud-console*` block. Without these the field
@@ -162,13 +162,13 @@
    font, full-bright ink color, static position) instead of the intended
    faint, mono, vertically-centered placeholder. */
 .hud-console-field .mq-editable-field {
-  border: none; background: transparent; color: var(--gw-text); box-shadow: none;
+  border: none; background: transparent; color: var(--cc-text); box-shadow: none;
 }
 .hud-console-field .mq-editable-field.mq-focused { border: none; box-shadow: none; }
 .hud-console-field .mq-editable-field .mq-cursor { border-color: #fff; }
 .hud-console-field .mq-input.mq-locked { pointer-events: none; }
 .hud-console-field .mq-selection, .hud-console-field .mq-selection .mq-non-leaf {
-  background: var(--gw-accent); color: #fff;
+  background: var(--cc-accent); color: #fff;
 }
 /* MathField always renders its host span with the OLD dual-panel `.hud-input`
    class (border/background/padding meant to BE the box for that layout).
@@ -180,41 +180,41 @@
 .hud-console-field .mq-input { position: relative; display: block; }
 .hud-console-field .mq-placeholder {
   position: absolute; left: 0; top: 50%; transform: translateY(-50%);
-  color: var(--gw-text-faint); pointer-events: none;
-  font-family: var(--gw-font-tech); font-size: var(--gw-fs-sm);
+  color: var(--cc-text-faint); pointer-events: none;
+  font-family: var(--cc-font-tech); font-size: var(--cc-fs-sm);
 }
 
 .hud-console__clear {
-  flex: none; width: 30px; height: 30px; border-radius: var(--gw-radius-sm);
-  border: 1px solid var(--gw-border); background: transparent;
-  color: var(--gw-text-muted); font-size: 18px; line-height: 1; cursor: pointer;
+  flex: none; width: 30px; height: 30px; border-radius: var(--cc-radius-sm);
+  border: 1px solid var(--cc-border); background: transparent;
+  color: var(--cc-text-muted); font-size: 18px; line-height: 1; cursor: pointer;
   transition: color 150ms, border-color 150ms;
 }
-.hud-console__clear:hover:not(:disabled) { color: var(--gw-text); border-color: var(--gw-border-strong); }
+.hud-console__clear:hover:not(:disabled) { color: var(--cc-text); border-color: var(--cc-border-strong); }
 .hud-console__clear:disabled { opacity: 0.3; cursor: default; }
 
 .hud-console__fire { flex: none; padding: 10px 22px; }
 .hud-console__fire-key {
-  font-family: var(--gw-font-tech); font-size: var(--gw-fs-2xs);
+  font-family: var(--cc-font-tech); font-size: var(--cc-fs-2xs);
   opacity: 0.55; margin-left: 2px;
-  border: 1px solid currentColor; border-radius: var(--gw-radius-sm); padding: 0 4px; line-height: 1.4;
+  border: 1px solid currentColor; border-radius: var(--cc-radius-sm); padding: 0 4px; line-height: 1.4;
 }
 
-.hud-console__chiprow { display: flex; align-items: center; justify-content: space-between; gap: var(--gw-space-3); }
-.hud-console__chips { display: flex; flex-wrap: wrap; gap: var(--gw-space-3); }
+.hud-console__chiprow { display: flex; align-items: center; justify-content: space-between; gap: var(--cc-space-3); }
+.hud-console__chips { display: flex; flex-wrap: wrap; gap: var(--cc-space-3); }
 .hud-console-chip-group { display: flex; flex-wrap: wrap; gap: 6px; }
 .hud-console-chip {
-  font-family: var(--gw-font-tech); font-size: var(--gw-fs-xs);
-  color: var(--gw-text-muted); background: var(--gw-surface-2);
-  border: 1px solid var(--gw-border); border-radius: var(--gw-radius-sm);
+  font-family: var(--cc-font-tech); font-size: var(--cc-fs-xs);
+  color: var(--cc-text-muted); background: var(--cc-surface-2);
+  border: 1px solid var(--cc-border); border-radius: var(--cc-radius-sm);
   padding: 4px 9px; cursor: pointer;
   transition: color 120ms, border-color 120ms, background 120ms;
 }
-.hud-console-chip:hover:not(:disabled) { color: var(--gw-text); border-color: var(--gw-border-strong); background: oklch(1 0 0 / 0.04); }
+.hud-console-chip:hover:not(:disabled) { color: var(--cc-text); border-color: var(--cc-border-strong); background: oklch(1 0 0 / 0.04); }
 .hud-console-chip:active:not(:disabled) { transform: scale(0.94); }
 .hud-console-chip:disabled { opacity: 0.35; cursor: default; }
 .hud-console-chip:focus-visible { outline: 2px solid oklch(0.9 0.01 250 / 0.9); outline-offset: 2px; }
 .hud-console__hint {
-  flex: none; font-family: var(--gw-font-tech); font-size: var(--gw-fs-2xs);
-  letter-spacing: 0.1em; color: var(--gw-text-faint); white-space: nowrap;
+  flex: none; font-family: var(--cc-font-tech); font-size: var(--cc-fs-2xs);
+  letter-spacing: 0.1em; color: var(--cc-text-faint); white-space: nowrap;
 }

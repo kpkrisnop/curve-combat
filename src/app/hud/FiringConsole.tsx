@@ -153,7 +153,7 @@ export function FiringConsole({ makeInput, singleTeam }: { makeInput?: () => any
         )}
         <button
           type="button"
-          className="gw-btn gw-btn--primary hud-console__fire"
+          className="cc-btn cc-btn--primary hud-console__fire"
           disabled={!canFire}
           onClick={() => hudController.requestFire(turn)}
         >

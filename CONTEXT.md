@@ -1,4 +1,4 @@
-# Graph War
+# CurveCombat
 
 A browser game where a player fires by typing a mathematical function; the
 projectile travels along the resulting curve through a world of targets and

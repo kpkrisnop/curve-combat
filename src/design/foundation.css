@@ -1,7 +1,7 @@
 /* ============================================================================
-   Graph War — Design Foundation
+   CurveCombat — Design Foundation
    Single source of truth for design tokens (colors, type, spacing, radii,
-   motion) plus the primitives (`.gw-*`) the lobby, settings panel, and HUDs
+   motion) plus the primitives (`.cc-*`) the lobby, settings panel, and HUDs
    share. `theme.css` (loaded after this file) holds composed, page-specific
    styles that consume these tokens — it must not redeclare any of them.
    ============================================================================ */
@@ -11,85 +11,85 @@
      Near-neutral darks: barely-cool, chroma trimmed so panels read as deep
      charcoal on black, not blue glass. The blue-gray coolness lives in the
      ink ramp; surfaces stay close to the pitch-black field. */
-  --gw-bg: #000000;
-  --gw-surface: rgba(12, 14, 18, 0.85);
-  --gw-surface-2: rgba(7, 9, 12, 0.9);
-  --gw-border: #1d222a;
-  --gw-border-strong: #303c48;
+  --cc-bg: #000000;
+  --cc-surface: rgba(12, 14, 18, 0.85);
+  --cc-surface-2: rgba(7, 9, 12, 0.9);
+  --cc-border: #1d222a;
+  --cc-border-strong: #303c48;
 
   /* ── Text ──────────────────────────────────────────────────────────────── */
-  --gw-text: #cdd9e5;            /* primary */
-  --gw-text-muted: #8499ab;      /* secondary */
-  --gw-text-faint: #5e7081;      /* tertiary — reserve for the single quietest element on a screen */
+  --cc-text: #cdd9e5;            /* primary */
+  --cc-text-muted: #8499ab;      /* secondary */
+  --cc-text-faint: #5e7081;      /* tertiary — reserve for the single quietest element on a screen */
 
   /* ── Player identity (semantic — do NOT reuse as neutral UI accent) ──────── */
-  --gw-red: #ff4444;
-  --gw-blue: #4488ff;
-  --gw-glow-red: 0 0 24px rgba(255, 68, 68, 0.35);
-  --gw-glow-blue: 0 0 24px rgba(68, 136, 255, 0.35);
+  --cc-red: #ff4444;
+  --cc-blue: #4488ff;
+  --cc-glow-red: 0 0 24px rgba(255, 68, 68, 0.35);
+  --cc-glow-blue: 0 0 24px rgba(68, 136, 255, 0.35);
   /* Hero duel colors — tuned for glow-on-black title/seat treatments; team tokens above stay untouched */
-  --gw-hero-red: oklch(0.63 0.235 27);
-  --gw-hero-blue: oklch(0.66 0.19 258);
+  --cc-hero-red: oklch(0.63 0.235 27);
+  --cc-hero-blue: oklch(0.66 0.19 258);
 
   /* Neutral interactive accent — the same near-white "primary-ivory" landing
      uses for its one filled button, reused here as the whole app's "this is
      selected/important" language instead of a third, disconnected hue.
-     Deliberately NOT team-blue (was #4488ff, identical to --gw-blue) so
+     Deliberately NOT team-blue (was #4488ff, identical to --cc-blue) so
      "this is selected" never reads as "this is the BLUE team" when a seat
      chip and a selected option card sit side by side. */
-  --gw-accent: oklch(0.93 0.008 250);
-  --gw-accent-hover: oklch(0.99 0.003 250);
-  --gw-accent-tint: oklch(1 0 0 / 0.08);
-  --gw-glow-accent: 0 0 20px oklch(1 0 0 / 0.22);
+  --cc-accent: oklch(0.93 0.008 250);
+  --cc-accent-hover: oklch(0.99 0.003 250);
+  --cc-accent-tint: oklch(1 0 0 / 0.08);
+  --cc-glow-accent: 0 0 20px oklch(1 0 0 / 0.22);
 
   /* ── Type scale ────────────────────────────────────────────────────────── */
-  --gw-font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
-  --gw-font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
-  --gw-font-display: "Archivo Variable", var(--gw-font-sans);
-  --gw-font-tech: "Martian Mono Variable", ui-monospace, SFMono-Regular, Menlo, monospace;
-  --gw-fs-2xs: 9px;
-  --gw-fs-xs: 11px;
-  --gw-fs-sm: 13px;
-  --gw-fs-md: 15px;
-  --gw-fs-lg: 22px;
-  --gw-fs-xl: 32px;
-  --gw-fs-2xl: 48px;
+  --cc-font-sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --cc-font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --cc-font-display: "Archivo Variable", var(--cc-font-sans);
+  --cc-font-tech: "Martian Mono Variable", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --cc-fs-2xs: 9px;
+  --cc-fs-xs: 11px;
+  --cc-fs-sm: 13px;
+  --cc-fs-md: 15px;
+  --cc-fs-lg: 22px;
+  --cc-fs-xl: 32px;
+  --cc-fs-2xl: 48px;
 
   /* ── Spacing scale (4px base) ──────────────────────────────────────────── */
-  --gw-space-1: 4px;
-  --gw-space-2: 8px;
-  --gw-space-3: 12px;
-  --gw-space-4: 16px;
-  --gw-space-5: 20px;
-  --gw-space-6: 28px;
-  --gw-space-7: 36px;
+  --cc-space-1: 4px;
+  --cc-space-2: 8px;
+  --cc-space-3: 12px;
+  --cc-space-4: 16px;
+  --cc-space-5: 20px;
+  --cc-space-6: 28px;
+  --cc-space-7: 36px;
 
   /* ── Radii ─────────────────────────────────────────────────────────────── */
-  --gw-radius-sm: 6px;
-  --gw-radius-md: 8px;
-  --gw-radius-lg: 10px;
-  --gw-radius-xl: 12px;
-  --gw-radius-2xl: 16px;
-  --gw-radius-pill: 20px;
+  --cc-radius-sm: 6px;
+  --cc-radius-md: 8px;
+  --cc-radius-lg: 10px;
+  --cc-radius-xl: 12px;
+  --cc-radius-2xl: 16px;
+  --cc-radius-pill: 20px;
 
   /* ── Motion ────────────────────────────────────────────────────────────── */
-  --gw-transition: 0.15s ease;
-  --gw-ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --cc-transition: 0.15s ease;
+  --cc-ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 
   /* ── Arena shell (grid-of-cards) ───────────────────────────────────────────
      ONE shared gutter token reused as BOTH the grid `gap` and the shell
      `padding` — every gap (card-to-card, card-to-screen-edge) is equal. */
-  --gw-gap: 18px;
+  --cc-gap: 18px;
   /* Fixed 340px at the 1024px phone-gate floor through ~1920px (tested);
      grows modestly on large/ultra-wide displays instead of staying a fixed
      sliver next to an ever-larger map, capped so it never gets absurd. */
-  --gw-panel-w: clamp(340px, 16vw, 420px);
-  --gw-footer-min: 78px;
+  --cc-panel-w: clamp(340px, 16vw, 420px);
+  --cc-footer-min: 78px;
   /* Floor for the MAP grid row (arena-shell) — the row can shrink to make
      room for a tall footer (deeply nested equation), but must never reach 0;
      the board is the one thing that has to stay legible regardless of what's
      being typed below it. */
-  --gw-map-min: 200px;
+  --cc-map-min: 200px;
 }
 
 /* ============================================================================
@@ -110,22 +110,22 @@
 }
 
 /* ── Label (section eyebrow) ─────────────────────────────────────────────── */
-.gw-label {
-  font-size: var(--gw-fs-xs);
+.cc-label {
+  font-size: var(--cc-fs-xs);
   font-weight: 700;
   letter-spacing: 0.1em;
-  color: var(--gw-text-muted);
+  color: var(--cc-text-muted);
   text-transform: uppercase;
-  margin: 0 0 var(--gw-space-2);
+  margin: 0 0 var(--cc-space-2);
 }
 
 /* ── Card / panel (config panel, seat chips, HUD readouts) ───────────────
    A plain surface primitive — never interactive by itself. (The button
-   primitive `.gw-btn` and the config controls live in theme.css.) */
-.gw-card {
-  background: var(--gw-surface);
-  border: 1px solid var(--gw-border);
-  border-radius: var(--gw-radius-lg);
-  padding: var(--gw-space-4);
+   primitive `.cc-btn` and the config controls live in theme.css.) */
+.cc-card {
+  background: var(--cc-surface);
+  border: 1px solid var(--cc-border);
+  border-radius: var(--cc-radius-lg);
+  padding: var(--cc-space-4);
   backdrop-filter: blur(6px);
 }

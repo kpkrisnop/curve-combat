@@ -45,7 +45,7 @@ export function RosterColumns({ players, myId, hostId, locked, onSwitch }: Props
         ))}
         {showSwitch && (
           <button
-            className="gw-btn roster-switch-btn"
+            className="cc-btn roster-switch-btn"
             onClick={() => onSwitch(team)}
           >
             Switch to {team.toUpperCase()}

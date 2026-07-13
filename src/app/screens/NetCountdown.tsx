@@ -11,8 +11,8 @@ export function NetCountdown({ startAt }: { startAt: number }) {
   }, [startAt]);
   if (n <= 0) return null;
   return (
-    <div className="gw-overlay-center gw-countdown">
-      <span className="gw-countdown-num">{n}</span>
+    <div className="cc-overlay-center cc-countdown">
+      <span className="cc-countdown-num">{n}</span>
     </div>
   );
 }

@@ -31,7 +31,7 @@ export function LandingScreen({ initialPanelOpen = false }: { initialPanelOpen?:
   }
 
   return (
-    <div className="gw-landing">
+    <div className="cc-landing">
       <SpacetimeBackground />
       <div className="land-bleed" aria-hidden="true" />
       <div className="land-chrome" aria-hidden="true">
@@ -41,7 +41,7 @@ export function LandingScreen({ initialPanelOpen = false }: { initialPanelOpen?:
         <span className="land-chrome__br">TURN-BASED · LOCAL + ONLINE</span>
       </div>
       <h1 className="land-title">
-        <span className="t-red">GRAPH</span> <span className="t-blue">WAR</span>
+        <span className="t-red">CURVE</span> <span className="t-blue">COMBAT</span>
       </h1>
       <p className="land-tagline">
         <span className="land-tagline__eq">y = f(x)</span>

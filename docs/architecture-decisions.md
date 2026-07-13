@@ -1,4 +1,4 @@
-# Graph War — Architecture Decisions
+# CurveCombat — Architecture Decisions
 
 > A browser-based, math-driven artillery game inspired by Graphwar. Players fire by
 > typing a mathematical function; the projectile travels along the resulting curve.

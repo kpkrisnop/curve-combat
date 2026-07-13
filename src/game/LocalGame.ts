@@ -73,7 +73,7 @@ export class LocalGame {
       ? playerById(this.match, this.match.activePlayerId)!.team : "red";
     this.renderFrom(this.match, viewTeam);
     this.initRoundHud();
-    if (localStorage.getItem("graphwar.tutorialDone") !== "1") this.runTutorial();
+    if (localStorage.getItem("curvecombat.tutorialDone") !== "1") this.runTutorial();
     else this.ui.focus();
   }
 
@@ -201,7 +201,7 @@ export class LocalGame {
     const loserLabel = roundLoser === "red" ? "RED" : "BLUE";
     this.ui.showSplash(
       `Round ${m.round + 1} of ${this.config.rounds}<br>` +
-      `<span style="color:${roundLoser === "red" ? "var(--gw-blue)" : "var(--gw-red)"}">${winnerLabel} wins the round</span><br>` +
+      `<span style="color:${roundLoser === "red" ? "var(--cc-blue)" : "var(--cc-red)"}">${winnerLabel} wins the round</span><br>` +
       `<small>${loserLabel} shoots first</small>`,
     );
     this.splashTimeout = setTimeout(() => {
@@ -223,7 +223,7 @@ export class LocalGame {
 
   private runTutorial(): void {
     const steps = [
-      "Welcome to Graph War! You are the RED dot on the left. BLUE is on the right.",
+      "Welcome to CurveCombat! You are the RED dot on the left. BLUE is on the right.",
       "Type a mathematical function of x (like: 0, x, sin(x)) into the RED input below. Your shot will travel along that curve.",
       "Press Enter or the Fire button to shoot. Try to hit BLUE!",
     ];
@@ -234,7 +234,7 @@ export class LocalGame {
     };
     const done = (): void => {
       this.ui.hideTutorial();
-      localStorage.setItem("graphwar.tutorialDone", "1");
+      localStorage.setItem("curvecombat.tutorialDone", "1");
       this.ui.focus();
     };
     show();

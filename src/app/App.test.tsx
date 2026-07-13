@@ -8,7 +8,7 @@ import { App } from "./App";
 vi.mock("./screens/LandingScreen", () => ({
   LandingScreen: () => (
     <div>
-      <span className="t-red">GRAPH</span> <span className="t-blue">WAR</span>
+      <span className="t-red">CURVE</span> <span className="t-blue">COMBAT</span>
     </div>
   ),
 }));
@@ -20,7 +20,7 @@ describe("App", () => {
   it("renders the landing title at hash ''", () => {
     location.hash = "";
     render(<App />);
-    expect(screen.getByText("GRAPH")).toBeTruthy();
-    expect(screen.getByText("WAR")).toBeTruthy();
+    expect(screen.getByText("CURVE")).toBeTruthy();
+    expect(screen.getByText("COMBAT")).toBeTruthy();
   });
 });

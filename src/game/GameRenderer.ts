@@ -23,13 +23,13 @@ import {
 // stage, the border ramp for grid chrome, the ink ramp for labels/boundary,
 // and saturated hue reserved for the two teams + fx.
 const COLORS = {
-  bg: 0x000000,        // --gw-bg — pitch black, same field as the page
-  grid: 0x1d222a,      // --gw-border — default hairline
-  axis: 0x303c48,      // --gw-border-strong — emphasized hairline
-  label: 0x5e7081,     // --gw-text-faint
-  boundary: 0x5e7081,  // --gw-text-faint — the real collision bounds
-  red: 0xff4444,       // --gw-red
-  blue: 0x4488ff,      // --gw-blue
+  bg: 0x000000,        // --cc-bg — pitch black, same field as the page
+  grid: 0x1d222a,      // --cc-border — default hairline
+  axis: 0x303c48,      // --cc-border-strong — emphasized hairline
+  label: 0x5e7081,     // --cc-text-faint
+  boundary: 0x5e7081,  // --cc-text-faint — the real collision bounds
+  red: 0xff4444,       // --cc-red
+  blue: 0x4488ff,      // --cc-blue
   projectile: 0xffffff,
   boom: 0xffc24d,
   planet: 0x262c34,

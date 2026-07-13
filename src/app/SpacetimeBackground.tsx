@@ -78,5 +78,5 @@ export function SpacetimeBackground() {
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  return <canvas ref={ref} className="gw-bgcanvas" aria-hidden="true" />;
+  return <canvas ref={ref} className="cc-bgcanvas" aria-hidden="true" />;
 }

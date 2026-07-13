@@ -102,7 +102,7 @@ export function Footer(props: FooterProps) {
 
   return (
     <div className="comp footer footer--pregame" data-testid="arena-footer">
-      <button type="button" className="gw-btn footer-leave" onClick={props.onLeave}>
+      <button type="button" className="cc-btn footer-leave" onClick={props.onLeave}>
         {props.mode === "pregame-online" ? "Leave Room" : "Leave"}
       </button>
       {showWaiting ? (
@@ -113,7 +113,7 @@ export function Footer(props: FooterProps) {
       ) : (
         <button
           type="button"
-          className="gw-btn gw-btn--primary footer-start"
+          className="cc-btn cc-btn--primary footer-start"
           disabled={props.startDisabled}
           onClick={props.onStart}
         >
@@ -126,7 +126,7 @@ export function Footer(props: FooterProps) {
         <>
           <span className="footer-sep" aria-hidden="true" />
           <label className="footer-name">
-            <span className="gw-label">Name</span>
+            <span className="cc-label">Name</span>
             <input
               type="text"
               className="footer-name-input"
@@ -134,16 +134,16 @@ export function Footer(props: FooterProps) {
               onChange={(e) => onNameInput(e.target.value)}
             />
           </label>
-          <button type="button" className="gw-btn footer-switch" onClick={props.onSwitchSide}>
+          <button type="button" className="cc-btn footer-switch" onClick={props.onSwitchSide}>
             <Icon path={mdiSwapHorizontal} size="15px" color="currentColor" />
             Switch side
           </button>
           <span className="footer-sep" aria-hidden="true" />
-          <button type="button" className={`gw-btn footer-copy-code ${copied === "code" ? "is-confirmed" : ""}`} onClick={copyCode}>
+          <button type="button" className={`cc-btn footer-copy-code ${copied === "code" ? "is-confirmed" : ""}`} onClick={copyCode}>
             <Icon path={copied === "code" ? mdiCheck : mdiContentCopy} size="15px" color="currentColor" />
             {copied === "code" ? "Copied" : "Copy code"}
           </button>
-          <button type="button" className={`gw-btn footer-copy-link ${copied === "link" ? "is-confirmed" : ""}`} onClick={copyLink}>
+          <button type="button" className={`cc-btn footer-copy-link ${copied === "link" ? "is-confirmed" : ""}`} onClick={copyLink}>
             <Icon path={copied === "link" ? mdiCheck : mdiContentCopy} size="15px" color="currentColor" />
             {copied === "link" ? "Copied" : "Copy link"}
           </button>
@@ -169,11 +169,11 @@ function IngameFooter({ onLeave, makeInput, singleTeam }: { onLeave?: () => void
         {quitConfirm ? (
           <span className="footer-quit__confirm">
             <span className="footer-quit__q">Quit match?</span>
-            <button type="button" className="gw-btn gw-btn--danger footer-quit__yes" onClick={onLeave}>Quit</button>
-            <button type="button" className="gw-btn footer-quit__no" onClick={() => setQuitConfirm(false)}>Stay</button>
+            <button type="button" className="cc-btn cc-btn--danger footer-quit__yes" onClick={onLeave}>Quit</button>
+            <button type="button" className="cc-btn footer-quit__no" onClick={() => setQuitConfirm(false)}>Stay</button>
           </span>
         ) : (
-          <button type="button" className="gw-btn footer-quit__btn" onClick={() => setQuitConfirm(true)}>Quit</button>
+          <button type="button" className="cc-btn footer-quit__btn" onClick={() => setQuitConfirm(true)}>Quit</button>
         )}
       </div>
       <HudBar makeInput={makeInput} singleTeam={singleTeam} />

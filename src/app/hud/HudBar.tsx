@@ -24,7 +24,7 @@ function PlayerPanel({ team, makeInput }: { team: Team; makeInput?: () => any })
         <MathField team={team} registry={hudInputs} makeInput={makeInput}
           onEnter={() => hudController.requestFire(team)} />
         {turn === team && <TimerBadge />}
-        <button className="gw-btn" disabled={!canFire}
+        <button className="cc-btn" disabled={!canFire}
           onClick={() => hudController.requestFire(team)}>Fire</button>
       </div>
       <div className="hud-status">{turn === team ? status : ""}</div>

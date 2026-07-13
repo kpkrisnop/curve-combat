@@ -188,7 +188,7 @@ describe("OnlineFlow", () => {
     expect(screen.queryByRole("button", { name: /Start Match/i })).toBeNull();
     // Countdown visible (NetCountdown renders "5" or similar)
     // The countdown num should be visible since startAt is in the future
-    const countdownEl = document.querySelector(".gw-countdown-num");
+    const countdownEl = document.querySelector(".cc-countdown-num");
     expect(countdownEl).toBeTruthy();
   });
 
@@ -474,7 +474,7 @@ describe("OnlineFlow", () => {
       netLobbyStore.set({ configFlash: 1 });
     });
 
-    expect(panel.className).toContain("gw-config-flash");
+    expect(panel.className).toContain("cc-config-flash");
   });
 
   // ── Task 9: Leave/Quit wiring ──────────────────────────────────────────────
