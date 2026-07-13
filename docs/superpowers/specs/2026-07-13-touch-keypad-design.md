@@ -219,27 +219,25 @@ replacement for the shortcut.
 The state already exists (`recallRef`, `draftRef`, `recallStep`, and
 `hudStore.history[team]`) — the popover is a new *view* of it, not new state.
 
-## Still open (answer on the device, not in the mock)
+## Resolved (KP, after the prototype)
 
-1. **Whether the always-on keypad is right on desktop**, where it is never needed.
-   Decision 2 says it is present and the prototype shows it is not obtrusive — but
-   only a desktop player can say whether it feels like clutter.
-2. **Whether the 700px gate stays.** The prototype indicates portrait is the better
-   iPad orientation (see above); confirm on the device, then decide whether to keep
-   the gate at 700px, or re-gate.
-3. **Whether `--cc-footer-min` / `--cc-map-min` need new values** once the real
-   footer is this tall.
+1. **The keypad is always open, on every device — including desktop.** Not a
+   toggle, not touch-only. Consistency: one footer, one layout, one thing to learn.
+   This also keeps Decision 2's no-detection property intact end to end.
+2. **The 700px gate stays.** Portrait iPad remains ungated.
+3. **`--cc-footer-min` / `--cc-map-min` keep their current values** for now; adjust
+   only if the real footer proves them wrong.
 
 ## Risks
 
-- **Caret visibility — the biggest one, still unverified.** `inputmode="none"`
-  keeps the field focusable, but we have NOT confirmed on-device that the MathQuill
-  caret is *visible and correctly placed* on tap. If it is not, the player cannot
-  see where a key will land, and no keypad layout saves that. **Check this first,
-  before building anything.**
+- **Caret visibility — VERIFIED on device.** With `inputmode="none"` shipped
+  (`52fecc2`), KP confirms the MathQuill caret is visible in the field on iPad.
+  This was the one risk that could have invalidated the whole approach; it held.
 - **Buttons stealing focus.** A `<button>` tap blurs the textarea. The chip row
   survives this because `insertText()` re-focuses. Keypad keys must do the same (or
   `preventDefault` on pointerdown) or the caret will jump or vanish on every key.
+  **This is now the top implementation risk** — it is the one thing that can still
+  make every key feel broken on touch.
 - **The prototype is not the app.** It has no MathQuill, no Pixi canvas, and its
   arena is an SVG mock. Sizes it reports are geometry, not proof; the real footer
   carries a live MathQuill field whose height we have not measured.
