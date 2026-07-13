@@ -51,7 +51,7 @@ export const NAV_KEYS: KeyDef[] = [
 export const FN_KEYS: KeyDef[] = [
   ins("sin", "sin("), ins("cos", "cos("), ins("tan", "tan("), ins("√", "sqrt"),
   ins("ln", "ln("), ins("log", "log_"), ins("x²", "x^2"), ins("xⁿ", "^"),
-  ins("π", "pi"), ins("e", "e"), ins("abs", "abs("), ins("1/a", "/"),
+  ins("π", "pi"), ins("e", "e"), ins("abs", "abs("), ins("1/a", "1/"),
   ins("arcsin", "arcsin("), ins("arccos", "arccos("), ins("arctan", "arctan("),
   ins("sinh", "sinh("), ins("cosh", "cosh("), ins("tanh", "tanh("),
   ins("exp", "exp("), ins("floor", "floor("), ins("ceil", "ceil("),

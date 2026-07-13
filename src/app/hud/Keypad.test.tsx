@@ -43,4 +43,11 @@ describe("Keypad", () => {
     screen.getByRole("button", { name: "7" }).dispatchEvent(ev);
     expect(ev.defaultPrevented).toBe(true);
   });
+
+  it("1/a inserts a reciprocal (1 in the numerator), not a bare empty fraction like ÷", () => {
+    const onKey = vi.fn();
+    render(<Keypad disabled={false} onKey={onKey} />);
+    fireEvent.click(screen.getByRole("button", { name: "1/a" }));
+    expect(onKey).toHaveBeenCalledWith({ kind: "insert", text: "1/" });
+  });
 });
