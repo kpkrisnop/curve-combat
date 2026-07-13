@@ -1,0 +1,338 @@
+<!doctype html>
+<!--
+  PROTOTYPE — THROWAWAY. Delete once the layout is chosen.
+
+  QUESTION: which keypad layout keeps the ARENA legible while keys stay tappable?
+  Spec: docs/superpowers/specs/2026-07-13-touch-keypad-design.md
+
+  Two variants, both built on KP's three-zone band (console | numbers | functions):
+    SKETCH — KP's hand sketch, replicated faithfully.
+    FIXED  — same zones, three corrections: calculator digit order (0 on the
+             bottom), `x` promoted out of the digit grid and away from `×`,
+             and all 12 functions visible instead of behind a scroll.
+
+  The arena above is mocked at its REAL 5:3 fit-to-contain aspect, so what you
+  are judging is whether you can still read the axes. Readout reports the cost.
+
+  Open directly: open src/app/hud/PROTOTYPE-keypad.html
+  Nothing is wired to MathQuill. The caret is fake. This answers LAYOUT ONLY.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>CurveCombat — keypad layout prototype</title>
+<style>
+  :root {
+    --cc-bg: #000; --cc-surface: rgba(12,14,18,.85); --cc-surface-2: rgba(7,9,12,.9);
+    --cc-border: #1d222a; --cc-border-strong: #303c48;
+    --cc-text: #cdd9e5; --cc-text-muted: #8499ab; --cc-text-faint: #5e7081;
+    --cc-red: #ff4444; --cc-blue: #4488ff; --cc-accent: #eef1f5;
+    --cc-font-sans: system-ui, -apple-system, sans-serif;
+    --cc-font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+    --cc-gap: 18px; --cc-radius-xl: 12px; --cc-radius-md: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    background: #0a0c10; color: var(--cc-text); font-family: var(--cc-font-sans);
+    min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+    gap: 16px; padding: 16px 16px 110px;
+  }
+  .note { max-width: 860px; font-size: 13px; color: var(--cc-text-muted); line-height: 1.5; text-align: center; }
+  .note b { color: var(--cc-text); }
+
+  /* ── device frame: a REAL viewport in CSS px, scaled to fit the window ────── */
+  .stage { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .frame-wrap { transform-origin: top center; }
+  .frame { background: var(--cc-bg); border: 1px solid var(--cc-border-strong); overflow: hidden; position: relative; }
+  .frame.portrait  { width: 768px;  height: 1024px; }
+  .frame.landscape { width: 1024px; height: 768px; }
+  .frame.desktop   { width: 1440px; height: 900px; }
+
+  /* ── arena shell: the real grid — map row shrinks, footer row grows ───────── */
+  .shell { position: absolute; inset: 0; display: grid; gap: var(--cc-gap); padding: var(--cc-gap);
+           grid-template-rows: minmax(0, 1fr) auto; }
+  .map-card { position: relative; border: 1px solid var(--cc-border); border-radius: var(--cc-radius-xl);
+              display: grid; place-items: center; min-height: 0; overflow: hidden; }
+
+  /* Quit — evicted from the footer (the keypad now fills it), floated into the
+     map card's top-right corner. Still two-step: a stray palm must not end the
+     match. Top-CENTER is taken by the round/score readout; RED spawns left, so
+     the right corner is the least likely to sit over anything. */
+  .quit { position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; align-items: center; }
+  .quit__btn { width: 40px; height: 40px; border-radius: var(--cc-radius-md);
+               background: rgba(12,14,18,.7); border: 1px solid var(--cc-border);
+               color: var(--cc-text-muted); font-size: 18px; cursor: pointer; }
+  .quit__confirm { display: flex; gap: 6px; align-items: center; background: rgba(12,14,18,.92);
+                   border: 1px solid var(--cc-border-strong); border-radius: var(--cc-radius-md);
+                   padding: 6px 8px; font-size: 12px; color: var(--cc-text-muted); }
+  .quit__yes { background: var(--cc-red); color: #fff; border: 0; border-radius: 6px; padding: 7px 12px; cursor: pointer; }
+  .quit__no { background: transparent; color: var(--cc-text); border: 1px solid var(--cc-border-strong);
+              border-radius: 6px; padding: 7px 12px; cursor: pointer; }
+  .arena { aspect-ratio: 5 / 3; max-width: 100%; max-height: 100%;
+           background: #05070a; border: 1px solid var(--cc-border); position: relative; }
+  .arena svg { width: 100%; height: 100%; display: block; }
+
+  /* ── the footer band: zones side by side ─────────────────────────────────
+     A container query (not a media query) drives the responsive step: the
+     footer's OWN width decides the arrangement, which is what actually matters
+     and what makes this testable in a scaled device frame. */
+  .footer { border: 1px solid var(--cc-border); border-radius: var(--cc-radius-xl);
+            background: var(--cc-surface); padding: 12px; display: flex; flex-wrap: wrap;
+            gap: 12px 16px; align-items: stretch; container-type: inline-size; }
+  .zone { display: flex; flex-direction: column; gap: 8px; }
+  .zone.console { flex: 1; min-width: 260px; }
+
+  /* The function zone is position:relative with an ABSOLUTE panel inside, so it
+     contributes NO height of its own — the console column sets the band height
+     and the functions scroll within it. (Without this the panel just grew the
+     footer and nothing ever overflowed, so it never scrolled.) */
+  /* WIDE (desktop / iPad landscape): a narrow 4-column side column, so the
+     console keeps its width. The panel is position:absolute inside its zone, so
+     it contributes NO height — the console column sets the band height and the
+     functions scroll within it. */
+  .zone.fnzone { position: relative; flex: 0 0 216px; min-height: 132px; }
+  .zone.fnzone .fnpanel { position: absolute; inset: 0; }
+
+
+  .turnline { display: flex; justify-content: space-between; align-items: center;
+              font-size: 11px; letter-spacing: .1em; color: var(--cc-text-muted); font-family: var(--cc-font-mono); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cc-red); display: inline-block; margin-right: 6px; }
+  .status { font-size: 12px; color: var(--cc-text-faint); font-family: var(--cc-font-mono); }
+  .inputrow { display: flex; align-items: center; gap: 8px; }
+  .prompt { color: var(--cc-red); font-size: 18px; font-family: var(--cc-font-mono); }
+  .field { flex: 1; min-height: 44px; border: 1px solid var(--cc-border-strong); border-radius: var(--cc-radius-md);
+           background: var(--cc-surface-2); display: flex; align-items: center; padding: 0 12px;
+           font-family: var(--cc-font-mono); font-size: 20px; overflow: hidden; }
+  .caret { display: inline-block; width: 1.5px; height: 22px; background: var(--cc-accent); animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  /* Fire spans the whole console column, under the nav row — it's the primary
+     action, and inline-with-the-input squeezed both. */
+  .fire { width: 100%; background: var(--cc-accent); color: #0a0c10; border: 0;
+          border-radius: var(--cc-radius-md); min-height: 46px; font-weight: 700;
+          font-size: 15px; letter-spacing: .04em; cursor: pointer; }
+  .navrow { display: grid; grid-auto-flow: column; gap: 6px; }
+
+  /* ── keys ────────────────────────────────────────────────────────────────── */
+  .key { background: rgba(255,255,255,.04); border: 1px solid var(--cc-border); color: var(--cc-text);
+         border-radius: var(--cc-radius-md); font-family: var(--cc-font-mono); font-size: 16px;
+         cursor: pointer; display: grid; place-items: center; user-select: none; min-height: var(--key-h, 46px);
+         min-width: 44px; }
+  .key:active { background: rgba(255,255,255,.14); }
+  .key.fn   { color: var(--cc-text-muted); font-size: 13px; }
+  .key.op   { background: rgba(255,255,255,.08); }
+  .key.util { background: rgba(255,255,255,.02); color: var(--cc-text-muted); font-size: 14px; }
+  /* the variable: the most-typed symbol in the game, and NOT a multiply sign */
+  .key.var  { color: var(--cc-blue); border-color: rgba(68,136,255,.45); background: rgba(68,136,255,.10);
+              font-style: italic; font-size: 20px; font-weight: 700; }
+
+  .grid { display: grid; gap: 6px; }
+  .nums { grid-template-columns: repeat(3, 1fr); }          /* clean 3-wide numpad */
+  .ops  { grid-template-columns: repeat(2, 1fr); }
+  .fns  { grid-template-columns: repeat(4, 1fr); }          /* side band (desktop/landscape) */
+
+  /* Scrolling function panel. The common twelve sit above the fold; scrolling
+     only ever reaches the exotic ones (arcsin, sinh, floor…). The cue is a
+     fade, not a scrollbar: a `local`-attached cover (scrolls with the content,
+     so it sits at the content's true bottom) paints over a `scroll`-attached
+     shadow (pinned to the panel's bottom edge) — the cover hides the fade
+     exactly when there is nothing left to scroll to. Same no-JS trick the
+     side-panel already uses in theme.css. rgb(11,13,16) is --cc-surface
+     pre-composited over black, so the cover matches the rendered panel color. */
+  .fnpanel {
+    overflow-y: auto; min-height: 0; padding-right: 2px;
+    scrollbar-width: none;
+    background:
+      linear-gradient(rgba(11,13,16,0), rgb(11,13,16) 70%) 0 100% / 100% 26px local no-repeat,
+      linear-gradient(rgba(11,13,16,0), rgba(11,13,16,.96)) 0 100% / 100% 34px scroll no-repeat;
+  }
+  .fnpanel::-webkit-scrollbar { display: none; }
+
+  /* NARROW (iPad portrait, 768px): four zones side by side starve the input, so
+     the function panel wraps to its own full-width row underneath and spreads to
+     8 columns — same zones, different arrangement.
+     MUST come after the .fns base rule: equal specificity, so source order decides. */
+  @container (max-width: 820px) {
+    .zone.fnzone { flex: 1 0 100%; min-height: 104px; }
+    .fns { grid-template-columns: repeat(8, 1fr); }
+  }
+
+  /* ── controls ────────────────────────────────────────────────────────────── */
+  .bar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 10; background: #11151b;
+         border-top: 1px solid var(--cc-border-strong); display: flex; gap: 20px; align-items: center;
+         justify-content: center; padding: 10px; flex-wrap: wrap; font-size: 13px; }
+  .bar button { background: #1c222b; color: var(--cc-text); border: 1px solid var(--cc-border-strong);
+                border-radius: 6px; padding: 7px 14px; cursor: pointer; font-size: 13px; }
+  .bar button.on { background: var(--cc-accent); color: #0a0c10; font-weight: 700; }
+  .bar .grp { display: flex; gap: 6px; align-items: center; }
+  .bar .lbl { color: var(--cc-text-faint); font-size: 11px; letter-spacing: .08em; font-family: var(--cc-font-mono); }
+  .readout { font-family: var(--cc-font-mono); font-size: 12px; color: var(--cc-text-muted); text-align: center; }
+  .readout b { color: var(--cc-accent); font-weight: 600; }
+  .readout .bad { color: var(--cc-red); }
+  .readout .good { color: #4ade80; }
+</style>
+</head>
+<body>
+
+<p class="note">
+  Three zones — <b>console · numbers · functions</b>. Fire spans the console column under the nav row.
+  The function panel scrolls: the common twelve are above the fold, and the fade means "more below" —
+  no scrollbar. The arena is mocked at its real 5:3 aspect, so judge whether you can still read the axes.
+</p>
+
+<div class="stage">
+  <div class="frame-wrap" id="wrap">
+    <div class="frame portrait" id="frame">
+      <div class="shell">
+        <div class="map-card">
+          <div class="arena" id="arena"></div>
+          <div class="quit" id="quit"></div>
+        </div>
+        <div class="footer" id="footer"></div>
+      </div>
+    </div>
+  </div>
+  <div class="readout" id="readout"></div>
+</div>
+
+<div class="bar">
+  <div class="grp"><span class="lbl">DEVICE</span>
+    <button data-dev="portrait" class="on">iPad portrait</button>
+    <button data-dev="landscape">iPad landscape</button>
+    <button data-dev="desktop">desktop</button>
+  </div>
+</div>
+
+<script>
+const key = (k, cls = "") => `<div class="key ${cls}">${k}</div>`;
+const keys = (arr, cls = "") => arr.map((k) => key(k, cls)).join("");
+
+// The common set sits above the fold; scrolling only ever reaches the exotic
+// tail. Every name here is one MathQuill already knows (autoOperatorNames).
+const FN_COMMON = ["sin", "cos", "tan", "√", "ln", "log", "x²", "xⁿ", "π", "e", "abs", "1/a"];
+const FN_MORE = ["arcsin", "arccos", "arctan", "sinh", "cosh", "tanh",
+                 "exp", "floor", "ceil", "round", "sign", "cot"];
+
+const FOOTER = () => `
+  <div class="zone console">
+    <div class="turnline"><span><span class="dot"></span>RED TO FIRE</span><span>0:42</span></div>
+    <div class="status">Tip: planets block shots — curve around them</div>
+    <div class="inputrow">
+      <span class="prompt">y =</span>
+      <div class="field"><span>sin(x)+0.5x</span><span class="caret"></span></div>
+    </div>
+    <div class="navrow">
+      ${keys(["←", "→"], "util")}${key("⌫", "util")}${key("Clear", "util")}${key("↺ Recall", "util")}
+    </div>
+    <button class="fire">FIRE ↵</button>
+  </div>
+
+  <div class="zone">
+    <div class="grid nums">
+      ${keys([7, 8, 9])}
+      ${keys([4, 5, 6])}
+      ${keys([1, 2, 3])}
+      ${key(0)}${key(".")}${key("x", "var")}
+    </div>
+  </div>
+
+  <div class="zone">
+    <div class="grid ops">
+      ${keys(["+", "−"], "op")}
+      ${keys(["×", "÷"], "op")}
+      ${keys(["(", ")"], "op")}
+      ${keys(["^", "√"], "op")}
+    </div>
+  </div>
+
+  <div class="zone fnzone">
+    <div class="fnpanel">
+      <div class="grid fns">${keys([...FN_COMMON, ...FN_MORE], "fn")}</div>
+    </div>
+  </div>`;
+
+let dev = "portrait";
+
+// Quit: two-step, so a stray palm on a touchscreen can't end the match. Click it.
+let quitConfirm = false;
+function renderQuit() {
+  document.getElementById("quit").innerHTML = quitConfirm
+    ? `<span class="quit__confirm">Quit match?
+         <button class="quit__yes">Quit</button><button class="quit__no">Stay</button></span>`
+    : `<button class="quit__btn" title="Quit match">✕</button>`;
+  const b = document.querySelector(".quit__btn"), no = document.querySelector(".quit__no");
+  if (b) b.onclick = () => { quitConfirm = true; renderQuit(); };
+  if (no) no.onclick = () => { quitConfirm = false; renderQuit(); };
+}
+
+function render() {
+  document.getElementById("footer").innerHTML = FOOTER();
+  renderQuit();
+  drawArena();
+  requestAnimationFrame(measure);
+}
+
+// gridlines + AXIS NUMBERS (the thing you must still be able to read) + soldiers
+function drawArena() {
+  let s = `<svg viewBox="0 0 200 120" preserveAspectRatio="none">`;
+  for (let x = 0; x <= 200; x += 10) s += `<line x1="${x}" y1="0" x2="${x}" y2="120" stroke="#131c26" stroke-width="0.4"/>`;
+  for (let y = 0; y <= 120; y += 10) s += `<line x1="0" y1="${y}" x2="200" y2="${y}" stroke="#131c26" stroke-width="0.4"/>`;
+  s += `<line x1="0" y1="60" x2="200" y2="60" stroke="#2c3a48" stroke-width="0.7"/>`;
+  s += `<line x1="100" y1="0" x2="100" y2="120" stroke="#2c3a48" stroke-width="0.7"/>`;
+  for (let i = -8; i <= 8; i += 2) { if (!i) continue;
+    s += `<text x="${100 + i * 10}" y="66" fill="#5e7081" font-size="4" text-anchor="middle" font-family="monospace">${i}</text>`; }
+  for (let i = -4; i <= 4; i += 2) { if (!i) continue;
+    s += `<text x="97" y="${60 - i * 10 + 1.5}" fill="#5e7081" font-size="4" text-anchor="end" font-family="monospace">${i}</text>`; }
+  s += `<circle cx="140" cy="42" r="11" fill="#171d25" stroke="#2c3a48" stroke-width="0.5"/>`;
+  s += `<circle cx="24" cy="60" r="3" fill="#ff4444"/><circle cx="176" cy="60" r="3" fill="#4488ff"/>`;
+  s += `<path d="M24 60 Q 80 20 130 55" fill="none" stroke="#ff4444" stroke-width="0.8" opacity=".8"/></svg>`;
+  document.getElementById("arena").innerHTML = s;
+}
+
+// Surface the state: what does this layout actually COST the arena?
+function measure() {
+  const frame = document.getElementById("frame");
+  const scale = frame.getBoundingClientRect().width / frame.offsetWidth;
+  const arena = document.getElementById("arena").getBoundingClientRect();
+  const footer = document.querySelector(".footer").getBoundingClientRect();
+  const aw = Math.round(arena.width / scale), ah = Math.round(arena.height / scale);
+  const fh = Math.round(footer.height / scale);
+  const ppu = (ah / 12).toFixed(1);            // px per world unit — axes blur out below ~20
+  const k = document.querySelector(".key").getBoundingClientRect();
+  const kh = Math.round(k.height / scale), kw = Math.round(k.width / scale);
+  const tapOk = kh >= 44 && kw >= 44;          // Apple HIG minimum
+  // Did the scroll fix actually take? (It didn't before: the panel grew instead.)
+  const p = document.querySelector(".fnpanel");
+  const scrolls = p.scrollHeight > p.clientHeight + 1;
+  // How many function keys clear the fold? The common 12 all must.
+  const visible = [...p.querySelectorAll(".key")].filter((el) =>
+    el.getBoundingClientRect().bottom <= p.getBoundingClientRect().bottom + 1).length;
+  // What did the function panel cost the equation field?
+  const fw = Math.round(document.querySelector(".field").getBoundingClientRect().width / scale);
+  document.getElementById("readout").innerHTML =
+    `arena <b>${aw}×${ah}</b> · <b>${ppu}</b> px/world-unit · footer <b>${fh}px</b> · ` +
+    `key <span class="${tapOk ? "good" : "bad"}">${kw}×${kh}</span> · ` +
+    `input <b>${fw}px</b> · ` +
+    `functions above the fold <span class="${visible >= 12 ? "good" : "bad"}">${visible}/24</span>` +
+    `${scrolls ? "" : ` <span class="bad">(NOT scrolling)</span>`}`;
+}
+
+function fit() {
+  const frame = document.getElementById("frame");
+  const s = Math.min(1, (window.innerHeight - 250) / frame.offsetHeight, (window.innerWidth - 40) / frame.offsetWidth);
+  const wrap = document.getElementById("wrap");
+  wrap.style.transform = `scale(${s})`;
+  wrap.style.height = frame.offsetHeight * s + "px";
+  requestAnimationFrame(measure);
+}
+
+document.querySelectorAll("[data-dev]").forEach((b) => b.onclick = () => {
+  dev = b.dataset.dev;
+  document.querySelectorAll("[data-dev]").forEach((o) => o.classList.toggle("on", o === b));
+  document.getElementById("frame").className = "frame " + dev;
+  render(); fit();
+});
+window.addEventListener("resize", fit);
+render(); fit();
+</script>
+</body>
+</html>

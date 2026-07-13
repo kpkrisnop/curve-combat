@@ -1,6 +1,6 @@
 # In-footer math keypad (touch input)
 
-**Status:** design approved, prototype pending
+**Status:** approved — layout frozen by prototype, ready to implement
 **Date:** 2026-07-13
 
 ## Why
@@ -93,7 +93,8 @@ permanent keypad in the footer:
 
 Portrait yields roughly **60% more arena pixels** once the footer is tall. The
 700px ungate is therefore not a hack to be reverted — portrait may be the better
-orientation for this game. The prototype decides.
+orientation for this game. The prototype supports this; confirm on the device
+before deciding the 700px gate's fate.
 
 ## Architecture
 
@@ -130,33 +131,118 @@ popover is a new *surface* on existing state, not new state). `CHIP_GROUPS` and
 and shrinks the map row, so a taller footer needs no grid change — only the
 `--cc-footer-min` / `--cc-map-min` floors may need revisiting.
 
-## Deferred to the prototype
+## The layout (frozen by the prototype)
 
-Design questions that only a real device can answer. **On a branch, in the real
-app, deployed to the real server** — a standalone mockup cannot answer any of them,
-because it has no MathQuill, no footer grid, and no arena competing for space.
+Settled in `src/app/hud/PROTOTYPE-keypad.html` (throwaway; delete once built).
+KP's design, corrected in three places and validated at real device sizes.
 
-1. Key layout: grid vs rows vs matrix; where digits, operators, functions and
-   navigation sit relative to each other.
-2. The recall popover's exact form and dismissal.
-3. Whether the always-on keypad is right on **desktop**, where it is never needed.
-   (Decision 2 says it is present; the prototype may argue for shrinking it there.)
-4. Final orientation call for iPad — and therefore whether the 700px gate stays.
-5. Whether `--cc-footer-min` / `--cc-map-min` need new values.
+The footer is a band of **four zones**: **console · numbers · operators ·
+functions**.
+
+**Console zone** (flexible width, `min-width: 260px`), top to bottom:
+turn line + timer · status line · `y =` + the equation field (full width) ·
+nav row (`← → ⌫ Clear ↺ Recall`) · **Fire, spanning the full column width**.
+Fire is the primary action and gets its own full-width bar; sharing a row with the
+input squeezed both.
+
+**Numbers zone** — calculator order, 3 columns:
+
+```
+7 8 9
+4 5 6
+1 2 3
+0 . x
+```
+
+`0` is on the bottom row, where every calculator, phone and keyboard puts it —
+players reach on muscle memory under a shot clock. **`x` is promoted out of the
+digit grid**: large, blue, italic, visually a *variable*. It is the most-typed
+symbol in the game and must never be confusable with `×` (KP's sketch had them two
+keys apart — a real misfire risk).
+
+**Operators zone** — 2 columns: `+ −` / `× ÷` / `( )` / `^ √`.
+
+**Functions zone** — a scrolling panel. The common twelve
+(`sin cos tan √ / ln log x² xⁿ / π e abs 1/a`) sit **above the fold**; scrolling
+only ever reaches the exotic tail (`arcsin cosh floor sign …`), all of which
+MathQuill already understands via `autoOperatorNames`, so they cost nothing.
+
+The scroll cue is a **fade, no scrollbar** — the `local`-over-`scroll` background
+trick already used by `.comp.side-panel` in `theme.css`, which self-cancels at the
+true bottom. The panel is `position: absolute` inside its zone so it contributes
+**no height**: the console column sets the band's height and the functions scroll
+within it. (Getting this wrong is what made the panel silently grow the footer
+instead of scrolling.)
+
+**Responsive step — a container query, not a media query.** The footer's own width
+decides the arrangement (`container-type: inline-size` on the footer):
+
+- **Wide (desktop, iPad landscape)** — all four zones side by side; functions are a
+  216px, 4-column side column.
+- **Narrow (iPad portrait, ≤ 820px footer)** — four zones side by side starve the
+  equation field, so the **function panel wraps to its own full-width row beneath
+  the band and spreads to 8 columns**. The input gets its width back.
+
+A media query would read the *viewport*; the footer's width is what actually
+constrains this (the side panel can be open), so the container query is both more
+correct and testable in a scaled frame.
+
+**Quit moves out of the footer.** The keypad fills it, so `.footer-quit`
+(`Footer.tsx`, absolutely positioned into the footer's top-left) is evicted and
+becomes a **floating `[✕]` in the map card's top-right corner**. Top-centre is
+taken by the round/score readout; RED spawns left, so the right corner is the
+least likely to sit over anything. **The two-step confirm is retained** — a
+one-tap quit floating over the play area on a touchscreen would end matches by
+stray palm. This is a deliberate, narrow exception to "nothing is hidden": 40px,
+in a corner, and in landscape it lands in the letterbox margin and covers nothing.
+
+## Scope: two separate pieces
+
+Per KP, this ships as **two independent changes**, not one:
+
+1. **The keypad** (this spec's core) — prototyped, layout frozen above.
+2. **Recall as a popover** — no prototype needed; implement directly. The recall
+   *button* is part of the keypad's nav row, but the popover is its own change and
+   can land before or after.
+
+**Recall popover.** Tapping `↺ Recall` opens a list **upward, over the input**, in
+the spirit of Discord's `/` command menu: most recent shot first, tap to load it
+into the field, tap-away or Esc to dismiss. It is transient, player-initiated and
+self-dismissing, which is the sanctioned exception to "nothing is hidden."
+
+It replaces the Up/Down key binding (`onUpOutOf` / `onDownOutOf` in
+`FiringConsole.tsx`), which is a keyboard idiom that means nothing on a device with
+no arrow keys — and the `↑ recall · ↵ fire` hint text goes with it. **Desktop keeps
+Up/Down** as an accelerator; the popover is the discoverable surface, not a
+replacement for the shortcut.
+
+The state already exists (`recallRef`, `draftRef`, `recallStep`, and
+`hudStore.history[team]`) — the popover is a new *view* of it, not new state.
+
+## Still open (answer on the device, not in the mock)
+
+1. **Whether the always-on keypad is right on desktop**, where it is never needed.
+   Decision 2 says it is present and the prototype shows it is not obtrusive — but
+   only a desktop player can say whether it feels like clutter.
+2. **Whether the 700px gate stays.** The prototype indicates portrait is the better
+   iPad orientation (see above); confirm on the device, then decide whether to keep
+   the gate at 700px, or re-gate.
+3. **Whether `--cc-footer-min` / `--cc-map-min` need new values** once the real
+   footer is this tall.
 
 ## Risks
 
-- **Caret visibility.** `inputmode="none"` keeps the field focusable, but we have
-  not confirmed on-device that the MathQuill caret is *visible and correctly
-  placed* on tap. If it is not, the player cannot see where a key will land, and
-  we need our own caret treatment before any of this is playable. **Check first in
-  the prototype.**
+- **Caret visibility — the biggest one, still unverified.** `inputmode="none"`
+  keeps the field focusable, but we have NOT confirmed on-device that the MathQuill
+  caret is *visible and correctly placed* on tap. If it is not, the player cannot
+  see where a key will land, and no keypad layout saves that. **Check this first,
+  before building anything.**
 - **Buttons stealing focus.** A `<button>` tap blurs the textarea. The chip row
-  survives this because `insertText()` re-focuses. Keypad keys must do the same
-  (or `preventDefault` on pointerdown) or the caret will jump/vanish on every key.
-- **Touch target size.** Keys must be large enough to hit on glass while the
-  footer stays short enough to leave the arena visible. These pull against each
-  other; this is the main thing the prototype is arbitrating.
+  survives this because `insertText()` re-focuses. Keypad keys must do the same (or
+  `preventDefault` on pointerdown) or the caret will jump or vanish on every key.
+- **The prototype is not the app.** It has no MathQuill, no Pixi canvas, and its
+  arena is an SVG mock. Sizes it reports are geometry, not proof; the real footer
+  carries a live MathQuill field whose height we have not measured.
 - **The window of unplayability.** `inputmode="none"` is on `main` now, so touch
   devices cannot type until the keypad lands. Keep that window short.
 
@@ -171,6 +257,11 @@ Per repo convention: TDD, colocated `*.test.tsx`, Testing Library.
   field and no other.
 - `MathInput.keystroke` is a one-line passthrough; the existing
   `inputmode="none"` test covers the suppression.
+- Quit: assert the two-step confirm survives the move to the map card — a
+  single-tap quit is the failure mode that matters.
+- Recall popover: assert it lists `hudStore.history[team]` newest-first, loads the
+  picked entry into the active field, and that dismissing restores the draft
+  (`draftRef`) rather than destroying unfired work.
 - **Everything that actually matters here is invisible to Vitest** — caret
   behavior, touch targets, whether the arena is legible with the footer tall.
   Verify on the device, per CLAUDE.md's standing warning that this codebase's real
