@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect } from "vitest";
-import { setFieldEnabled } from "./MathInput";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { MathInput, setFieldEnabled } from "./MathInput";
 
 // setFieldEnabled is the field-lock mechanism extracted from MathInput.setEnabled
 // so it can be tested without a live MathQuill instance. It operates purely on a
@@ -31,5 +31,41 @@ describe("setFieldEnabled", () => {
     expect(ta.disabled).toBe(false);
     expect(el.classList.contains("mq-locked")).toBe(false);
     expect(ta.hasAttribute("tabindex")).toBe(false);
+  });
+});
+
+// jsdom has no matchMedia; stub it so the field can be asked about the pointer.
+function stubPointer(coarse: boolean) {
+  vi.stubGlobal("matchMedia", (q: string) => ({ matches: coarse, media: q }));
+}
+afterEach(() => vi.unstubAllGlobals());
+
+describe("MathInput.focus on touch devices", () => {
+  const mount = () => {
+    const input = new MathInput("", "e.g. sin(x)");
+    document.body.appendChild(input.el);
+    return { input, ta: () => input.el.querySelector("textarea")! };
+  };
+
+  it("focuses the field on a fine-pointer device (desktop auto-focus must keep working)", () => {
+    stubPointer(false);
+    const { input, ta } = mount();
+    input.focus();
+    expect(document.activeElement).toBe(ta());
+  });
+
+  it("does NOT focus on a coarse-pointer device (iOS: a pre-focused field never opens the keyboard on tap)", () => {
+    stubPointer(true);
+    const { input, ta } = mount();
+    input.focus();
+    expect(document.activeElement).not.toBe(ta());
+  });
+
+  it("still focuses on chip insert even on touch — that call is inside the user's tap, so the keyboard opens", () => {
+    stubPointer(true);
+    const { input, ta } = mount();
+    input.insertText("sin(");
+    expect(document.activeElement).toBe(ta());
+    expect(input.getLatex()).toContain("sin");
   });
 });
