@@ -108,17 +108,7 @@ export class MathInput {
     this.syncPlaceholder();
   }
 
-  /**
-   * Programmatic focus (turn change, Clear, post-shot refocus). On iOS/iPadOS a
-   * .focus() outside a user gesture focuses MathQuill's hidden textarea but does
-   * NOT open the software keyboard — and a later tap on an already-focused
-   * element fires no fresh focus event, so the keyboard never comes up at all.
-   * On coarse-pointer devices we therefore leave the field unfocused and let the
-   * player's own tap do it. Desktop auto-focus is unchanged.
-   * (`insertText` still focuses: a chip tap *is* a gesture, so the keyboard opens.)
-   */
   focus(): void {
-    if (window.matchMedia?.("(hover: none)").matches) return;
     this.mq.focus();
   }
 
