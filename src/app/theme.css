@@ -142,12 +142,15 @@ body { font-family: var(--cc-font-sans); overflow: hidden; }
   display: flex; align-items: flex-start; justify-content: center;
 }
 .land-panel {
-  display: flex; align-items: center; gap: var(--cc-space-5);
+  /* tops flush: the code box is taller (hint hangs below) — align on top edges */
+  display: flex; align-items: flex-start; gap: var(--cc-space-5);
 }
 .land-panel__or {
   font-family: var(--cc-font-tech);
   font-size: 11px; letter-spacing: 0.1em;
   color: var(--cc-text-muted);
+  /* ponytail: same block padding as .land-btn so "or" rides the button's centre line */
+  padding: 14px 0; line-height: 20px;
 }
 .land-join { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .land-join__hint {
