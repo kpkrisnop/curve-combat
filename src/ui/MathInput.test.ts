@@ -40,3 +40,23 @@ describe("setFieldEnabled", () => {
     expect(ta.hasAttribute("tabindex")).toBe(false);
   });
 });
+
+describe("MathInput.keystroke", () => {
+  it("sends Backspace to the field, deleting one character (not the whole equation)", () => {
+    const input = new MathInput();
+    document.body.appendChild(input.el);
+    input.insertText("12");
+    input.keystroke("Backspace");
+    expect(input.getLatex()).toBe("1");
+  });
+
+  it("Right escapes a superscript, so typing continues at the top level", () => {
+    const input = new MathInput();
+    document.body.appendChild(input.el);
+    input.insertText("x^2");      // cursor is INSIDE the superscript
+    input.keystroke("Right");     // the only way out
+    input.insertText("+1");
+    expect(input.getLatex()).toContain("+1");
+    expect(input.getLatex()).not.toMatch(/\^\{2\+1\}/); // the +1 must NOT be in the exponent
+  });
+});

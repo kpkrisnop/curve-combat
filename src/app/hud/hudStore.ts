@@ -42,6 +42,8 @@ export interface HudInputHandle {
   setEnabled(e: boolean): void;
   /** Type raw chars/LaTeX at the cursor (function chips). */
   insertText(chars: string): void;
+  /** Send a non-text key: "Left", "Right", "Backspace" (keypad nav keys). */
+  keystroke(chars: string): void;
 }
 
 export class HudInputRegistry {
