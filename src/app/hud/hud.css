@@ -104,7 +104,17 @@
 .comp.footer { transition: border-color 220ms var(--cc-ease-out-expo, ease), box-shadow 220ms var(--cc-ease-out-expo, ease); }
 @media (prefers-reduced-motion: reduce) { .comp.footer { transition: none; } }
 
-.hud-console { width: 100%; max-width: 720px; display: flex; flex-direction: column; gap: var(--cc-space-3); }
+/* ── The keypad footer (touch-keypad, 2026-07-13) ─────────────────────────
+   Four zones side by side: console · numbers · operators · functions.
+   The keypad replaced the native OS keyboard (MathInput sets inputmode="none"),
+   so it is always present on every device — there is no touch/desktop fork. */
+.hud-console {
+  width: 100%; max-width: none;          /* was 720px — the band uses the full width */
+  display: flex; flex-wrap: wrap; gap: var(--cc-space-3) var(--cc-space-4);
+  align-items: stretch;
+  container-type: inline-size;           /* the FOOTER's width drives the responsive step */
+}
+.hud-console__col { flex: 1; min-width: 260px; display: flex; flex-direction: column; gap: var(--cc-space-2); }
 
 .hud-console__turnline { display: flex; align-items: center; justify-content: space-between; }
 .hud-console__turn {
@@ -172,37 +182,67 @@
   font-family: var(--cc-font-tech); font-size: var(--cc-fs-sm);
 }
 
-.hud-console__clear {
-  flex: none; width: 30px; height: 30px; border-radius: var(--cc-radius-sm);
-  border: 1px solid var(--cc-border); background: transparent;
-  color: var(--cc-text-muted); font-size: 18px; line-height: 1; cursor: pointer;
-  transition: color 150ms, border-color 150ms;
-}
-.hud-console__clear:hover:not(:disabled) { color: var(--cc-text); border-color: var(--cc-border-strong); }
-.hud-console__clear:disabled { opacity: 0.3; cursor: default; }
-
-.hud-console__fire { flex: none; padding: 10px 22px; }
+/* Fire spans the console column, under the nav row: it is the primary action,
+   and sharing a row with the input squeezed both. */
+.hud-console__fire { width: 100%; justify-content: center; }
 .hud-console__fire-key {
   font-family: var(--cc-font-tech); font-size: var(--cc-fs-2xs);
   opacity: 0.55; margin-left: 2px;
   border: 1px solid currentColor; border-radius: var(--cc-radius-sm); padding: 0 4px; line-height: 1.4;
 }
 
-.hud-console__chiprow { display: flex; align-items: center; justify-content: space-between; gap: var(--cc-space-3); }
-.hud-console__chips { display: flex; flex-wrap: wrap; gap: var(--cc-space-3); }
-.hud-console-chip-group { display: flex; flex-wrap: wrap; gap: 6px; }
-.hud-console-chip {
-  font-family: var(--cc-font-tech); font-size: var(--cc-fs-xs);
-  color: var(--cc-text-muted); background: var(--cc-surface-2);
-  border: 1px solid var(--cc-border); border-radius: var(--cc-radius-sm);
-  padding: 4px 9px; cursor: pointer;
-  transition: color 120ms, border-color 120ms, background 120ms;
+/* ── The keypad ───────────────────────────────────────────────────────────
+   The chip row grown up: one grid, one component, same insertText mechanism. */
+.hud-console__nav { display: grid; grid-auto-flow: column; gap: 6px; }
+
+.keypad__key {
+  min-height: 46px; min-width: 44px;     /* Apple HIG touch minimum */
+  display: grid; place-items: center;
+  background: oklch(1 0 0 / 0.04); border: 1px solid var(--cc-border);
+  border-radius: var(--cc-radius-md); color: var(--cc-text);
+  font-family: var(--cc-font-mono); font-size: var(--cc-fs-md); cursor: pointer;
+  transition: background var(--cc-transition);
 }
-.hud-console-chip:hover:not(:disabled) { color: var(--cc-text); border-color: var(--cc-border-strong); background: oklch(1 0 0 / 0.04); }
-.hud-console-chip:active:not(:disabled) { transform: scale(0.94); }
-.hud-console-chip:disabled { opacity: 0.35; cursor: default; }
-.hud-console-chip:focus-visible { outline: 2px solid oklch(0.9 0.01 250 / 0.9); outline-offset: 2px; }
-.hud-console__hint {
-  flex: none; font-family: var(--cc-font-tech); font-size: var(--cc-fs-2xs);
-  letter-spacing: 0.1em; color: var(--cc-text-faint); white-space: nowrap;
+.keypad__key:active:not(:disabled) { background: oklch(1 0 0 / 0.14); }
+.keypad__key:disabled { opacity: 0.4; cursor: default; }
+.keypad__key.is-util { background: oklch(1 0 0 / 0.02); color: var(--cc-text-muted); font-size: var(--cc-fs-sm); }
+/* The variable — the most-typed symbol in the game, and NOT a multiply sign. */
+.keypad__key.is-var {
+  color: var(--cc-blue); border-color: color-mix(in srgb, var(--cc-blue) 45%, var(--cc-border));
+  background: color-mix(in srgb, var(--cc-blue) 10%, transparent);
+  font-style: italic; font-weight: 700; font-size: var(--cc-fs-lg);
+}
+
+.keypad__zone { display: grid; gap: 6px; align-content: start; }
+.keypad__nums { grid-template-columns: repeat(3, 1fr); }
+.keypad__ops  { grid-template-columns: repeat(2, 1fr); }
+/* Operator/function weighting comes from the prototype's `.key.op` / `.key.fn`,
+   which the key model has no className for — so it hangs off the zone instead.
+   Function labels (`arcsin`) need the smaller size to fit four to a 216px band. */
+.keypad__ops .keypad__key { background: oklch(1 0 0 / 0.08); }
+.keypad__fns .keypad__key { color: var(--cc-text-muted); font-size: var(--cc-fs-sm); }
+.keypad__fns { display: grid; gap: 6px; grid-template-columns: repeat(4, 1fr); }
+
+/* The function panel is position:absolute inside its zone, so it contributes NO
+   height — the console column sets the band's height and the functions scroll
+   inside it. Without this the panel grows the footer and never scrolls at all. */
+.keypad__fnzone { position: relative; flex: 0 0 216px; min-height: 132px; }
+.keypad__fnpanel {
+  position: absolute; inset: 0; overflow-y: auto; scrollbar-width: none;
+  /* Fade, not a scrollbar. Same local-over-scroll trick as .comp.side-panel:
+     the `local` cover scrolls with the content and cancels the `scroll` shadow
+     exactly at the true bottom, so the cue is honest. rgb(10,12,15) is
+     --cc-surface pre-composited over --cc-bg. */
+  background:
+    linear-gradient(rgba(10, 12, 15, 0), rgb(10, 12, 15) 70%) 0 100% / 100% 26px local no-repeat,
+    linear-gradient(rgba(10, 12, 15, 0), rgba(10, 12, 15, 0.96)) 0 100% / 100% 34px scroll no-repeat;
+}
+.keypad__fnpanel::-webkit-scrollbar { display: none; }
+
+/* NARROW (iPad portrait): four zones side by side starve the equation field, so
+   the functions wrap to their own full-width row and spread to 8 columns.
+   MUST come after .keypad__fns — equal specificity, source order decides. */
+@container (max-width: 820px) {
+  .keypad__fnzone { flex: 1 0 100%; min-height: 104px; }
+  .keypad__fns { grid-template-columns: repeat(8, 1fr); }
 }

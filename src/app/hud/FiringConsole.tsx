@@ -145,81 +145,86 @@ export function FiringConsole({ makeInput, singleTeam }: { makeInput?: () => any
 
   return (
     <div className="hud-console">
-      <div className="hud-console__turnline">
-        <span className="hud-console__turn" aria-live="polite">
-          <span className={`hud-console__dot is-${displayed}`} aria-hidden="true" />
-          {waiting ? `${label} IS AIMING…` : `${label} TO FIRE`}
-        </span>
-        <TimerBadge />
-      </div>
-
-      <div className={`hud-console__inputrow ${waiting ? "is-locked" : ""}`}>
-        <span className="hud-prompt">y =</span>
-        <div className="hud-console__fields">
-          {teams.map((t) => (
-            <div
-              key={t}
-              // In singleTeam (online) mode, while waiting on the opponent's turn,
-              // the locked placeholder below takes over the "hud-console-field"
-              // slot visually — this wrapper stays mounted (so the MathField
-              // instance and its registry entry never unmount) but drops the
-              // shared class so it doesn't also count as a visible field.
-              className={
-                singleTeam && waiting
-                  ? "hud-console-field--hidden"
-                  : `hud-console-field ${t === active && !waiting ? "" : "hud-console-field--hidden"}`
-              }
-            >
-              <MathField
-                team={t}
-                registry={hudInputs}
-                makeInput={makeInput}
-                placeholder="e.g. sin(x)"
-                onEnter={() => hudController.requestFire(t)}
-                onEdit={() => onEdit(t)}
-                onUpOutOf={() => recallStep(t, -1)}
-                onDownOutOf={() => recallStep(t, 1)}
-              />
-            </div>
-          ))}
-          {waiting && (
-            <span className="hud-console-field hud-console-field--locked">
-              opponent is choosing a curve…
-            </span>
-          )}
+      {/* The console column. The Keypad's three zones are its siblings — four
+          zones side by side (hud.css), so the band reads left to right:
+          console · numbers · operators · functions. */}
+      <div className="hud-console__col">
+        <div className="hud-console__turnline">
+          <span className="hud-console__turn" aria-live="polite">
+            <span className={`hud-console__dot is-${displayed}`} aria-hidden="true" />
+            {waiting ? `${label} IS AIMING…` : `${label} TO FIRE`}
+          </span>
+          <TimerBadge />
         </div>
+
+        {/* Rendered even while waiting: a disconnect/forfeit warning is news you
+            need on the opponent's turn too, not just your own. */}
+        <div className={`hud-status is-${statusKind}`} aria-live="polite">{statusText}</div>
+
+        <div className={`hud-console__inputrow ${waiting ? "is-locked" : ""}`}>
+          <span className="hud-prompt">y =</span>
+          <div className="hud-console__fields">
+            {teams.map((t) => (
+              <div
+                key={t}
+                // In singleTeam (online) mode, while waiting on the opponent's turn,
+                // the locked placeholder below takes over the "hud-console-field"
+                // slot visually — this wrapper stays mounted (so the MathField
+                // instance and its registry entry never unmount) but drops the
+                // shared class so it doesn't also count as a visible field.
+                className={
+                  singleTeam && waiting
+                    ? "hud-console-field--hidden"
+                    : `hud-console-field ${t === active && !waiting ? "" : "hud-console-field--hidden"}`
+                }
+              >
+                <MathField
+                  team={t}
+                  registry={hudInputs}
+                  makeInput={makeInput}
+                  placeholder="e.g. sin(x)"
+                  onEnter={() => hudController.requestFire(t)}
+                  onEdit={() => onEdit(t)}
+                  onUpOutOf={() => recallStep(t, -1)}
+                  onDownOutOf={() => recallStep(t, 1)}
+                />
+              </div>
+            ))}
+            {waiting && (
+              <span className="hud-console-field hud-console-field--locked">
+                opponent is choosing a curve…
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="hud-console__nav">
+          {NAV_KEYS.map((k) => (
+            <button
+              key={k.label}
+              type="button"
+              className="keypad__key is-util"
+              disabled={waiting || busy}
+              // See Keypad's Key: a button tap would steal focus from MathQuill's
+              // hidden textarea and drop the caret.
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={() => onKey(k.action)}
+            >
+              {k.label}
+            </button>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          className="cc-btn cc-btn--primary hud-console__fire"
+          disabled={!canFire}
+          onClick={() => hudController.requestFire(active)}
+        >
+          {busy ? "Firing…" : "Fire"}
+          <span className="hud-console__fire-key" aria-hidden="true">↵</span>
+        </button>
       </div>
-
-      {/* Rendered even while waiting: a disconnect/forfeit warning is news you
-          need on the opponent's turn too, not just your own. */}
-      <div className={`hud-status is-${statusKind}`} aria-live="polite">{statusText}</div>
-
-      <div className="hud-console__nav">
-        {NAV_KEYS.map((k) => (
-          <button
-            key={k.label}
-            type="button"
-            className="keypad__key is-util"
-            disabled={waiting || busy}
-            // See Keypad's Key: a button tap would steal focus from MathQuill's
-            // hidden textarea and drop the caret.
-            onPointerDown={(e) => e.preventDefault()}
-            onClick={() => onKey(k.action)}
-          >
-            {k.label}
-          </button>
-        ))}
-      </div>
-
-      <button
-        type="button"
-        className="cc-btn cc-btn--primary hud-console__fire"
-        disabled={!canFire}
-        onClick={() => hudController.requestFire(active)}
-      >
-        {busy ? "Firing…" : "Fire"}
-        <span className="hud-console__fire-key" aria-hidden="true">↵</span>
-      </button>
 
       <Keypad disabled={waiting || busy} onKey={onKey} />
     </div>
