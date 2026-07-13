@@ -80,6 +80,16 @@ export class MathInput {
       },
     });
 
+    // SPIKE (custom-keypad): suppress the software keyboard on touch devices.
+    // MathQuill types into a hidden textarea; `inputmode="none"` tells the OS
+    // "this field is focusable and takes a caret, but do NOT open a keyboard for
+    // it" — physical keys are unaffected, so desktop typing is untouched and no
+    // device detection is needed. On iPad the native keyboard is the direct
+    // cause of every symptom we have (it doesn't reliably open, it covers the
+    // console, and it displaces the page when dismissed); this is the platform's
+    // own off switch for it, and the precondition for our own on-screen keypad.
+    this.el.querySelector("textarea")?.setAttribute("inputmode", "none");
+
     // A faux placeholder overlay (MathQuill has no native placeholder): shown
     // only while the field is empty, hidden the moment any content is typed.
     if (placeholder) {

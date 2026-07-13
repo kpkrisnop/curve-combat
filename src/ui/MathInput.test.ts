@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
-import { setFieldEnabled } from "./MathInput";
+import { MathInput, setFieldEnabled } from "./MathInput";
 
 // setFieldEnabled is the field-lock mechanism extracted from MathInput.setEnabled
 // so it can be tested without a live MathQuill instance. It operates purely on a
@@ -12,6 +12,13 @@ function makeField() {
   el.appendChild(ta);
   return { el, ta };
 }
+
+describe("software-keyboard suppression", () => {
+  it("marks MathQuill's textarea inputmode=none, so no OS keyboard opens for it", () => {
+    const input = new MathInput();
+    expect(input.el.querySelector("textarea")?.getAttribute("inputmode")).toBe("none");
+  });
+});
 
 describe("setFieldEnabled", () => {
   it("locks WITHOUT disabling the textarea (a disabled→enabled cycle permanently breaks MathQuill click-to-focus)", () => {
