@@ -227,7 +227,9 @@ body { font-family: var(--cc-font-sans); overflow: hidden; }
   align-items: center; justify-content: center; text-align: center;
   background: #000; padding: var(--cc-space-6);
 }
-@media (max-width: 1023px) { .cc-phonegate { display: flex; } }
+/* ponytail: 700px — lets a 768px portrait iPad through for testing; phones
+   (≤ ~430px portrait) stay gated. Portrait playability is UNVERIFIED. */
+@media (max-width: 699px) { .cc-phonegate { display: flex; } }
 
 /* ── Arena layout (ADR-0003) ────────────────────────────────────────────── */
 .arena-frame { position: absolute; inset: 0; overflow: hidden; }
