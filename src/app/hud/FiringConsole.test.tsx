@@ -133,6 +133,13 @@ describe("FiringConsole", () => {
     expect(document.querySelector(".hud-console-field--locked")).toBeNull();
   });
 
+  it("field is disabled (not just hidden) while waiting on the opponent's turn", () => {
+    act(() => hudController.setTurn("blue"));
+    render(<FiringConsole makeInput={makeInput} singleTeam="red" />);
+    // singleTeam=red, turn=blue => waiting for opponent => field must be disabled
+    expect(inputs[0].setEnabled).toHaveBeenLastCalledWith(false);
+  });
+
   it("Fire is disabled until the active field has content, then fires with that latex", () => {
     const cb = vi.fn();
     hudController.onFire(cb);

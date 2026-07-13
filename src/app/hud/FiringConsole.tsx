@@ -73,8 +73,9 @@ export function FiringConsole({ makeInput, singleTeam }: { makeInput?: () => any
   // opens an OS keyboard any more (inputmode="none"), so a focus call buys
   // nothing and re-introduces the caret/scroll fights of the reverted 90b2d52.
   useEffect(() => {
-    teams.forEach((t) => hudInputs.get(t)?.setEnabled(t === active && !busy));
+    teams.forEach((t) => hudInputs.get(t)?.setEnabled(t === active && !busy && !waiting));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `teams` is stable per singleTeam identity
+    // ponytail: !waiting locks the field on the opponent's turn (formerly relied on CSS display:none)
   }, [active, busy, waiting, singleTeam]);
 
   const recallStep = (team: Team, dir: -1 | 1) => {
