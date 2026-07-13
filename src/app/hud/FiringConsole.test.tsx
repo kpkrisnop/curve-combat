@@ -224,4 +224,11 @@ describe("FiringConsole", () => {
     act(() => inputs[1].fireUpOutOf());
     expect(inputs[1].setLatex).toHaveBeenLastCalledWith("blueshot");
   });
+
+  it("prevents default on pointerdown for nav keys so a key tap never blurs the math field", () => {
+    render(<FiringConsole makeInput={makeInput} />);
+    const ev = new PointerEvent("pointerdown", { bubbles: true, cancelable: true });
+    screen.getByRole("button", { name: "Backspace" }).dispatchEvent(ev);
+    expect(ev.defaultPrevented).toBe(true);
+  });
 });
