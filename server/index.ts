@@ -5,7 +5,7 @@ import { parseClientMessage, encode, type ServerMessage } from "../src/net/proto
 import type { MatchState } from "../src/game/matchState";
 import { MatchEngine } from "./matchEngine";
 
-interface Conn { ws: WebSocket; playerId?: string; room?: string; isSpectator?: boolean }
+interface Conn { ws: WebSocket; playerId?: string; room?: string; isSpectator?: boolean; isAlive: boolean }
 
 const turnTimers = new Map<string, ReturnType<typeof setTimeout>>();
 // Wall-clock deadline for each room's active turn, kept in lockstep with
@@ -91,9 +91,21 @@ export function createServer(port: number): { close: () => Promise<void> } {
     }, 2000);
   }
 
+  // Cloudflare Tunnel (and similar proxies) drop WS connections idle for
+  // ~100s. Ping every 30s so there's always traffic, and terminate any peer
+  // that stops answering pongs (dead socket, not just a quiet turn).
+  const heartbeat = setInterval(() => {
+    for (const c of conns) {
+      if (!c.isAlive) { c.ws.terminate(); continue; }
+      c.isAlive = false;
+      c.ws.ping();
+    }
+  }, 30_000);
+
   wss.on("connection", (ws) => {
-    const conn: Conn = { ws };
+    const conn: Conn = { ws, isAlive: true };
     conns.add(conn);
+    ws.on("pong", () => { conn.isAlive = true; });
 
     ws.on("message", (buf) => {
       let msg;
@@ -353,6 +365,7 @@ export function createServer(port: number): { close: () => Promise<void> } {
 
   return {
     close: () => new Promise<void>((res) => {
+      clearInterval(heartbeat);
       for (const c of conns) c.ws.terminate();
       wss.close(() => res());
     }),

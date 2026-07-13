@@ -127,6 +127,27 @@ describe("server integration (Phase 2)", () => {
     a2.close(); b.close(); await server.close();
   });
 
+  it("heartbeat pings don't disconnect a quiet-but-responsive connection", async () => {
+    const port = 3600 + Math.floor(Math.random() * 100);
+    const server = createServer(port);
+    const a = await open(port);
+    a.send(encode({ type: "join", room: "PING", name: "Ann" }));
+    await next(a, "joined");
+
+    // Three 30s heartbeat cycles of silence — each round-trip below only
+    // succeeds if the socket is still open, so a false-positive termination
+    // (e.g. isAlive not reset on pong) would fail this instead of timing out.
+    for (let i = 0; i < 3; i++) {
+      vi.advanceTimersByTime(30_001);
+      a.send(encode({ type: "setName", name: `Ann${i}` }));
+      await next(a, "lobbyState");
+    }
+    expect(a.readyState).toBe(WebSocket.OPEN);
+
+    a.close();
+    await server.close();
+  });
+
   it("spectator joining mid-match receives catch-up matchState", async () => {
     const port = 3550 + Math.floor(Math.random() * 150);
     const server = createServer(port);
