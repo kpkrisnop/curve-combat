@@ -19,6 +19,7 @@ function makeTrackedInput() {
     setEnabled: vi.fn(),
     reflow: vi.fn(),
     insertText: vi.fn((chars: string) => { latex += chars; editCb?.(); }),
+    keystroke: vi.fn(),
     onEnter: (cb: () => void) => { enterCb = cb; },
     onEdit: (cb: () => void) => { editCb = cb; },
     onUpOutOf: (cb: () => void) => { upCb = cb; },
@@ -145,22 +146,47 @@ describe("FiringConsole", () => {
     expect(cb).toHaveBeenCalledWith("red", "\\sin(x)");
   });
 
-  it("Clear empties the active field and refocuses it", () => {
+  it("routes a digit key into the ACTIVE team's field only", () => {
     act(() => hudController.setTurn("red"));
     render(<FiringConsole makeInput={makeInput} />);
-    act(() => inputs[0].typeLatex("x^2"));
-    fireEvent.click(screen.getByRole("button", { name: /clear equation/i }));
-    expect(inputs[0].setLatex).toHaveBeenLastCalledWith("");
-    expect(inputs[0].focus).toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "7" }));
+    expect(inputs[0].insertText).toHaveBeenCalledWith("7"); // red = first registered
+    expect(inputs[1].insertText).not.toHaveBeenCalled();
   });
 
-  it("clicking a chip inserts its text into the active team's field", () => {
+  it("routes a function key into the active field", () => {
     act(() => hudController.setTurn("red"));
     render(<FiringConsole makeInput={makeInput} />);
     fireEvent.click(screen.getByRole("button", { name: "sin" }));
     expect(inputs[0].insertText).toHaveBeenCalledWith("sin(");
-    fireEvent.click(screen.getByRole("button", { name: "logₐ" }));
-    expect(inputs[0].insertText).toHaveBeenCalledWith("log_");
+  });
+
+  it("routes backspace as a keystroke, not as text", () => {
+    act(() => hudController.setTurn("red"));
+    render(<FiringConsole makeInput={makeInput} />);
+    fireEvent.click(screen.getByRole("button", { name: "Backspace" }));
+    expect(inputs[0].keystroke).toHaveBeenCalledWith("Backspace");
+    expect(inputs[0].insertText).not.toHaveBeenCalled();
+  });
+
+  it("Clear empties the active field", () => {
+    act(() => hudController.setTurn("red"));
+    render(<FiringConsole makeInput={makeInput} />);
+    act(() => inputs[0].typeLatex("x^2"));
+    fireEvent.click(screen.getByRole("button", { name: "Clear" }));
+    expect(inputs[0].setLatex).toHaveBeenLastCalledWith("");
+  });
+
+  it("keys are inert while waiting on the opponent's turn", () => {
+    act(() => hudController.setTurn("red"));
+    render(<FiringConsole makeInput={makeInput} singleTeam="blue" />);
+    const key = screen.getByRole("button", { name: "7" }) as HTMLButtonElement;
+    expect(key.disabled).toBe(true);
+  });
+
+  it("renders no function chip row — the keypad absorbed it", () => {
+    render(<FiringConsole makeInput={makeInput} />);
+    expect(document.querySelector(".hud-console__chiprow")).toBeNull();
   });
 
   it("recall: upOutOf walks older shots, downOutOf walks back to the live draft without blanking it", () => {

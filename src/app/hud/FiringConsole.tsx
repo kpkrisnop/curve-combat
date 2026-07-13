@@ -14,17 +14,8 @@ import { useStore } from "../store";
 import { hudStore, hudController, hudInputs, type Team } from "./hudStore";
 import { MathField } from "./MathField";
 import { TimerBadge } from "./TimerBadge";
-
-const CHIP_GROUPS: { label: string; type: string }[][] = [
-  [{ label: "sin", type: "sin(" }, { label: "cos", type: "cos(" }, { label: "tan", type: "tan(" }],
-  // "log_" leaves the cursor inside the subscript for the base — the same
-  // raw-insertion-point pattern the "xⁿ" chip uses for superscripts (type
-  // "^", arrow out, keep typing).
-  [{ label: "ln", type: "ln(" }, { label: "logₐ", type: "log_" }],
-  [{ label: "√", type: "sqrt" }, { label: "x²", type: "x^2" }, { label: "xⁿ", type: "^" }],
-  [{ label: "π", type: "pi" }, { label: "e", type: "e" }],
-  [{ label: "( )", type: "(" }, { label: "abs", type: "abs(" }],
-];
+import { Keypad, NAV_KEYS } from "./Keypad";
+import type { KeyAction } from "./keypadKeys";
 
 // Shown only while a shot is actually in flight — flavour that's earned by an
 // event, never idle decoration. (A permanently-jokey status line would train
@@ -62,6 +53,9 @@ export function FiringConsole({ makeInput, singleTeam }: { makeInput?: () => any
   // walk back down to it, so recall never destroys unfired work.
   const draftRef = useRef<Record<Team, string>>({ red: "", blue: "" });
   const programmaticRef = useRef(false); // true while WE set latex, so onEdit ignores it
+  // Recall popover: the Recall key sets it, Task 8 renders it. The value side is
+  // deliberately unread for now (noUnusedLocals would reject it) — Task 8 names it.
+  const [, setRecallOpen] = useState(false);
 
   // Enable only the displayed field; refocus it whenever the turn changes.
   useEffect(() => {
@@ -96,9 +90,21 @@ export function FiringConsole({ makeInput, singleTeam }: { makeInput?: () => any
     setLive((l) => ({ ...l, [team]: hudInputs.get(team)?.getLatex() ?? "" }));
   };
 
-  const insertChip = (chars: string) => {
+  // One router for every key. `insertChip` used to do this for the chip row;
+  // the keypad is that row grown up, so it is the same mechanism.
+  const onKey = (a: KeyAction) => {
     if (waiting || busy) return;
-    hudInputs.get(turn)?.insertText(chars);
+    const input = hudInputs.get(turn);
+    if (!input) return;
+    if (a.kind === "insert") input.insertText(a.text);
+    else if (a.kind === "keystroke") input.keystroke(a.keys);
+    else if (a.name === "clear") {
+      programmaticRef.current = true;
+      input.setLatex("");
+      programmaticRef.current = false;
+    } else if (a.name === "recall") {
+      setRecallOpen(true); // Task 8 renders the popover; until then this is inert
+    }
     recallRef.current = { team: null, idx: -1 };
     setLive((l) => ({ ...l, [turn]: hudInputs.get(turn)?.getLatex() ?? "" }));
   };
@@ -168,59 +174,40 @@ export function FiringConsole({ makeInput, singleTeam }: { makeInput?: () => any
             </span>
           )}
         </div>
-        {!waiting && (
-          <button
-            type="button"
-            className="hud-console__clear"
-            title="Clear"
-            aria-label="Clear equation"
-            disabled={!live[turn].trim()}
-            onClick={() => {
-              programmaticRef.current = true;
-              hudInputs.get(turn)?.setLatex("");
-              programmaticRef.current = false;
-              setLive((l) => ({ ...l, [turn]: "" }));
-              hudInputs.get(turn)?.focus();
-            }}
-          >
-            ×
-          </button>
-        )}
-        <button
-          type="button"
-          className="cc-btn cc-btn--primary hud-console__fire"
-          disabled={!canFire}
-          onClick={() => hudController.requestFire(turn)}
-        >
-          {busy ? "Firing…" : "Fire"}
-          <span className="hud-console__fire-key" aria-hidden="true">↵</span>
-        </button>
       </div>
 
       {/* Rendered even while waiting: a disconnect/forfeit warning is news you
           need on the opponent's turn too, not just your own. */}
       <div className={`hud-status is-${statusKind}`} aria-live="polite">{statusText}</div>
 
-      <div className="hud-console__chiprow">
-        <div className="hud-console__chips">
-          {CHIP_GROUPS.map((group, gi) => (
-            <div className="hud-console-chip-group" key={gi}>
-              {group.map((c) => (
-                <button
-                  key={c.label}
-                  type="button"
-                  className="hud-console-chip"
-                  disabled={waiting || busy}
-                  onClick={() => insertChip(c.type)}
-                >
-                  {c.label}
-                </button>
-              ))}
-            </div>
-          ))}
-        </div>
-        <span className="hud-console__hint">↑ recall · ↵ fire</span>
+      <div className="hud-console__nav">
+        {NAV_KEYS.map((k) => (
+          <button
+            key={k.label}
+            type="button"
+            className="keypad__key is-util"
+            disabled={waiting || busy}
+            // See Keypad's Key: a button tap would steal focus from MathQuill's
+            // hidden textarea and drop the caret.
+            onPointerDown={(e) => e.preventDefault()}
+            onClick={() => onKey(k.action)}
+          >
+            {k.label}
+          </button>
+        ))}
       </div>
+
+      <button
+        type="button"
+        className="cc-btn cc-btn--primary hud-console__fire"
+        disabled={!canFire}
+        onClick={() => hudController.requestFire(turn)}
+      >
+        {busy ? "Firing…" : "Fire"}
+        <span className="hud-console__fire-key" aria-hidden="true">↵</span>
+      </button>
+
+      <Keypad disabled={waiting || busy} onKey={onKey} />
     </div>
   );
 }
