@@ -609,9 +609,18 @@ export class GameRenderer {
     const trailColor = effectivePlayer === "red" ? COLORS.red : COLORS.blue;
 
     return new Promise((resolve) => {
+      // The animation owns the trail's lifetime: it must erase what it drew.
+      // Online, the authoritative matchState (→ setWorld → trailLayer.clear())
+      // lands at the same instant as the final animation frame, so a clear from
+      // there can be re-drawn over by this loop and stick until the next shot.
+      const finish = () => {
+        trailLayer.clear();
+        resolve();
+      };
+
       if (result.hit.kind === "dud" || result.samples.length < 2) {
         this.flashDud(this.world.soldier.pos);
-        window.setTimeout(resolve, 350);
+        window.setTimeout(finish, 350);
         return;
       }
 
@@ -660,7 +669,7 @@ export class GameRenderer {
 
         if (progress >= 1) {
           this.app.ticker.remove(tick);
-          this.resolveImpact(result, resolve);
+          this.resolveImpact(result, finish);
         }
       };
       this.app.ticker.add(tick);
