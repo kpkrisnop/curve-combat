@@ -51,12 +51,19 @@ describe("MathInput.keystroke", () => {
   });
 
   it("Right escapes a superscript, so typing continues at the top level", () => {
+    // "y" is deliberately NOT in charsThatBreakOutOfSupSub ("+-=<>") and isn't a
+    // digit (autoSubscriptNumerals only fires for digits), so MathQuill itself
+    // does nothing to move the cursor here: without a working keystroke("Right")
+    // forwarding "y" would land INSIDE the exponent (x^{2y}). Only a real Right
+    // keystroke gets it to the top level (x^2y). This is what makes the test
+    // fail when keystroke() is a no-op, unlike the previous "+1" version where
+    // "+" broke out of the superscript on its own regardless of keystroke().
     const input = new MathInput();
     document.body.appendChild(input.el);
     input.insertText("x^2");      // cursor is INSIDE the superscript
     input.keystroke("Right");     // the only way out
-    input.insertText("+1");
-    expect(input.getLatex()).toContain("+1");
-    expect(input.getLatex()).not.toMatch(/\^\{2\+1\}/); // the +1 must NOT be in the exponent
+    input.insertText("y");
+    expect(input.getLatex()).toBe("x^2y");
+    expect(input.getLatex()).not.toBe("x^{2y}");
   });
 });
