@@ -30,9 +30,11 @@ export interface NetLobbyState {
   round1Seed: number | null;
   startAt: number | null;
   configFlash: number;   // increments on every guest-visible config change (drives the flash)
-  peerDown: { name: string; deadline: number } | null;
-  /** Transient "<name> quit" toast text; cleared by the UI after a few seconds. */
-  forfeitNotice: string | null;
+  // Peer-disconnect and forfeit notices are NOT stored here — they go straight
+  // to the HUD status line (hudStore, via GameUiPort.setStatus) so there is one
+  // message channel instead of a competing badge. Only `selfReconnecting` still
+  // warrants an overlay, because it must BLOCK: you cannot play while you're the
+  // one who is disconnected.
   selfReconnecting: boolean;
   error: string | null;
 }
@@ -64,8 +66,6 @@ export function initialNetLobbyState(roomCode: string): NetLobbyState {
     round1Seed: null,
     startAt: null,
     configFlash: 0,
-    peerDown: null,
-    forfeitNotice: null,
     selfReconnecting: false,
     error: null,
   };

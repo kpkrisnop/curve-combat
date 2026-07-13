@@ -463,7 +463,7 @@ describe("NetworkGame forfeit", () => {
 
   it("sets a forfeit notice when a player disappears from matchState", async () => {
     netLobbyStore.set(initialNetLobbyState("WOLF"));
-    const { client } = await makeGame();
+    const { client, ui } = await makeGame();
 
     // First state: r1 ("Red") will forfeit; r2 stays on the red team so
     // render()'s red-team lookup (unrelated to this feature) still resolves.
@@ -490,7 +490,9 @@ describe("NetworkGame forfeit", () => {
       },
     });
 
-    expect(netLobbyStore.get().forfeitNotice).toBe("Red quit");
+    // The forfeit notice goes to the HUD status line (warn tone), not to a
+    // netLobbyStore badge — there is one message channel now.
+    expect(ui.setStatus).toHaveBeenCalledWith("Red quit", "warn");
   });
 });
 

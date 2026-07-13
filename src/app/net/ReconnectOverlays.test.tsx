@@ -11,52 +11,28 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe("ReconnectOverlays", () => {
-  it("renders nothing when both null", () => {
+  it("renders nothing while connected", () => {
     const { container } = render(<ReconnectOverlays />);
     expect(container.firstChild).toBeNull();
   });
 
   it("selfReconnecting=true → blocking overlay with 'Reconnecting…'", () => {
     act(() => {
-      netLobbyStore.set({ selfReconnecting: true, peerDown: null });
+      netLobbyStore.set({ selfReconnecting: true });
     });
     render(<ReconnectOverlays />);
     expect(screen.getByText(/Reconnecting/)).toBeTruthy();
-    // Blocking overlay should be present
-    const overlay = document.querySelector(".reconnect-overlay--blocking");
-    expect(overlay).toBeTruthy();
+    expect(document.querySelector(".reconnect-overlay--blocking")).toBeTruthy();
   });
 
-  it("peerDown → banner with 'NAME disconnected'", () => {
+  it("only ever blocks — the non-blocking badge variant is retired", () => {
+    // Peer-disconnect and forfeit notices now go to the HUD status line
+    // (NetworkGame → GameUiPort.setStatus), so this component must never
+    // render a competing banner again, in any state.
     act(() => {
-      netLobbyStore.set({
-        selfReconnecting: false,
-        peerDown: { name: "Ann", deadline: Date.now() + 30_000 },
-      });
+      netLobbyStore.set({ selfReconnecting: true });
     });
     render(<ReconnectOverlays />);
-    expect(screen.getByText(/Ann disconnected/)).toBeTruthy();
-    const banner = document.querySelector(".reconnect-overlay--banner");
-    expect(banner).toBeTruthy();
-  });
-
-  it("selfReconnecting takes precedence over peerDown", () => {
-    act(() => {
-      netLobbyStore.set({
-        selfReconnecting: true,
-        peerDown: { name: "Ann", deadline: Date.now() + 30_000 },
-      });
-    });
-    render(<ReconnectOverlays />);
-    // Blocking overlay shown (self takes priority)
-    expect(screen.getByText(/Reconnecting/)).toBeTruthy();
-    const blocking = document.querySelector(".reconnect-overlay--blocking");
-    expect(blocking).toBeTruthy();
-  });
-
-  it("shows the forfeit notice when set", () => {
-    netLobbyStore.set({ forfeitNotice: "Red quit" });
-    render(<ReconnectOverlays />);
-    expect(screen.getByText(/red quit/i)).toBeTruthy();
+    expect(document.querySelector(".reconnect-overlay--banner")).toBeNull();
   });
 });

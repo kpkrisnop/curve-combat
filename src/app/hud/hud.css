@@ -45,7 +45,18 @@
 .hud-input .mq-selection, .hud-input .mq-selection .mq-non-leaf {
   background: var(--cc-accent); color: #fff;
 }
+/* The one status line. Its resting tones (tip / flavour / info commentary) stay
+   quiet so the alert tones genuinely stand out — the whole point of routing
+   errors and disconnects through here instead of a competing badge. */
 .hud-status { min-height: 18px; font-size: var(--cc-fs-xs); color: var(--cc-text-faint); }
+.hud-status.is-tip { color: var(--cc-text-faint); }
+.hud-status.is-info { color: var(--cc-text-muted); }
+.hud-status.is-flavour {
+  color: var(--cc-text); font-family: var(--cc-font-tech);
+  letter-spacing: 0.08em; font-weight: 600;
+}
+.hud-status.is-warn  { color: #ffb020; }   /* same amber as the turn timer's warn state */
+.hud-status.is-error { color: var(--cc-red); }
 .hud-timer { font-family: var(--cc-font-mono); font-weight: 800; min-width: 44px; text-align: center; }
 .hud-timer.warn { color: #ffb020; }
 .hud-timer.crit { color: var(--cc-red); animation: cc-pulse 0.6s infinite alternate; }

@@ -30,6 +30,61 @@ function makeTrackedInput() {
   };
 }
 
+const statusEl = () => document.querySelector(".hud-status")!;
+
+describe("FiringConsole — status line", () => {
+  const makeInput = () => makeTrackedInput();
+
+  beforeEach(() => hudStore.set(initialHudState()));
+  afterEach(() => cleanup());
+
+  it("is never blank: with nothing to report it shows a tip", () => {
+    render(<FiringConsole makeInput={makeInput} />);
+    expect(statusEl().textContent).toMatch(/^Tip: /);
+    expect(statusEl().className).toContain("is-tip");
+  });
+
+  it("shows an in-flight flavour line while the shot is busy, not a tip", () => {
+    render(<FiringConsole makeInput={makeInput} />);
+    act(() => hudController.setBusy("red", true));
+    expect(statusEl().className).toContain("is-flavour");
+    expect(statusEl().textContent).not.toMatch(/^Tip: /);
+  });
+
+  it("shows shot commentary (info) once the game reports it, replacing the tip", () => {
+    render(<FiringConsole makeInput={makeInput} />);
+    act(() => hudController.setStatus("Direct hit on BLUE — 12 dmg", "info"));
+    expect(statusEl().textContent).toBe("Direct hit on BLUE — 12 dmg");
+    expect(statusEl().className).toContain("is-info");
+  });
+
+  it("an error outranks everything and is toned so it cuts through", () => {
+    render(<FiringConsole makeInput={makeInput} />);
+    act(() => hudController.setBusy("red", true));
+    act(() => hudController.setStatus("Not a plottable function of x", "error"));
+    expect(statusEl().textContent).toBe("Not a plottable function of x");
+    expect(statusEl().className).toContain("is-error");
+  });
+
+  it("a disconnect warning still shows while waiting on the opponent's turn", () => {
+    // Regression guard: the line used to render "" whenever it wasn't your turn,
+    // which hid exactly the news you most need during the opponent's turn.
+    act(() => hudController.setTurn("red"));
+    render(<FiringConsole makeInput={makeInput} singleTeam="blue" />);
+    act(() => hudController.setStatus("Ann disconnected — waiting up to 30s…", "warn"));
+    expect(statusEl().textContent).toBe("Ann disconnected — waiting up to 30s…");
+    expect(statusEl().className).toContain("is-warn");
+  });
+
+  it("clearing the status falls back to a tip rather than blanking the line", () => {
+    render(<FiringConsole makeInput={makeInput} />);
+    act(() => hudController.setStatus("RED hit a planet", "info"));
+    expect(statusEl().textContent).toBe("RED hit a planet");
+    act(() => hudController.setStatus());
+    expect(statusEl().textContent).toMatch(/^Tip: /);
+  });
+});
+
 describe("FiringConsole", () => {
   let inputs: ReturnType<typeof makeTrackedInput>[];
   const makeInput = () => { const i = makeTrackedInput(); inputs.push(i); return i; };

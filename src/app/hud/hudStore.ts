@@ -1,5 +1,5 @@
 import { createStore, type Store } from "../store";
-import type { GameUiPort } from "../../game/GameUiPort";
+import type { GameUiPort, StatusTone } from "../../game/GameUiPort";
 
 export type Team = "red" | "blue";
 
@@ -9,6 +9,8 @@ export interface HudState {
   busy: { red: boolean; blue: boolean };
   score: { red: number; blue: number; round: number; totalRounds: number };
   status: string;
+  /** Severity of `status`; drives its colour so errors/warnings cut through. */
+  statusTone: StatusTone;
   timer: number | null;
   win: { winner: Team; detail: string } | null;
   splash: string | null;
@@ -24,6 +26,7 @@ export function initialHudState(): HudState {
     busy: { red: false, blue: false },
     score: { red: 0, blue: 0, round: 1, totalRounds: 3 },
     status: "",
+    statusTone: "info",
     timer: null,
     win: null,
     splash: null,
@@ -93,7 +96,9 @@ export class HudController implements GameUiPort {
   }
   setNoTurnMode(enabled: boolean): void { this.store.set({ noTurn: enabled }); }
   focus(): void { this.inputs.get(this.store.get().turn)?.focus(); }
-  setStatus(note?: string): void { this.store.set({ status: note ?? "" }); }
+  setStatus(note?: string, tone: StatusTone = "info"): void {
+    this.store.set({ status: note ?? "", statusTone: tone });
+  }
   showWin(winner: Team, detail = "Direct hit."): void { this.store.set({ win: { winner, detail } }); }
   resetInputs(): void {
     this.inputs.get("red")?.setLatex("");

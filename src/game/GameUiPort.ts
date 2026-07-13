@@ -2,6 +2,9 @@
  * Extracted from GameUI's public API so React (HudController) and any future UI
  * can implement it; NetworkGame and LocalGame depend on this, not on a concrete class.
  */
+/** Severity of a HUD status-line message. Drives its colour, not its content. */
+export type StatusTone = "info" | "warn" | "error";
+
 export interface GameUiPort {
   onFire(cb: (player: "red" | "blue", latex: string) => void): void;
   onReset(cb: () => void): void;
@@ -9,7 +12,12 @@ export interface GameUiPort {
   setBusy(player: "red" | "blue", busy: boolean): void;
   setNoTurnMode(enabled: boolean): void;
   focus(): void;
-  setStatus(note?: string): void;
+  /**
+   * The HUD's single status line. `tone` drives its colour so an error/warning
+   * still cuts through a line that otherwise carries routine shot commentary.
+   * Omit `note` to clear it (the HUD then falls back to a tip).
+   */
+  setStatus(note?: string, tone?: StatusTone): void;
   showWin(winner: "red" | "blue", detail?: string): void;
   resetInputs(): void;
   hideWin(): void;

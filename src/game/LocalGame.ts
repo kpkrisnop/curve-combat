@@ -7,6 +7,7 @@ import {
   type MatchState, type Team, type PlayerState,
 } from "./matchState";
 import { resolveFire } from "./resolveFire";
+import { shotCommentary } from "./shotCommentary";
 import { buildLocalLayout } from "./localLayout";
 import type { Bounds, World, Vec2, ShotResult } from "../sim/types";
 
@@ -149,7 +150,9 @@ export class LocalGame {
 
     const res = resolveFire(m, { playerId: shooter.id, latex });
     if (res.rejected) {
-      if (res.rejected === "bad-function") this.ui.setStatus("that isn't a plottable function of x");
+      if (res.rejected === "bad-function") {
+        this.ui.setStatus("Not a plottable function of x", "error");
+      }
       if (!this.config.noTurn) this.armTimer();
       return;
     }
@@ -184,7 +187,9 @@ export class LocalGame {
       this.ui.setTurn(viewTeam);
       this.armTimer();
     }
-    this.ui.setStatus();
+    // Report how the shot ended, rather than clearing the line — the status
+    // line's resting content IS the running match commentary.
+    this.ui.setStatus(shotCommentary(commit.shot!, player, commit.damage), "info");
     this.ui.focus();
   }
 

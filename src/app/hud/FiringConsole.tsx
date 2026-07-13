@@ -26,11 +26,29 @@ const CHIP_GROUPS: { label: string; type: string }[][] = [
   [{ label: "( )", type: "(" }, { label: "abs", type: "abs(" }],
 ];
 
+// Shown only while a shot is actually in flight — flavour that's earned by an
+// event, never idle decoration. (A permanently-jokey status line would train
+// players to ignore it, and then they'd miss the errors it also carries.)
+const FLAVOUR = ["FIRE IN THE HOLE!", "PEW PEW!", "SHOT AWAY!", "INCOMING!", "LET 'ER RIP!"];
+
+// The resting fallback before anyone has fired this round, so the line is never
+// blank. Rotates per turn so it doesn't read as frozen.
+const TIPS = [
+  "Tip: ↑ recalls your last shot — tweak it and fire again",
+  "Tip: sin(x) arcs like a wave; x² dives like a mortar",
+  "Tip: planets block shots — curve around them",
+  "Tip: a steeper impact angle hits harder in HP mode",
+  "Tip: press ↵ to fire without leaving the keyboard",
+];
+
+const pick = (xs: string[]) => xs[Math.floor(Math.random() * xs.length)];
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function FiringConsole({ makeInput, singleTeam }: { makeInput?: () => any; singleTeam?: Team }) {
   const turn = useStore(hudStore, (s) => s.turn);
   const busy = useStore(hudStore, (s) => s.busy[turn]);
   const status = useStore(hudStore, (s) => s.status);
+  const statusTone = useStore(hudStore, (s) => s.statusTone);
 
   const teams: Team[] = singleTeam ? [singleTeam] : ["red", "blue"];
   const waiting = singleTeam !== undefined && turn !== singleTeam;
@@ -87,6 +105,23 @@ export function FiringConsole({ makeInput, singleTeam }: { makeInput?: () => any
 
   const canFire = !waiting && !busy && live[turn].trim() !== "";
   const label = turn.toUpperCase();
+
+  // ── The status line ──────────────────────────────────────────────────────
+  // One channel, in priority order: whatever the game last said (an error, a
+  // warning, or the running shot commentary) > a shot in flight > a tip. It is
+  // never blank, and never *usually* decorative — so a real error still reads
+  // as a real error.
+  const [flavour, setFlavour] = useState(FLAVOUR[0]);
+  useEffect(() => { if (busy) setFlavour(pick(FLAVOUR)); }, [busy]);
+
+  const [tip, setTip] = useState(() => pick(TIPS));
+  useEffect(() => { setTip(pick(TIPS)); }, [turn]);
+
+  const [statusText, statusKind] = status
+    ? [status, statusTone]
+    : busy
+      ? [flavour, "flavour" as const]
+      : [tip, "tip" as const];
 
   return (
     <div className="hud-console">
@@ -162,7 +197,9 @@ export function FiringConsole({ makeInput, singleTeam }: { makeInput?: () => any
         </button>
       </div>
 
-      <div className="hud-status">{!waiting ? status : ""}</div>
+      {/* Rendered even while waiting: a disconnect/forfeit warning is news you
+          need on the opponent's turn too, not just your own. */}
+      <div className={`hud-status is-${statusKind}`} aria-live="polite">{statusText}</div>
 
       <div className="hud-console__chiprow">
         <div className="hud-console__chips">

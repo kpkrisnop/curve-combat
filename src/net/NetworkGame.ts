@@ -4,6 +4,7 @@ import type { GameRenderer } from "../game/GameRenderer";
 import type { GameUiPort } from "../game/GameUiPort";
 import type { MatchState, Team } from "../game/matchState";
 import { computeDamage } from "../game/hpLogic";
+import { shotCommentary } from "../game/shotCommentary";
 import type { ScatterConfig } from "../game/matchLogic";
 import { netLobbyStore } from "../app/net/netLobbyStore";
 
@@ -89,17 +90,20 @@ export class NetworkGame {
       void (async () => {
         const firer = this.lastState?.players.find((p) => p.id === m.firerId);
         await this.renderer.playShot(m.shot, firer?.team);
+        let dmg: number | undefined;
         if (
           this.lastState?.config.mode === "hp" &&
           m.shot.hit.kind === "target" &&
           m.shot.hit.at
         ) {
-          const dmg = computeDamage(m.shot.impactSlope);
+          dmg = computeDamage(m.shot.impactSlope);
           if (firer) {
             const targetTeam: Team = firer.team === "red" ? "blue" : "red";
             this.renderer.showFloatingDamage(m.shot.hit.at, dmg, targetTeam);
           }
         }
+        // Same running commentary as LocalGame — the status line's resting content.
+        if (firer) this.ui.setStatus(shotCommentary(m.shot, firer.team, dmg), "info");
       })();
     });
     this.client.on("matchState", (m) => {
@@ -113,15 +117,12 @@ export class NetworkGame {
     this.client.on("peerStatus", (m) => {
       if (m.type !== "peerStatus") return;
       if (m.connected) {
-        netLobbyStore.set({ peerDown: null });
         this.ui.setStatus("");
       } else {
-        // Find the peer's name from lastState for the overlay
         const peerName = this.lastState
           ? (this.lastState.players.find((p) => p.id !== this.myId)?.name ?? "Opponent")
           : "Opponent";
-        netLobbyStore.set({ peerDown: { name: peerName, deadline: Date.now() + 30_000 } });
-        this.ui.setStatus("Opponent disconnected — waiting up to 30s…");
+        this.ui.setStatus(`${peerName} disconnected — waiting up to 30s…`, "warn");
       }
     });
     this.client.on("error", (m) => {
@@ -131,7 +132,7 @@ export class NetworkGame {
         this.client.send({ type: "join", room: this.room, name: this.name });
         return;
       }
-      this.ui.setStatus(m.message);
+      this.ui.setStatus(m.message, "error");
     });
 
     this.ui.onFire((_player, latex) => {
@@ -241,7 +242,7 @@ export class NetworkGame {
       (p) => !state.players.some((q) => q.id === p.id),
     );
     if (removed.length > 0) {
-      netLobbyStore.set({ forfeitNotice: `${removed[0].name} quit`, peerDown: null });
+      this.ui.setStatus(`${removed[0].name} quit`, "warn");
     }
     this.lastState = state;
     // New round started (not the first state received) — clear stale equations,

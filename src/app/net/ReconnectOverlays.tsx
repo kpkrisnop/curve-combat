@@ -1,56 +1,31 @@
 // src/app/net/ReconnectOverlays.tsx
 //
-// Renders reconnect state overlays driven by netLobbyStore:
+// The ONE reconnect state that still earns an overlay:
 //   selfReconnecting=true → blocking full-screen "Reconnecting…" overlay
-//   peerDown              → non-blocking banner "NAME disconnected — waiting up to 30s"
-//   forfeitNotice         → non-blocking banner with the notice text, auto-clears after 4s
-//   all null              → null (renders nothing)
+//   otherwise             → null (renders nothing)
 //
-// Precedence when multiple are set: selfReconnecting > peerDown > forfeitNotice.
+// It blocks because it must: while YOU are the disconnected one, the board is
+// stale and nothing you do will register, so a non-blocking badge would be a lie.
+//
+// The other two notices (peer disconnected, peer forfeited) used to render as
+// non-blocking badges here. They now go to the HUD status line instead — see
+// NetworkGame's peerStatus/render handlers — so the game has a single message
+// channel rather than a badge competing with the footer for the same news.
 
-import { useEffect } from "react";
 import { useStore } from "../store";
 import { netLobbyStore } from "./netLobbyStore";
 
 export function ReconnectOverlays() {
   const selfReconnecting = useStore(netLobbyStore, (s) => s.selfReconnecting);
-  const peerDown         = useStore(netLobbyStore, (s) => s.peerDown);
-  const forfeitNotice    = useStore(netLobbyStore, (s) => s.forfeitNotice);
 
-  useEffect(() => {
-    if (!forfeitNotice) return;
-    const t = setTimeout(() => netLobbyStore.set({ forfeitNotice: null }), 4000);
-    return () => clearTimeout(t);
-  }, [forfeitNotice]);
+  if (!selfReconnecting) return null;
 
-  if (selfReconnecting) {
-    return (
-      <div className="reconnect-overlay reconnect-overlay--blocking" role="status" aria-live="assertive">
-        <div className="reconnect-overlay__inner">
-          <span className="reconnect-overlay__spinner" aria-hidden="true" />
-          <span className="reconnect-overlay__text">Reconnecting…</span>
-        </div>
+  return (
+    <div className="reconnect-overlay reconnect-overlay--blocking" role="status" aria-live="assertive">
+      <div className="reconnect-overlay__inner">
+        <span className="reconnect-overlay__spinner" aria-hidden="true" />
+        <span className="reconnect-overlay__text">Reconnecting…</span>
       </div>
-    );
-  }
-
-  if (peerDown) {
-    return (
-      <div className="reconnect-overlay reconnect-overlay--banner" role="status" aria-live="polite">
-        <span className="reconnect-overlay__text">
-          {peerDown.name} disconnected — waiting up to 30s
-        </span>
-      </div>
-    );
-  }
-
-  if (forfeitNotice) {
-    return (
-      <div className="reconnect-overlay reconnect-overlay--banner" role="status" aria-live="polite">
-        {forfeitNotice}
-      </div>
-    );
-  }
-
-  return null;
+    </div>
+  );
 }
