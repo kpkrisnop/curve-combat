@@ -53,4 +53,18 @@ describe("ConfigPanel", () => {
     render(<ConfigPanel value={base} onChange={vi.fn()} seed={42} onReroll={vi.fn()} />);
     expect(screen.getByText(/seed 42/)).toBeTruthy();
   });
+
+  it("disables simultaneous fire for local play, with a reason", () => {
+    render(<ConfigPanel value={base} onChange={vi.fn()} seed={7} onReroll={vi.fn()} simultaneousDisabled />);
+    const checkbox = screen.getByRole("checkbox", { name: /simultaneous/i }) as HTMLInputElement;
+    expect(checkbox.disabled).toBe(true);
+    expect(screen.getByText(/one keypad/i)).toBeTruthy();
+  });
+
+  it("leaves simultaneous fire enabled when not disabled (online)", () => {
+    render(<ConfigPanel value={base} onChange={vi.fn()} seed={7} onReroll={vi.fn()} />);
+    const checkbox = screen.getByRole("checkbox", { name: /simultaneous/i }) as HTMLInputElement;
+    expect(checkbox.disabled).toBe(false);
+    expect(screen.queryByText(/one keypad/i)).toBeNull();
+  });
 });

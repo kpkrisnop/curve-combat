@@ -22,7 +22,8 @@ interface Props {
 export function LocalFlow({ initial, autostart = false }: Props) {
   const [phase, setPhase] = useState<Phase>(autostart ? "countdown" : "config");
   const [config, setConfig] = useState<PanelConfig>({
-    mode: initial.mode, rounds: initial.rounds, noTurn: initial.noTurn,
+    mode: initial.mode, rounds: initial.rounds,
+    noTurn: false, // local hotseat can't do simultaneous fire — one keypad, two players (never trust `initial`, which may carry a stale/shared noTurn:true)
     turnSeconds: initial.turnSeconds ?? 60, map: initial.map, scatter: initial.scatter,
   });
   const [seed, setSeed] = useState(newSeed);
@@ -96,7 +97,7 @@ export function LocalFlow({ initial, autostart = false }: Props) {
 
       {phase === "config" && (
         <div className="comp side-panel">
-          <ConfigPanel value={config} onChange={onChange} seed={seed} onReroll={onReroll} />
+          <ConfigPanel value={config} onChange={onChange} seed={seed} onReroll={onReroll} simultaneousDisabled />
         </div>
       )}
 
