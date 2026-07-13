@@ -1,9 +1,13 @@
-// The redesigned turn-based in-game footer console (arena-shell-redesign
-// follow-up). Replaces the always-both-visible dual `PlayerPanel` layout for
-// turn-based play: one team-colored console whose visible field swaps with
-// the turn. `noTurn` (simultaneous-fire) mode is unaffected — HudBar renders
-// the original dual layout for that mode; this component is never mounted
-// then.
+// The in-game footer console — the ONE console every mode uses. Replaced the
+// always-both-visible dual `PlayerPanel` layout: one team-colored console whose
+// visible field swaps with the turn.
+//
+// `noTurn` (simultaneous fire) also lives here now. It has no "whose turn" —
+// local noTurn is disabled (two players cannot share one keypad) and online
+// noTurn gives each client exactly one field (`singleTeam`). So `turn` is
+// meaningless for routing there (the server never sets it: NetworkGame only
+// calls setTurn when there IS an active player), and everything that means
+// "the team this console types into" routes through `active` instead.
 //
 // Both teams' MathQuill fields stay mounted at all times (local hotseat) so
 // each is simply its own memory across swaps — there is nothing to marshal.
@@ -37,13 +41,21 @@ const pick = (xs: string[]) => xs[Math.floor(Math.random() * xs.length)];
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function FiringConsole({ makeInput, singleTeam }: { makeInput?: () => any; singleTeam?: Team }) {
   const turn = useStore(hudStore, (s) => s.turn);
-  const busy = useStore(hudStore, (s) => s.busy[turn]);
+  const noTurn = useStore(hudStore, (s) => s.noTurn);
   const status = useStore(hudStore, (s) => s.status);
   const statusTone = useStore(hudStore, (s) => s.statusTone);
 
+  // The team this console types into — every input/fire/enable path routes
+  // through this. Online: always me. Local: whoever's turn it is.
+  const active: Team = singleTeam ?? turn;
+  const busy = useStore(hudStore, (s) => s.busy[active]);
+
   const teams: Team[] = singleTeam ? [singleTeam] : ["red", "blue"];
-  const waiting = singleTeam !== undefined && turn !== singleTeam;
-  const displayed: Team = waiting ? OTHER(singleTeam!) : turn;
+  // In simultaneous fire you can always fire, so you are never waiting on anyone.
+  const waiting = !noTurn && singleTeam !== undefined && turn !== singleTeam;
+  // Whose name/dot the console shows. While waiting that's the opponent (== turn);
+  // otherwise it's the team you're typing for.
+  const displayed: Team = waiting ? turn : active;
 
   const [live, setLive] = useState<Record<Team, string>>({ red: "", blue: "" });
   // Recall pointer for whichever team is currently being navigated. idx -1 =
@@ -57,12 +69,13 @@ export function FiringConsole({ makeInput, singleTeam }: { makeInput?: () => any
   // deliberately unread for now (noUnusedLocals would reject it) — Task 8 names it.
   const [, setRecallOpen] = useState(false);
 
-  // Enable only the displayed field; refocus it whenever the turn changes.
+  // Enable only the field this console types into. No .focus() here: nothing
+  // opens an OS keyboard any more (inputmode="none"), so a focus call buys
+  // nothing and re-introduces the caret/scroll fights of the reverted 90b2d52.
   useEffect(() => {
-    teams.forEach((t) => hudInputs.get(t)?.setEnabled(t === turn && !busy));
-    if (turn === displayed && !waiting) hudInputs.get(turn)?.focus();
+    teams.forEach((t) => hudInputs.get(t)?.setEnabled(t === active && !busy));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `teams` is stable per singleTeam identity
-  }, [turn, busy, waiting, displayed, singleTeam]);
+  }, [active, busy, waiting, singleTeam]);
 
   const recallStep = (team: Team, dir: -1 | 1) => {
     const hist = hudStore.get().history[team];
@@ -94,7 +107,7 @@ export function FiringConsole({ makeInput, singleTeam }: { makeInput?: () => any
   // the keypad is that row grown up, so it is the same mechanism.
   const onKey = (a: KeyAction) => {
     if (waiting || busy) return;
-    const input = hudInputs.get(turn);
+    const input = hudInputs.get(active);
     if (!input) return;
     if (a.kind === "insert") input.insertText(a.text);
     else if (a.kind === "keystroke") input.keystroke(a.keys);
@@ -106,11 +119,11 @@ export function FiringConsole({ makeInput, singleTeam }: { makeInput?: () => any
       setRecallOpen(true); // Task 8 renders the popover; until then this is inert
     }
     recallRef.current = { team: null, idx: -1 };
-    setLive((l) => ({ ...l, [turn]: hudInputs.get(turn)?.getLatex() ?? "" }));
+    setLive((l) => ({ ...l, [active]: hudInputs.get(active)?.getLatex() ?? "" }));
   };
 
-  const canFire = !waiting && !busy && live[turn].trim() !== "";
-  const label = turn.toUpperCase();
+  const canFire = !waiting && !busy && live[active].trim() !== "";
+  const label = displayed.toUpperCase();
 
   // ── The status line ──────────────────────────────────────────────────────
   // One channel, in priority order: whatever the game last said (an error, a
@@ -153,7 +166,7 @@ export function FiringConsole({ makeInput, singleTeam }: { makeInput?: () => any
               className={
                 singleTeam && waiting
                   ? "hud-console-field--hidden"
-                  : `hud-console-field ${t === turn && !waiting ? "" : "hud-console-field--hidden"}`
+                  : `hud-console-field ${t === active && !waiting ? "" : "hud-console-field--hidden"}`
               }
             >
               <MathField
@@ -201,7 +214,7 @@ export function FiringConsole({ makeInput, singleTeam }: { makeInput?: () => any
         type="button"
         className="cc-btn cc-btn--primary hud-console__fire"
         disabled={!canFire}
-        onClick={() => hudController.requestFire(turn)}
+        onClick={() => hudController.requestFire(active)}
       >
         {busy ? "Firing…" : "Fire"}
         <span className="hud-console__fire-key" aria-hidden="true">↵</span>
@@ -210,8 +223,4 @@ export function FiringConsole({ makeInput, singleTeam }: { makeInput?: () => any
       <Keypad disabled={waiting || busy} onKey={onKey} />
     </div>
   );
-}
-
-function OTHER(t: Team): Team {
-  return t === "red" ? "blue" : "red";
 }

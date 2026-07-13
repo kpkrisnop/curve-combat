@@ -184,6 +184,52 @@ describe("FiringConsole", () => {
     expect(key.disabled).toBe(true);
   });
 
+  it("noTurn: the field is never locked — nobody is ever waiting on anyone", () => {
+    act(() => hudController.setNoTurnMode(true));
+    act(() => hudController.setTurn("blue")); // stale/meaningless in noTurn
+    render(<FiringConsole makeInput={makeInput} singleTeam="red" />);
+    expect((screen.getByRole("button", { name: "7" }) as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.queryByText(/is aiming/i)).toBeNull();
+    expect(document.querySelector(".hud-console-field--locked")).toBeNull();
+  });
+
+  it("noTurn + singleTeam: keys route into MY team's field, not into `turn`", () => {
+    // In online noTurn the server never sets an active player, so hudStore.turn
+    // is stale ("red" from initial state). Routing by `turn` would type into a
+    // field this client doesn't even own.
+    act(() => hudController.setNoTurnMode(true));
+    act(() => hudController.setTurn("red"));
+    render(<FiringConsole makeInput={makeInput} singleTeam="blue" />);
+    fireEvent.click(screen.getByRole("button", { name: "7" }));
+    expect(inputs[0].insertText).toHaveBeenCalledWith("7"); // the only field: blue
+  });
+
+  it("noTurn + singleTeam: Fire fires MY team's latex, and the turn line names MY team", () => {
+    const cb = vi.fn();
+    hudController.onFire(cb);
+    act(() => hudController.setNoTurnMode(true));
+    act(() => hudController.setTurn("red"));
+    render(<FiringConsole makeInput={makeInput} singleTeam="blue" />);
+    expect(screen.getByText(/BLUE TO FIRE/i)).toBeTruthy();
+    expect(document.querySelector(".hud-console__dot.is-blue")).toBeTruthy();
+    const fire = screen.getByRole("button", { name: /Fire/i }) as HTMLButtonElement;
+    expect(fire.disabled).toBe(true);
+    act(() => inputs[0].typeLatex("\\cos(x)"));
+    expect(fire.disabled).toBe(false);
+    fireEvent.click(fire);
+    expect(cb).toHaveBeenCalledWith("blue", "\\cos(x)");
+  });
+
+  it("noTurn + singleTeam: my field is enabled, not hidden behind a stale turn", () => {
+    act(() => hudController.setNoTurnMode(true));
+    act(() => hudController.setTurn("red"));
+    render(<FiringConsole makeInput={makeInput} singleTeam="blue" />);
+    expect(inputs[0].setEnabled).toHaveBeenLastCalledWith(true);
+    const fields = document.querySelectorAll(".hud-console-field");
+    expect(fields).toHaveLength(1);
+    expect(fields[0].classList.contains("hud-console-field--hidden")).toBe(false);
+  });
+
   it("renders no function chip row — the keypad absorbed it", () => {
     render(<FiringConsole makeInput={makeInput} />);
     expect(document.querySelector(".hud-console__chiprow")).toBeNull();

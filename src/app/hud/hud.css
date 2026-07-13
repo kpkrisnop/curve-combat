@@ -1,29 +1,7 @@
 /* Embedded inside the FOOTER card (arena-shell-redesign C3) — in-flow, not an
-   absolute viewport overlay, so the footer row can grow for tall equations. */
-.hud-bar {
-  display: grid; grid-template-columns: 1fr 1fr; gap: var(--cc-space-3);
-  align-items: center; width: 100%;
-}
-/* Single-team (online) in-game layout: one player panel, no second grid
-   track (M3/L4) — a fixed-column grid instead of 1fr 1fr collapses the
-   dangling empty column the scoreboard used to occupy, and capping the
-   width below the footer's full width lets the footer's
-   `justify-content: center` actually center the panel instead of being a
-   no-op against a 100%-wide child. */
-.hud-bar--single {
-  grid-template-columns: minmax(0, 1fr);
-  width: 100%;
-  max-width: 640px;
-}
-.player-panel {
-  background: var(--cc-surface-2); border: 1px solid var(--cc-border);
-  border-radius: var(--cc-radius-lg); padding: var(--cc-space-3);
-  backdrop-filter: blur(8px); transition: border-color 200ms, box-shadow 200ms, opacity 200ms;
-}
-.player-panel.is-red.is-active  { border-color: var(--cc-red);  box-shadow: var(--cc-glow-red); }
-.player-panel.is-blue.is-active { border-color: var(--cc-blue); box-shadow: var(--cc-glow-blue); }
-.player-panel.is-inactive { opacity: 0.45; }
-.fire-row { display: flex; align-items: center; gap: var(--cc-space-2); }
+   absolute viewport overlay, so the footer row can grow for tall equations.
+   The `.hud-bar` / `.player-panel` / `.fire-row` layout that used to live here
+   is gone with PlayerPanel: every mode renders `.hud-console` now. */
 .hud-prompt { font-family: var(--cc-font-mono); color: var(--cc-text-muted); }
 .hud-input { flex: 1; min-width: 0; background: var(--cc-surface);
   border: 1px solid var(--cc-border); border-radius: var(--cc-radius-sm);
@@ -106,10 +84,9 @@
   to   { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
 }
 
-/* ── FiringConsole (redesigned turn-based footer, arena-shell-redesign
-   follow-up) — a single team-swapping console replacing the always-both-
-   visible dual panel for turn-based play. `noTurn` mode is unaffected and
-   keeps the `.hud-bar`/`.player-panel` layout above, unchanged. */
+/* ── FiringConsole (the in-game footer, arena-shell-redesign follow-up) — a
+   single team-swapping console that replaced the always-both-visible dual
+   panel. Every mode uses it now, `noTurn` included. */
 
 /* The whole footer CARD glows with whoever's turn it is — set by Footer.tsx
    on `.comp.footer` itself (not on `.hud-console`), so the full card edge
