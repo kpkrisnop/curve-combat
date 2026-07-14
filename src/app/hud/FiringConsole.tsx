@@ -69,6 +69,11 @@ export function FiringConsole({ makeInput, singleTeam }: { makeInput?: () => any
   const programmaticRef = useRef(false); // true while WE set latex, so onEdit ignores it
   // Recall popover: the Recall key opens it, the input row renders it (upward).
   const [recallOpen, setRecallOpen] = useState(false);
+  // Firing via Enter (keydown, no pointerdown) skips the tap-away handler, so a
+  // popover left open would otherwise just hide during the shot and reappear
+  // once busy clears — showing the next team's history under the old team's
+  // key. Close it on any turn/busy transition instead of relying on tap-away.
+  useEffect(() => setRecallOpen(false), [active, busy]);
 
   // Enable only the field this console types into. No .focus() here: nothing
   // opens an OS keyboard any more (inputmode="none"), so a focus call buys
@@ -118,7 +123,7 @@ export function FiringConsole({ makeInput, singleTeam }: { makeInput?: () => any
       input.setLatex("");
       programmaticRef.current = false;
     } else if (a.name === "recall") {
-      setRecallOpen(true); // Task 8 renders the popover; until then this is inert
+      setRecallOpen(true);
     }
     recallRef.current = { team: null, idx: -1 };
     setLive((l) => ({ ...l, [active]: hudInputs.get(active)?.getLatex() ?? "" }));

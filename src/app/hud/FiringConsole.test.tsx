@@ -278,6 +278,31 @@ describe("FiringConsole", () => {
     expect(inputs[1].setLatex).toHaveBeenLastCalledWith("blueshot");
   });
 
+  it("closes the recall popover on a turn change so it can't reappear over the wrong team", () => {
+    // Regression: firing via Enter is a keydown with no pointerdown, so the
+    // tap-away handler never runs. The popover used to just hide while busy
+    // and reappear once busy cleared, now showing the NEXT team's history.
+    act(() => hudController.setTurn("red"));
+    render(<FiringConsole makeInput={makeInput} />);
+    act(() => hudController.pushHistory("red", "redshot"));
+    fireEvent.click(screen.getByRole("button", { name: "Recall" }));
+    expect(screen.getByRole("listbox")).toBeTruthy();
+    act(() => hudController.setTurn("blue"));
+    expect(screen.queryByRole("listbox")).toBeNull();
+  });
+
+  it("closes the recall popover when busy starts, so it doesn't reappear once the shot lands", () => {
+    act(() => hudController.setTurn("red"));
+    render(<FiringConsole makeInput={makeInput} />);
+    act(() => hudController.pushHistory("red", "redshot"));
+    fireEvent.click(screen.getByRole("button", { name: "Recall" }));
+    expect(screen.getByRole("listbox")).toBeTruthy();
+    act(() => hudController.setBusy("red", true));
+    expect(screen.queryByRole("listbox")).toBeNull();
+    act(() => hudController.setBusy("red", false));
+    expect(screen.queryByRole("listbox")).toBeNull(); // stays closed, doesn't zombie back
+  });
+
   it("prevents default on pointerdown for nav keys so a key tap never blurs the math field", () => {
     render(<FiringConsole makeInput={makeInput} />);
     const ev = new PointerEvent("pointerdown", { bubbles: true, cancelable: true });

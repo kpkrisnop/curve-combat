@@ -9,6 +9,11 @@ describe("prettyLatex", () => {
     expect(prettyLatex("\\frac{1}{x}")).toBe("(1)/(x)");
     expect(prettyLatex("2\\cdot x^{2}+\\pi")).toBe("2·x^2+π");
   });
+
+  it("handles \\frac and \\sqrt whose groups contain nested braces (exponents)", () => {
+    expect(prettyLatex("\\frac{x^{2}}{3}")).toBe("(x^2)/(3)");
+    expect(prettyLatex("\\sqrt{x^{2}+1}")).toBe("√(x^2+1)");
+  });
 });
 
 // ponytail: repo has no user-event/jest-dom (see Keypad.test.tsx) — fireEvent +

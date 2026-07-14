@@ -12,12 +12,26 @@ import { useEffect, useRef } from "react";
 // ponytail: display-only, not a parser — the real latex still goes to the engine
 // untouched. If a shot ever renders wrong here, mount a MathQuill StaticMath per
 // row instead (browser-only, so it'd need mocking in the jsdom tests).
+// \frac/\sqrt groups can themselves contain braces (an exponent like `^{2}`),
+// so a single `[^{}]*` can't match them — it stops at the first inner `}`.
+// This group tolerates one level of nesting, and running the replace to a
+// fixed point (below) lets deeper nesting resolve from the inside out.
+const G = String.raw`((?:[^{}]|\{[^{}]*\})*)`;
+const FRAC = new RegExp(String.raw`\\frac\{${G}\}\{${G}\}`, "g");
+const SQRT = new RegExp(String.raw`\\sqrt\{${G}\}`, "g");
+
 export function prettyLatex(latex: string): string {
-  return latex
+  let s = latex
     .replace(/\\left|\\right/g, "")
-    .replace(/\\operatorname\{([^{}]*)\}/g, "$1")
-    .replace(/\\frac\{([^{}]*)\}\{([^{}]*)\}/g, "($1)/($2)")
-    .replace(/\\sqrt\{([^{}]*)\}/g, "√($1)")
+    .replace(/\\operatorname\{([^{}]*)\}/g, "$1");
+
+  for (let i = 0; i < 8; i++) {
+    const next = s.replace(FRAC, "($1)/($2)").replace(SQRT, "√($1)");
+    if (next === s) break;
+    s = next;
+  }
+
+  return s
     .replace(/\\cdot/g, "·")
     .replace(/\\pi/g, "π")
     .replace(/\\([a-zA-Z]+)/g, "$1")
