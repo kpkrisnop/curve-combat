@@ -499,7 +499,10 @@ describe("OnlineFlow", () => {
       });
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /^quit$/i }));
+    // The quit now floats on the map card as a ✕ (aria-label "Quit match"),
+    // and still confirms before it forfeits.
+    fireEvent.click(screen.getByRole("button", { name: /quit match/i }));
+    expect(mockNet.sendForfeit).not.toHaveBeenCalled();
     expect(screen.getByText(/quit match\?/i)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /^quit$/i }));
     expect(mockNet.sendForfeit).toHaveBeenCalledTimes(1);

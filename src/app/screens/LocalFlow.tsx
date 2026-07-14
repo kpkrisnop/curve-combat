@@ -7,6 +7,7 @@ import { hudController } from "../hud/hudStore";
 import { SpacetimeBackground } from "../SpacetimeBackground";
 import { ArenaStage } from "../arena/ArenaStage";
 import { Footer } from "../hud/Footer";
+import { IngameQuit } from "../hud/IngameQuit";
 import { HudOverlays } from "../hud/Overlays";
 import { ConfigPanel, type PanelConfig } from "./ConfigPanel";
 import { CountdownOverlay } from "./CountdownOverlay";
@@ -86,6 +87,7 @@ export function LocalFlow({ initial, autostart = false }: Props) {
       <SpacetimeBackground />
       <div className="comp map-card">
         <ArenaStage scale={phase === "play" ? 1 : 0.87} onReady={onReady} />
+        {phase === "play" && <IngameQuit onLeave={() => hudController.requestReset()} />}
         {phase === "config" && (
           <>
             {/* proto-HUD seats: same edges the player panels will occupy */}
@@ -103,7 +105,7 @@ export function LocalFlow({ initial, autostart = false }: Props) {
 
       {phase === "config" && <Footer mode="pregame-local" onStart={onStart} onLeave={() => hudController.requestReset()} />}
       {phase === "countdown" && <CountdownOverlay seconds={3} onDone={onCountdownDone} />}
-      {phase === "play" && (<><Footer mode="ingame" onLeave={() => hudController.requestReset()} /><HudOverlays /></>)}
+      {phase === "play" && (<><Footer mode="ingame" /><HudOverlays /></>)}
     </div>
   );
 }

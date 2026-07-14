@@ -8,6 +8,7 @@ import { Icon } from "../mdiIcon";
 import { mdiRefresh } from "@mdi/js";
 import { ArenaStage } from "../arena/ArenaStage";
 import { Footer } from "../hud/Footer";
+import { IngameQuit } from "../hud/IngameQuit";
 import { HudOverlays } from "../hud/Overlays";
 import { hudController } from "../hud/hudStore";
 import { NetworkGame } from "../../net/NetworkGame";
@@ -280,6 +281,9 @@ export function OnlineFlow({ code }: Props) {
     <div className={shellClass}>
       <div className="comp map-card">
         <ArenaStage scale={scale} onReady={onReady} />
+        {isPlay && !amSpectator && (
+          <IngameQuit onLeave={() => { netRef.current?.sendForfeit(); hudController.requestReset(); }} />
+        )}
       </div>
 
       {/* ── Lobby chrome ──────────────────────────────────────────────── */}
@@ -362,11 +366,7 @@ export function OnlineFlow({ code }: Props) {
 
       {isPlay && !amSpectator && (
         <>
-          <Footer
-            mode="ingame"
-            singleTeam={myTeam ?? undefined}
-            onLeave={() => { netRef.current?.sendForfeit(); hudController.requestReset(); }}
-          />
+          <Footer mode="ingame" singleTeam={myTeam ?? undefined} />
           <HudOverlays />
           <ReconnectOverlays />
         </>

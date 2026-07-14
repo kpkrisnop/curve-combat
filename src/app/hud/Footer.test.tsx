@@ -114,25 +114,11 @@ describe("Footer", () => {
     expect(onLeave).toHaveBeenCalledTimes(1);
   });
 
-  it("ingame Quit shows an inline confirm (no native window.confirm) and calls onLeave on Quit", () => {
-    const onLeave = vi.fn();
-    const confirmSpy = vi.spyOn(window, "confirm");
-    render(<Footer mode="ingame" onLeave={onLeave} makeInput={makeInput} />);
-    fireEvent.click(screen.getByRole("button", { name: /^quit$/i }));
-    expect(confirmSpy).not.toHaveBeenCalled();
-    expect(screen.getByText(/quit match\?/i)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: /^quit$/i }));
-    expect(onLeave).toHaveBeenCalledTimes(1);
-    confirmSpy.mockRestore();
-  });
-
-  it("ingame Quit inline confirm: Stay dismisses without calling onLeave", () => {
-    const onLeave = vi.fn();
-    render(<Footer mode="ingame" onLeave={onLeave} makeInput={makeInput} />);
-    fireEvent.click(screen.getByRole("button", { name: /^quit$/i }));
-    fireEvent.click(screen.getByRole("button", { name: /^stay$/i }));
-    expect(onLeave).not.toHaveBeenCalled();
-    expect(screen.queryByText(/quit match\?/i)).toBeNull();
+  // The ingame Quit left the footer for the map card (the keypad fills the
+  // footer now) — its two-step confirm is covered by IngameQuit.test.tsx.
+  it("ingame footer carries no Quit — it floats on the map card now", () => {
+    render(<Footer mode="ingame" makeInput={makeInput} />);
+    expect(screen.queryByRole("button", { name: /quit/i })).toBeNull();
   });
 
   it("ingame footer card carries the active team's glow class, reading turn from hudStore", () => {
