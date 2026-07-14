@@ -110,8 +110,11 @@ describe("LocalGame", () => {
   it("a direct hit ends the round and shows the splash", async () => {
     const r = fakeRenderer(); const ui = fakeUi();
     const g = new LocalGame(r as never, ui);
-    // Empty field + flat shot from red at blue's row → guaranteed hit
-    g.preview({ ...cfg, scatter: { ...cfg.scatter, maxPlanets: 0 } }, 42);
+    // Empty field + mirrored spawns → guaranteed hit. A fired constant is
+    // anchored to the shooter (trajectory.ts: yOffset = sy - fn(sx)), so "0" is a
+    // flat line at red's own y and only connects when blue shares it. spawnMirror
+    // defaults to false (cfd58cd), so the test has to ask for the symmetry.
+    g.preview({ ...cfg, scatter: { ...cfg.scatter, maxPlanets: 0, spawnMirror: true } }, 42);
     g.begin();
     await (ui as any).fire("red", "0");
     expect(ui.showSplash).toHaveBeenCalled();

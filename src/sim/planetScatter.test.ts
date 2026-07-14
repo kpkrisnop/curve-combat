@@ -71,7 +71,8 @@ describe("computeSpawns — seeded, in-zone, mirror-symmetric", () => {
   });
 
   it("is mirror-symmetric: right = -left, same y", () => {
-    const s = computeSpawns(DEFAULT_MAP, 3, DEFAULT_SCATTER, 77);
+    // Mirroring is opt-in — the default is independent sides — so ask for it.
+    const s = computeSpawns(DEFAULT_MAP, 3, { ...DEFAULT_SCATTER, spawnMirror: true }, 77);
     // spawns are pushed as [left0, right0, left1, right1, ...]
     for (let i = 0; i < s.length; i += 2) {
       const left = s[i];

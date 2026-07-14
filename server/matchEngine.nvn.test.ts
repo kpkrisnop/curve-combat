@@ -33,11 +33,29 @@ function cfg2v(overrides: Partial<MatchConfig> = {}): MatchConfig {
   };
 }
 
-/** cfg2v, but forces same-side spawns onto a single x column so separation is purely on y. */
+/**
+ * cfg2v, but forces same-side spawns onto a single x column so separation is
+ * purely on y — AND mirrors the two sides, so red and blue share a y and a flat
+ * shot connects. Both are load-bearing for the elimination tests below: a fired
+ * constant is anchored to the SHOOTER (trajectory.ts: `yOffset = sy - fn(sx)`),
+ * so it draws a flat line at the shooter's own y whatever its value. Without the
+ * mirror the sides roll independently (the default since cfd58cd) and the shot
+ * sails past. These tests are about elimination and rotation, not spawn
+ * geometry; they just need an arena where a flat shot lands.
+ */
 function cfg2vFixedColumn(overrides: Partial<MatchConfig> = {}): MatchConfig {
   return cfg2v({
     ...overrides,
-    scatter: { ...arenaDefaults().scatter, spawnBandX: 0, ...(overrides.scatter ?? {}) },
+    // The forced values come LAST so they actually win. Callers pass a whole
+    // `...arenaDefaults().scatter` in their override, which used to spread over
+    // `spawnBandX: 0` and put it back to the default — so this helper's own
+    // fixed column was silently not being applied.
+    scatter: {
+      ...arenaDefaults().scatter,
+      ...(overrides.scatter ?? {}),
+      spawnBandX: 0,
+      spawnMirror: true,
+    },
   });
 }
 

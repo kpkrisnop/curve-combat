@@ -51,7 +51,13 @@ describe("MatchEngine", () => {
 
   it("no-turn: resolvePlayerShot after round ended is a no-op (same state reference)", () => {
     const c: MatchConfig = { ...config(), noTurn: true };
-    c.scatter = { ...c.scatter, maxPlanets: 0 };
+    // A fired constant is anchored to the SHOOTER (trajectory.ts: yOffset = sy - fn(sx)),
+    // so "0" is a flat line at the shooter's own y — it connects only when both
+    // soldiers share a y. That's what spawnMirror buys, and since the default
+    // flipped to false (cfd58cd) this test has to ask for it. maxPlanets clears
+    // the lane; spawnMirror aligns the rows. This test is about round logic, not
+    // spawn geometry — it just needs an arena where a flat shot lands.
+    c.scatter = { ...c.scatter, maxPlanets: 0, spawnMirror: true };
     const e = new MatchEngine(c, PLAYERS, () => 1);
 
     // Both fire while in play (no-turn allows it)
@@ -73,9 +79,12 @@ describe("MatchEngine", () => {
 
   it("beginNextRound resets to play with the round loser shooting first", () => {
     const c = config();
-    c.scatter = { ...c.scatter, maxPlanets: 0 }; // clear the lane so a flat shot connects
+    // Clear the lane AND align the rows: a fired constant is anchored to the
+    // shooter, so "0" is a flat line at red's own y and only connects when blue
+    // shares it (spawnMirror — off by default since cfd58cd).
+    c.scatter = { ...c.scatter, maxPlanets: 0, spawnMirror: true };
     const e = new MatchEngine(c, PLAYERS, () => 1);
-    const r = e.fire("A", "0"); // red hits blue on the shared y-axis
+    const r = e.fire("A", "0"); // red hits blue on the shared y
     expect(r.ok).toBe(true);
     const ended = e.resolvePlayerShot("A");
     expect(ended.scores.red).toBe(1);

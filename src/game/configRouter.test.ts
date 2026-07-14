@@ -4,7 +4,9 @@ import type { MatchConfig } from "./matchLogic";
 import { arenaDefaults } from "./arenaDefaults";
 
 const DEFAULT: MatchConfig = { mode: "classic", rounds: 3, noTurn: false, turnSeconds: 60, role: "local", ...arenaDefaults() };
-const ARENA_HASH = "&w=20&h=12&rmn=0.5&rmx=2&gmn=0.5&gmx=2&sc=1.5&fm=1&mp=15&ts=1&eg=1&bx=3&ym=1.5&sp=2&sm=1";
+// sm=0: spawnMirror defaults to FALSE (flipped deliberately in cfd58cd — sides
+// roll independently unless the player asks for symmetry).
+const ARENA_HASH = "&w=20&h=12&rmn=0.5&rmx=2&gmn=0.5&gmx=2&sc=1.5&fm=1&mp=15&ts=1&eg=1&bx=3&ym=1.5&sp=2&sm=0";
 
 describe("configToHash", () => {
   it("encodes classic 3-round default config with arena fields", () => {
@@ -33,7 +35,8 @@ describe("parseConfigFromHash", () => {
       map: { width: 30, height: 18 },
       scatter: {
         rMin: 1, rMax: 3, gapMin: 1, gapMax: 4, spawnClearance: 2.5, fieldMargin: 1, maxPlanets: 8,
-        spawnEdgeGap: 2, spawnBandX: 4, spawnYMargin: 2, spawnSeparation: 3, spawnMirror: true,
+        // The hash above carries no `sm`, so this falls back to the default — false.
+        spawnEdgeGap: 2, spawnBandX: 4, spawnYMargin: 2, spawnSeparation: 3, spawnMirror: false,
       },
       teamSize: 3,
     });

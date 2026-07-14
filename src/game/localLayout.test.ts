@@ -31,13 +31,24 @@ describe("buildLocalLayout seeding", () => {
     ).toBe(true);
   });
 
-  it("red always spawns at x<0 and blue at x>0, mirrored", () => {
+  // Sides hold on ANY config; mirroring is opt-in (spawnMirror defaults to false
+  // since cfd58cd, so the two sides roll independently). They were one test that
+  // silently depended on the old default — they are two different guarantees.
+  it("red always spawns at x<0 and blue at x>0", () => {
     const bounds = boundsFromMap(cfg.map);
     const layout = buildLocalLayout(bounds, cfg, 4242);
     const red = layout.players.find((p) => p.id === "r1")!;
     const blue = layout.players.find((p) => p.id === "b1")!;
     expect(red.pos.x).toBeLessThan(0);
     expect(blue.pos.x).toBeGreaterThan(0);
+  });
+
+  it("mirrors blue onto red when spawnMirror is on", () => {
+    const mirrored: MatchConfig = { ...cfg, scatter: { ...cfg.scatter, spawnMirror: true } };
+    const bounds = boundsFromMap(mirrored.map);
+    const layout = buildLocalLayout(bounds, mirrored, 4242);
+    const red = layout.players.find((p) => p.id === "r1")!;
+    const blue = layout.players.find((p) => p.id === "b1")!;
     expect(blue.pos.x).toBeCloseTo(-red.pos.x, 9);
     expect(blue.pos.y).toBeCloseTo(red.pos.y, 9);
   });
