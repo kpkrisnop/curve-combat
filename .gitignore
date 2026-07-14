@@ -22,3 +22,9 @@ prototypes/
 gw-*.png
 val-*.png
 scratch-*.mjs
+
+# Local agent tooling (kept on disk, not published)
+.claude/settings.local.json
+.claude/skills/
+.impeccable/
+MY_VISUAL_UI_REVIEW.md

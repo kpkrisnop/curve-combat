@@ -1,6 +1,6 @@
 // Thin adapter around a MathQuill editable field. This is the ONLY module that
-// knows MathQuill exists — ExpressionPanel (and anything else) talks to this
-// clean interface, so swapping the input library again is a one-file change.
+// knows MathQuill exists — the HUD (and anything else) talks to this clean
+// interface, so swapping the input library again is a one-file change.
 //
 // Import order is load-bearing: the jQuery shim must run before the MathQuill
 // build evaluates. Static imports evaluate top-to-bottom, so this is correct.
