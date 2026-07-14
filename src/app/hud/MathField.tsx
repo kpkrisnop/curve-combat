@@ -10,6 +10,7 @@ interface MathInputLike {
   setEnabled(e: boolean): void;
   reflow(): void;
   insertText(chars: string): void;
+  keystroke(chars: string): void;
   onEnter(cb: () => void): void;
   onEdit(cb: () => void): void;
   onUpOutOf(cb: () => void): void;

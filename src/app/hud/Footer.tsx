@@ -38,7 +38,7 @@ export function roomLink(roomCode: string, base: string): string {
 interface FooterProps {
   mode: FooterMode;
 
-  /** Leave/Quit action. ingame confirms first; pregame calls directly. */
+  /** Pregame Leave — called directly, no confirm. (Ingame Quit is IngameQuit.) */
   onLeave?: () => void;
 
   // pregame (both local + online)
@@ -78,7 +78,7 @@ export function Footer(props: FooterProps) {
   }
 
   if (props.mode === "ingame") {
-    return <IngameFooter onLeave={props.onLeave} makeInput={props.makeInput} singleTeam={props.singleTeam} />;
+    return <IngameFooter makeInput={props.makeInput} singleTeam={props.singleTeam} />;
   }
 
   const isOnline = props.mode === "pregame-online";
@@ -153,9 +153,11 @@ export function Footer(props: FooterProps) {
   );
 }
 
+// The ingame Quit no longer lives here — the keypad fills the footer, so it
+// floats on the map card instead (see hud/IngameQuit.tsx, rendered by the
+// flows). `onLeave` on FooterProps is now pregame-only.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function IngameFooter({ onLeave, makeInput, singleTeam }: { onLeave?: () => void; makeInput?: () => any; singleTeam?: Team }) {
-  const [quitConfirm, setQuitConfirm] = useState(false);
+function IngameFooter({ makeInput, singleTeam }: { makeInput?: () => any; singleTeam?: Team }) {
   const turn = useStore(hudStore, (s) => s.turn);
   const noTurn = useStore(hudStore, (s) => s.noTurn);
   const waiting = singleTeam !== undefined && turn !== singleTeam;
@@ -165,17 +167,6 @@ function IngameFooter({ onLeave, makeInput, singleTeam }: { onLeave?: () => void
 
   return (
     <div className={`comp footer footer--ingame ${teamClass} ${waitingClass}`} data-testid="arena-footer">
-      <div className="footer-quit">
-        {quitConfirm ? (
-          <span className="footer-quit__confirm">
-            <span className="footer-quit__q">Quit match?</span>
-            <button type="button" className="cc-btn cc-btn--danger footer-quit__yes" onClick={onLeave}>Quit</button>
-            <button type="button" className="cc-btn footer-quit__no" onClick={() => setQuitConfirm(false)}>Stay</button>
-          </span>
-        ) : (
-          <button type="button" className="cc-btn footer-quit__btn" onClick={() => setQuitConfirm(true)}>Quit</button>
-        )}
-      </div>
       <HudBar makeInput={makeInput} singleTeam={singleTeam} />
     </div>
   );

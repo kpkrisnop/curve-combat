@@ -114,14 +114,12 @@ describe("HudBar — singleTeam prop", () => {
     expect(fires).toHaveLength(1); // one visible Fire button, not one per side
   });
 
-  it("noTurn mode still renders the original always-both-visible dual panel layout, unaffected by the redesign", () => {
+  it("noTurn mode renders the one console too — the dual PlayerPanel layout is gone", () => {
     act(() => hudController.setNoTurnMode(true));
-    render(<HudBar makeInput={makeInput} />);
-    expect(document.querySelector(".player-panel.is-red")).toBeTruthy();
-    expect(document.querySelector(".player-panel.is-blue")).toBeTruthy();
-    expect(document.querySelector(".hud-console")).toBeNull();
-    const fires = screen.getAllByRole("button", { name: "Fire" });
-    expect(fires).toHaveLength(2);
+    render(<HudBar makeInput={makeInput} singleTeam="red" />);
+    expect(document.querySelector(".hud-console")).not.toBeNull();
+    expect(document.querySelector(".player-panel")).toBeNull();
+    expect(screen.getAllByRole("button", { name: "Fire" })).toHaveLength(1);
   });
 });
 

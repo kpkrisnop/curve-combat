@@ -337,20 +337,31 @@ body { font-family: var(--cc-font-sans); overflow: hidden; }
   outline: none; border-color: var(--cc-accent);
 }
 
-/* ── Ingame Quit — quiet card-level utility, pinned to the top-left corner of
-   the footer card, absolutely positioned (removed from the flex flow, so
-   `.footer--ingame`'s justify-content:center centers only the console) — and
-   an inline confirm instead of a native window.confirm, which breaks the
-   pitch-black premium frame. */
-.footer-quit { position: absolute; left: var(--cc-space-5); top: var(--cc-space-4); }
-.footer-quit__btn {
-  border-color: transparent; color: var(--cc-text-faint);
-  padding: 8px 14px; font-size: var(--cc-fs-xs);
+/* ── Ingame Quit — evicted from the footer (the keypad fills it now), floated
+   into the MAP CARD's top-right corner (`.comp` is already position:relative,
+   so it anchors there). Top-CENTRE is the round/score readout and RED spawns
+   left, so the right corner sits over the least; in landscape the arena is
+   letterboxed inside the card, so the ✕ lands in the empty margin. Still an
+   inline two-step confirm, never a native window.confirm: it now floats over
+   the play area, and a stray palm must not end the match. */
+.arena-quit { position: absolute; top: var(--cc-space-3); right: var(--cc-space-3); z-index: 5; }
+.arena-quit__btn {
+  width: 40px; height: 40px; display: grid; place-items: center;
+  background: color-mix(in srgb, var(--cc-surface) 70%, transparent);
+  border: 1px solid var(--cc-border); border-radius: var(--cc-radius-md);
+  color: var(--cc-text-muted); font-size: var(--cc-fs-md); cursor: pointer;
+  transition: color 150ms var(--cc-ease-out-expo, ease), border-color 150ms var(--cc-ease-out-expo, ease);
 }
-.footer-quit__btn:hover:not(:disabled) { color: var(--cc-text); border-color: var(--cc-border-strong); background: transparent; }
-.footer-quit__confirm { display: inline-flex; align-items: center; gap: var(--cc-space-2); }
-.footer-quit__q { font-size: var(--cc-fs-xs); color: var(--cc-text-muted); }
-.footer-quit__yes, .footer-quit__no { padding: 6px 12px; font-size: var(--cc-fs-xs); }
+.arena-quit__btn:hover { color: var(--cc-text); border-color: var(--cc-border-strong); }
+.arena-quit__confirm {
+  display: inline-flex; align-items: center; gap: var(--cc-space-2);
+  background: var(--cc-surface-2); border: 1px solid var(--cc-border-strong);
+  border-radius: var(--cc-radius-md); padding: 6px 8px;
+}
+.arena-quit__q { font-size: var(--cc-fs-xs); color: var(--cc-text-muted); }
+/* min-height 44px (Apple HIG touch minimum, same as the keypad/recall rows):
+   the one control whose whole job is "a stray palm must not end a match". */
+.arena-quit__yes, .arena-quit__no { min-height: 44px; padding: 6px 12px; font-size: var(--cc-fs-xs); }
 
 /* Room-code badge — out-of-flow (absolute) so it never becomes an implicit
    grid item of .arena-shell; pinned to the shell's top-left corner. */
@@ -491,6 +502,13 @@ body { font-family: var(--cc-font-sans); overflow: hidden; }
 .cfg-check__input:checked + .cfg-check__box svg { opacity: 1; transform: scale(1); }
 .cfg-check__input:checked ~ .cfg-check__label { color: var(--cc-text); }
 .cfg-check__input:focus-visible + .cfg-check__box { outline: 2px solid oklch(0.9 0.01 250 / 0.9); outline-offset: 2px; }
+/* Disabled = struck through, not merely dimmed. A greyed row reads as "off";
+   the strike reads as "not on offer" — which is what an unavailable option is
+   (simultaneous fire on one device, where both players would share one keypad).
+   :has() on the label so the whole row, box included, goes quiet together. */
+.cfg-check:has(.cfg-check__input:disabled) { cursor: default; opacity: 0.45; }
+.cfg-check:has(.cfg-check__input:disabled):hover .cfg-check__box { border-color: var(--cc-border-strong); }
+.cfg-check__input:disabled ~ .cfg-check__label { text-decoration: line-through; text-decoration-thickness: 1px; }
 @media (prefers-reduced-motion: reduce) {
   .cfg-check__box svg { transition: none; }
 }

@@ -51,12 +51,12 @@ const clampTimer = (n: number) => Math.max(TIMER_MIN, Math.min(TIMER_MAX, Math.r
 
 /** Custom checkbox (design-system `cfg-check`): hidden input, SVG check box,
  *  inline label that brightens when on. The whole row is the hit target. */
-function Check({ checked, onChange, children }: {
-  checked: boolean; onChange: (on: boolean) => void; children: ReactNode;
+function Check({ checked, onChange, disabled, children }: {
+  checked: boolean; onChange: (on: boolean) => void; disabled?: boolean; children: ReactNode;
 }) {
   return (
     <label className="cfg-check">
-      <input type="checkbox" className="cfg-check__input" checked={checked}
+      <input type="checkbox" className="cfg-check__input" checked={checked} disabled={disabled}
         onChange={(e) => onChange(e.target.checked)} />
       <span className="cfg-check__box" aria-hidden="true">
         <svg viewBox="0 0 12 10"><path d="M1 5l3.5 3.5L11 1" /></svg>
@@ -96,9 +96,10 @@ interface Props {
   onReroll: () => void;
   readOnly?: boolean;
   hideSeedRow?: boolean;
+  simultaneousDisabled?: boolean;
 }
 
-export function ConfigPanel({ value, onChange, seed, onReroll, readOnly, hideSeedRow }: Props) {
+export function ConfigPanel({ value, onChange, seed, onReroll, readOnly, hideSeedRow, simultaneousDisabled }: Props) {
   const step = (d: number) => onChange({ turnSeconds: clampTimer(value.turnSeconds + d) });
   return (
     // The surrounding .comp.side-panel is the card; no surface chrome of its
@@ -127,9 +128,12 @@ export function ConfigPanel({ value, onChange, seed, onReroll, readOnly, hideSee
           </div>
         </div>
 
-        <Check checked={value.noTurn} onChange={(on) => onChange({ noTurn: on })}>
+        <Check checked={value.noTurn} onChange={(on) => onChange({ noTurn: on })} disabled={simultaneousDisabled}>
           No-Turn Mode (simultaneous fire)
         </Check>
+        {simultaneousDisabled && (
+          <small className="cfg-hint">not available on one device — both players would share one keypad</small>
+        )}
 
         <div className="cfg-block">
           <p className="cfg-label">Turn Timer</p>

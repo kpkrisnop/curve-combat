@@ -40,3 +40,30 @@ describe("setFieldEnabled", () => {
     expect(ta.hasAttribute("tabindex")).toBe(false);
   });
 });
+
+describe("MathInput.keystroke", () => {
+  it("sends Backspace to the field, deleting one character (not the whole equation)", () => {
+    const input = new MathInput();
+    document.body.appendChild(input.el);
+    input.insertText("12");
+    input.keystroke("Backspace");
+    expect(input.getLatex()).toBe("1");
+  });
+
+  it("Right escapes a superscript, so typing continues at the top level", () => {
+    // "y" is deliberately NOT in charsThatBreakOutOfSupSub ("+-=<>") and isn't a
+    // digit (autoSubscriptNumerals only fires for digits), so MathQuill itself
+    // does nothing to move the cursor here: without a working keystroke("Right")
+    // forwarding "y" would land INSIDE the exponent (x^{2y}). Only a real Right
+    // keystroke gets it to the top level (x^2y). This is what makes the test
+    // fail when keystroke() is a no-op, unlike the previous "+1" version where
+    // "+" broke out of the superscript on its own regardless of keystroke().
+    const input = new MathInput();
+    document.body.appendChild(input.el);
+    input.insertText("x^2");      // cursor is INSIDE the superscript
+    input.keystroke("Right");     // the only way out
+    input.insertText("y");
+    expect(input.getLatex()).toBe("x^2y");
+    expect(input.getLatex()).not.toBe("x^{2y}");
+  });
+});

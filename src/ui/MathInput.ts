@@ -133,6 +133,18 @@ export class MathInput {
     this.syncPlaceholder();
   }
 
+  /**
+   * Send a non-text key (arrows, Backspace). `insertText` can't express these:
+   * they move or delete rather than typing. Refocuses for the same reason
+   * insertText does — the key that triggered this was a <button>, and the tap
+   * blurred the field.
+   */
+  keystroke(keys: string): void {
+    this.mq.keystroke(keys);
+    this.mq.focus();
+    this.syncPlaceholder();
+  }
+
   /** Recompute layout — call once after el is attached to the DOM. */
   reflow(): void {
     this.mq.reflow?.();

@@ -7,6 +7,7 @@ import { hudController } from "../hud/hudStore";
 import { SpacetimeBackground } from "../SpacetimeBackground";
 import { ArenaStage } from "../arena/ArenaStage";
 import { Footer } from "../hud/Footer";
+import { IngameQuit } from "../hud/IngameQuit";
 import { HudOverlays } from "../hud/Overlays";
 import { ConfigPanel, type PanelConfig } from "./ConfigPanel";
 import { CountdownOverlay } from "./CountdownOverlay";
@@ -22,7 +23,8 @@ interface Props {
 export function LocalFlow({ initial, autostart = false }: Props) {
   const [phase, setPhase] = useState<Phase>(autostart ? "countdown" : "config");
   const [config, setConfig] = useState<PanelConfig>({
-    mode: initial.mode, rounds: initial.rounds, noTurn: initial.noTurn,
+    mode: initial.mode, rounds: initial.rounds,
+    noTurn: false, // local hotseat can't do simultaneous fire — one keypad, two players (never trust `initial`, which may carry a stale/shared noTurn:true)
     turnSeconds: initial.turnSeconds ?? 60, map: initial.map, scatter: initial.scatter,
   });
   const [seed, setSeed] = useState(newSeed);
@@ -85,6 +87,7 @@ export function LocalFlow({ initial, autostart = false }: Props) {
       <SpacetimeBackground />
       <div className="comp map-card">
         <ArenaStage scale={phase === "play" ? 1 : 0.87} onReady={onReady} />
+        {phase === "play" && <IngameQuit onLeave={() => hudController.requestReset()} />}
         {phase === "config" && (
           <>
             {/* proto-HUD seats: same edges the player panels will occupy */}
@@ -96,13 +99,13 @@ export function LocalFlow({ initial, autostart = false }: Props) {
 
       {phase === "config" && (
         <div className="comp side-panel">
-          <ConfigPanel value={config} onChange={onChange} seed={seed} onReroll={onReroll} />
+          <ConfigPanel value={config} onChange={onChange} seed={seed} onReroll={onReroll} simultaneousDisabled />
         </div>
       )}
 
       {phase === "config" && <Footer mode="pregame-local" onStart={onStart} onLeave={() => hudController.requestReset()} />}
       {phase === "countdown" && <CountdownOverlay seconds={3} onDone={onCountdownDone} />}
-      {phase === "play" && (<><Footer mode="ingame" onLeave={() => hudController.requestReset()} /><HudOverlays /></>)}
+      {phase === "play" && (<><Footer mode="ingame" /><HudOverlays /></>)}
     </div>
   );
 }

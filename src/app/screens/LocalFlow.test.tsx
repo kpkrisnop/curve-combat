@@ -82,4 +82,10 @@ describe("LocalFlow arena shell", () => {
     fireEvent.click(screen.getByRole("button", { name: /^leave$/i }));
     expect(location.hash === "" || location.hash === "#").toBe(true);
   });
+
+  it("forces noTurn off for local play even when a stale/shared initial config carries noTurn:true", () => {
+    fakeRenderer.setNoTurnMode.mockClear();
+    render(<LocalFlow initial={{ ...initial, noTurn: true }} />);
+    expect(fakeRenderer.setNoTurnMode).toHaveBeenCalledWith(false);
+  });
 });
