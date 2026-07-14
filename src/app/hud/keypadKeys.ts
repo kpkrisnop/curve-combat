@@ -1,8 +1,8 @@
 // The keypad's data. Separated from the component so the model is testable and
 // the component stays purely presentational.
 //
-// Layout frozen in the prototype (src/app/hud/PROTOTYPE-keypad.html) and
-// recorded in docs/superpowers/specs/2026-07-13-touch-keypad-design.md.
+// Layout recorded in docs/superpowers/specs/2026-07-13-touch-keypad-design.md
+// (frozen by a throwaway HTML prototype, since deleted).
 
 export type KeyAction =
   | { kind: "insert"; text: string }

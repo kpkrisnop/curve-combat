@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-07-13-touch-keypad-design.md` — read it first.
 
-**Prototype (the frozen layout):** `src/app/hud/PROTOTYPE-keypad.html` — open it in a browser and look at it before writing CSS. Delete it in the final task.
+**Prototype (the frozen layout):** `src/app/hud/PROTOTYPE-keypad.html` — open it in a browser and look at it before writing CSS. Delete it in the final task. *(Shipped: the prototype was deleted in Task 9; the layout now lives in `src/app/hud/hud.css`.)*
 
 ## Global Constraints
 

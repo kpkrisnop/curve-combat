@@ -1,6 +1,6 @@
 # In-footer math keypad (touch input)
 
-**Status:** approved — layout frozen by prototype, ready to implement
+**Status:** shipped
 **Date:** 2026-07-13
 
 ## Why
@@ -133,7 +133,8 @@ and shrinks the map row, so a taller footer needs no grid change — only the
 
 ## The layout (frozen by the prototype)
 
-Settled in `src/app/hud/PROTOTYPE-keypad.html` (throwaway; delete once built).
+Settled in a throwaway HTML prototype (`src/app/hud/PROTOTYPE-keypad.html`,
+deleted once built — the shipped layout lives in `src/app/hud/hud.css`).
 KP's design, corrected in three places and validated at real device sizes.
 
 The footer is a band of **four zones**: **console · numbers · operators ·
