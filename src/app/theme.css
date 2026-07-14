@@ -502,6 +502,13 @@ body { font-family: var(--cc-font-sans); overflow: hidden; }
 .cfg-check__input:checked + .cfg-check__box svg { opacity: 1; transform: scale(1); }
 .cfg-check__input:checked ~ .cfg-check__label { color: var(--cc-text); }
 .cfg-check__input:focus-visible + .cfg-check__box { outline: 2px solid oklch(0.9 0.01 250 / 0.9); outline-offset: 2px; }
+/* Disabled = struck through, not merely dimmed. A greyed row reads as "off";
+   the strike reads as "not on offer" — which is what an unavailable option is
+   (simultaneous fire on one device, where both players would share one keypad).
+   :has() on the label so the whole row, box included, goes quiet together. */
+.cfg-check:has(.cfg-check__input:disabled) { cursor: default; opacity: 0.45; }
+.cfg-check:has(.cfg-check__input:disabled):hover .cfg-check__box { border-color: var(--cc-border-strong); }
+.cfg-check__input:disabled ~ .cfg-check__label { text-decoration: line-through; text-decoration-thickness: 1px; }
 @media (prefers-reduced-motion: reduce) {
   .cfg-check__box svg { transition: none; }
 }

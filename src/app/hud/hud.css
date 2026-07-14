@@ -233,11 +233,14 @@
 .keypad__key:active:not(:disabled) { background: oklch(1 0 0 / 0.14); }
 .keypad__key:disabled { opacity: 0.4; cursor: default; }
 .keypad__key.is-util { background: oklch(1 0 0 / 0.02); color: var(--cc-text-muted); font-size: var(--cc-fs-sm); }
-/* The variable — the most-typed symbol in the game, and NOT a multiply sign. */
+/* The variable — the most-typed symbol in the game, and NOT a multiply sign.
+   It is set in the same italic serif MathQuill renders variables in, so the key
+   looks like the `x` it produces. That typographic difference is what separates
+   it from the mono `×` operator — it no longer needs a colour to do that job. */
 .keypad__key.is-var {
-  color: var(--cc-blue); border-color: color-mix(in srgb, var(--cc-blue) 45%, var(--cc-border));
-  background: color-mix(in srgb, var(--cc-blue) 10%, transparent);
-  font-style: italic; font-weight: 700; font-size: var(--cc-fs-lg);
+  color: var(--cc-text);
+  font-family: "Times New Roman", Times, serif;
+  font-style: italic; font-weight: 500; font-size: var(--cc-fs-lg);
 }
 
 .keypad__zone { display: grid; gap: 6px; align-content: start; }
@@ -252,19 +255,28 @@
 
 /* The function panel is position:absolute inside its zone, so it contributes NO
    height — the console column sets the band's height and the functions scroll
-   inside it. Without this the panel grows the footer and never scrolls at all. */
-.keypad__fnzone { position: relative; flex: 0 0 216px; min-height: 132px; }
+   inside it. Without this the panel grows the footer and never scrolls at all.
+   Width: the longest labels (`arcsin`, `arccos`, `arctan`) overflowed a 216px
+   band; there is slack in the footer, so the band takes it rather than shrinking
+   the type. Portrait is unaffected — the panel spans the full width there. */
+.keypad__fnzone { position: relative; flex: 0 0 308px; min-height: 132px; }
 .keypad__fnpanel {
-  position: absolute; inset: 0; overflow-y: auto; scrollbar-width: none;
-  /* Fade, not a scrollbar. Same local-over-scroll trick as .comp.side-panel:
-     the `local` cover scrolls with the content and cancels the `scroll` shadow
-     exactly at the true bottom, so the cue is honest. rgb(10,12,15) is
-     --cc-surface pre-composited over --cc-bg. */
+  position: absolute; inset: 0; overflow-y: auto; padding-right: 4px;
+  /* A scrollbar AND the fade: the bar says "this scrolls" even at rest, the fade
+     says "there is more below" and honestly cancels itself at the true bottom
+     (the `local` cover scrolls with the content and paints over the `scroll`
+     shadow). Bar styled to match .comp.side-panel — thin, no track chrome.
+     rgb(10,12,15) is --cc-surface pre-composited over --cc-bg. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--cc-border-strong) transparent;
   background:
     linear-gradient(rgba(10, 12, 15, 0), rgb(10, 12, 15) 70%) 0 100% / 100% 26px local no-repeat,
     linear-gradient(rgba(10, 12, 15, 0), rgba(10, 12, 15, 0.96)) 0 100% / 100% 34px scroll no-repeat;
 }
-.keypad__fnpanel::-webkit-scrollbar { display: none; }
+.keypad__fnpanel::-webkit-scrollbar { width: 8px; }
+.keypad__fnpanel::-webkit-scrollbar-track { background: transparent; }
+.keypad__fnpanel::-webkit-scrollbar-thumb { background: var(--cc-border-strong); border-radius: 4px; }
+.keypad__fnpanel::-webkit-scrollbar-thumb:hover { background: oklch(1 0 0 / 0.25); }
 
 /* NARROW (iPad portrait): four zones side by side starve the equation field, so
    the functions wrap to their own full-width row and spread to 8 columns.
