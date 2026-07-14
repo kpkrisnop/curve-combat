@@ -19,6 +19,7 @@ import { hudStore, hudController, hudInputs, type Team } from "./hudStore";
 import { MathField } from "./MathField";
 import { TimerBadge } from "./TimerBadge";
 import { Keypad, NAV_KEYS } from "./Keypad";
+import { RecallPopover } from "./RecallPopover";
 import type { KeyAction } from "./keypadKeys";
 
 // Shown only while a shot is actually in flight — flavour that's earned by an
@@ -29,11 +30,11 @@ const FLAVOUR = ["FIRE IN THE HOLE!", "PEW PEW!", "SHOT AWAY!", "INCOMING!", "LE
 // The resting fallback before anyone has fired this round, so the line is never
 // blank. Rotates per turn so it doesn't read as frozen.
 const TIPS = [
-  "Tip: ↑ recalls your last shot — tweak it and fire again",
+  "Tip: ↺ Recall reloads a past shot — tweak it and fire again",
   "Tip: sin(x) arcs like a wave; x² dives like a mortar",
   "Tip: planets block shots — curve around them",
   "Tip: a steeper impact angle hits harder in HP mode",
-  "Tip: press ↵ to fire without leaving the keyboard",
+  "Tip: Clear wipes the field; Recall brings a shot back",
 ];
 
 const pick = (xs: string[]) => xs[Math.floor(Math.random() * xs.length)];
@@ -44,6 +45,7 @@ export function FiringConsole({ makeInput, singleTeam }: { makeInput?: () => any
   const noTurn = useStore(hudStore, (s) => s.noTurn);
   const status = useStore(hudStore, (s) => s.status);
   const statusTone = useStore(hudStore, (s) => s.statusTone);
+  const history = useStore(hudStore, (s) => s.history);
 
   // The team this console types into — every input/fire/enable path routes
   // through this. Online: always me. Local: whoever's turn it is.
@@ -65,9 +67,8 @@ export function FiringConsole({ makeInput, singleTeam }: { makeInput?: () => any
   // walk back down to it, so recall never destroys unfired work.
   const draftRef = useRef<Record<Team, string>>({ red: "", blue: "" });
   const programmaticRef = useRef(false); // true while WE set latex, so onEdit ignores it
-  // Recall popover: the Recall key sets it, Task 8 renders it. The value side is
-  // deliberately unread for now (noUnusedLocals would reject it) — Task 8 names it.
-  const [, setRecallOpen] = useState(false);
+  // Recall popover: the Recall key opens it, the input row renders it (upward).
+  const [recallOpen, setRecallOpen] = useState(false);
 
   // Enable only the field this console types into. No .focus() here: nothing
   // opens an OS keyboard any more (inputmode="none"), so a focus call buys
@@ -162,6 +163,25 @@ export function FiringConsole({ makeInput, singleTeam }: { makeInput?: () => any
         <div className={`hud-status is-${statusKind}`} aria-live="polite">{statusText}</div>
 
         <div className={`hud-console__inputrow ${waiting ? "is-locked" : ""}`}>
+          {/* Anchored to the input row, opens upward over it. Killed if the turn
+              or a shot takes the console away under it. */}
+          {recallOpen && !waiting && !busy && (
+            <RecallPopover
+              history={history[active]}
+              onPick={(latex) => {
+                programmaticRef.current = true;
+                hudInputs.get(active)?.setLatex(latex);
+                programmaticRef.current = false;
+                // A pick is a fresh starting point, not a position in the history
+                // walk: reset the arrow-key cursor so ↑ still steps from the top
+                // (and ↓ can't blank the field into a stale draft).
+                recallRef.current = { team: null, idx: -1 };
+                setLive((l) => ({ ...l, [active]: latex }));
+                setRecallOpen(false);
+              }}
+              onDismiss={() => setRecallOpen(false)}
+            />
+          )}
           <span className="hud-prompt">y =</span>
           <div className="hud-console__fields">
             {teams.map((t) => (

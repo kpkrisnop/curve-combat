@@ -126,7 +126,7 @@
 .hud-console__dot.is-red  { background: var(--cc-red);  box-shadow: 0 0 8px var(--cc-red); }
 .hud-console__dot.is-blue { background: var(--cc-blue); box-shadow: 0 0 8px var(--cc-blue); }
 
-.hud-console__inputrow { display: flex; align-items: center; gap: var(--cc-space-2); }
+.hud-console__inputrow { position: relative; display: flex; align-items: center; gap: var(--cc-space-2); }
 .hud-console__inputrow.is-locked { opacity: 0.6; }
 .hud-console__fields { position: relative; flex: 1; min-width: 0; display: flex; }
 .hud-console-field {
@@ -190,6 +190,33 @@
   opacity: 0.55; margin-left: 2px;
   border: 1px solid currentColor; border-radius: var(--cc-radius-sm); padding: 0 4px; line-height: 1.4;
 }
+
+/* ── Recall popover ───────────────────────────────────────────────────────
+   Opens UPWARD over the input. The one thing allowed to cover the console:
+   transient, player-initiated, self-dismissing. */
+.recall {
+  position: absolute; bottom: calc(100% + 8px); left: 0; right: 0; z-index: 20;
+  max-height: 240px; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 2px; padding: 6px;
+  background: var(--cc-surface-2); border: 1px solid var(--cc-border-strong);
+  border-radius: var(--cc-radius-lg); backdrop-filter: blur(14px);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.55);
+}
+.recall__item {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--cc-space-3);
+  padding: 10px 12px; min-height: 44px;  /* Apple HIG touch minimum */
+  text-align: left;
+  background: transparent; border: 0; border-radius: var(--cc-radius-sm);
+  color: var(--cc-text); font-family: var(--cc-font-mono); font-size: var(--cc-fs-sm); cursor: pointer;
+}
+.recall__item:hover { background: color-mix(in srgb, var(--cc-text) 8%, transparent); }
+.recall__eq { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recall__tag {
+  flex: none;
+  font-family: var(--cc-font-tech); font-size: var(--cc-fs-2xs);
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--cc-text-faint);
+}
+.recall__empty { padding: 12px; color: var(--cc-text-faint); font-size: var(--cc-fs-sm); }
 
 /* ── The keypad ───────────────────────────────────────────────────────────
    The chip row grown up: one grid, one component, same insertText mechanism. */
