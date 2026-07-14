@@ -51,6 +51,14 @@ body { font-family: var(--cc-font-sans); overflow: hidden; }
 .land-chrome .land-chrome__bl { bottom: 0; left: 0; }
 .land-chrome .land-chrome__br { bottom: 0; right: 0; }
 
+/* GitHub link — sits where the chrome's bottom-left slug used to */
+.land-gh {
+  position: absolute; z-index: 2; bottom: 0; left: 0; padding: 22px 26px;
+  display: flex; color: var(--cc-text-muted);
+  transition: color 160ms var(--cc-ease-out-expo);
+}
+.land-gh:hover, .land-gh:focus-visible { color: var(--cc-accent); }
+
 /* Title — Archivo wide + black, restrained two-layer ignition glow */
 .land-title {
   grid-row: 2;

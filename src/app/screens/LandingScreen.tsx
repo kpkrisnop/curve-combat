@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { mdiGithub } from "@mdi/js";
+import { Icon } from "../mdiIcon";
 import { SpacetimeBackground } from "../SpacetimeBackground";
 import { RoomCodeInput } from "./RoomCodeInput";
 
@@ -37,9 +39,18 @@ export function LandingScreen({ initialPanelOpen = false }: { initialPanelOpen?:
       <div className="land-chrome" aria-hidden="true">
         <span className="land-chrome__tl">SPACETIME ARENA</span>
         <span className="land-chrome__tr">DESKTOP · 2 TEAMS</span>
-        <span className="land-chrome__bl">f : ℝ → ℝ</span>
         <span className="land-chrome__br">TURN-BASED · LOCAL + ONLINE</span>
       </div>
+      {/* Outside .land-chrome: that block is aria-hidden and pointer-events: none */}
+      <a
+        className="land-gh"
+        href="https://github.com/kpkrisnop/curve-combat"
+        target="_blank"
+        rel="noreferrer"
+        aria-label="Source on GitHub"
+      >
+        <Icon path={mdiGithub} size={1} />
+      </a>
       <h1 className="land-title">
         <span className="t-red">CURVE</span> <span className="t-blue">COMBAT</span>
       </h1>

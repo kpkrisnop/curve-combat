@@ -1,6 +1,10 @@
 # CurveCombat
 
+**Play: [curvecombat.sakongroup.work](https://curvecombat.sakongroup.work/)**
+
 A browser game where you aim by writing a curve.
+
+![CurveCombat landing screen](docs/images/landing.png)
 
 Two teams face off across a planet-scattered arena. On your turn you type a
 mathematical function — `x^2/8`, `3sin(x/2)`, `e^(x/4)` — and fire. The curve is
