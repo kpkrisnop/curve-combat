@@ -1,6 +1,6 @@
 # CurveCombat
 
-A browser game where two teams fire mathematical function curves across a planet-scattered arena to hit each other. React + TypeScript + Vite client, Pixi.js canvas rendering, and an authoritative WebSocket server for online play. Supports local hotseat and online NvN (two teams). Desktop/landscape only (phone-gated, ~≥1024px).
+A browser game where two teams fire mathematical function curves across a planet-scattered arena to hit each other. React + TypeScript + Vite client, Pixi.js canvas rendering, and an authoritative WebSocket server for online play. Supports local hotseat and online NvN (two teams). Desktop and tablet, either orientation; phones are gated out (~<700px).
 
 ## Layout
 
@@ -39,6 +39,7 @@ A browser game where two teams fire mathematical function curves across a planet
 - This checkout often lives on a slow (cloud-synced) filesystem, which makes Vitest's per-file environment setup slow. The **full suite is flaky under parallel load** — timing-sensitive React and countdown tests time out when many run at once but pass in isolation. Before treating a failure as a regression, re-run that file alone. The server integration tests (real countdown delays) are the most sensitive.
 - Keep the client protocol and server handlers in lockstep (see Conventions).
 - The HUD (`hudStore` / `hudController` in `src/app/hud/`) is an app-wide singleton shared by both local and online play. Screens own its lifecycle — reset HUD state on entry and dispose their game instance on unmount — or timers, intervals, and stale state bleed between modes.
-- The math field sets `inputmode="none"` — no OS keyboard EVER opens, on any device. The in-footer `Keypad` (`src/app/hud/Keypad.tsx`) is the only way to type on touch. Never add device detection around it (a coarse-pointer guard was tried and reverted: `90b2d52` / `229cab8`).
+- **A fired curve is anchored to the shooter**, not to world coordinates (`trajectory.ts`: `yOffset = sy - fn(sx)`) — the curve is translated so it always passes through the soldier. So firing a *constant* draws a flat line at the shooter's own y and the constant's value is irrelevant; such a shot connects only when both soldiers share a y (i.e. `spawnMirror`, which is **off** by default — the two sides roll independently). Tests that need a guaranteed hit must ask for `spawnMirror: true` rather than assume it.
+- The math field sets `inputmode="none"` — no OS keyboard EVER opens, on any device. The in-footer `Keypad` (`src/app/hud/Keypad.tsx`) is the only way to type on touch, and every key must `preventDefault()` on `pointerdown` or the tap steals focus from MathQuill's hidden textarea and drops the caret. Never add device detection around any of this — it has been tried and reverted; media queries describe the *pointer*, not whether a hardware keyboard exists (an iPad with a Magic Keyboard reports `hover: hover`).
 - Much of the surface is UI, animation, networking, and turn/round lifecycle: the bug classes here (focus, leaked intervals, render timing, reconnect/turn state) are ones the unit suite misses. Reproduce and verify in a real browser, not just Vitest.
 - `.superpowers/` (gitignored) holds a subagent-workflow progress ledger when that workflow is in use.
