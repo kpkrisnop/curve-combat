@@ -97,6 +97,12 @@ export class HudController implements GameUiPort {
     this.store.set((s) => ({ busy: { ...s.busy, [player]: busy } }));
   }
   setNoTurnMode(enabled: boolean): void { this.store.set({ noTurn: enabled }); }
+  /** Local-only. Routing by `turn` is safe HERE and nowhere else: LocalGame is
+   *  the sole caller and it is turn-based, so `turn` IS the team that types.
+   *  In online noTurn `turn` is stale forever (the server never sets an active
+   *  player), so this would resolve the wrong/unregistered field. Focus for
+   *  online is owned by FiringConsole's enable effect, which routes by `active`
+   *  — wire the online path through THAT, never through here. */
   focus(): void { this.inputs.get(this.store.get().turn)?.focus(); }
   setStatus(note?: string, tone: StatusTone = "info"): void {
     this.store.set({ status: note ?? "", statusTone: tone });

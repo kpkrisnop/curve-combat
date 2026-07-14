@@ -359,7 +359,9 @@ body { font-family: var(--cc-font-sans); overflow: hidden; }
   border-radius: var(--cc-radius-md); padding: 6px 8px;
 }
 .arena-quit__q { font-size: var(--cc-fs-xs); color: var(--cc-text-muted); }
-.arena-quit__yes, .arena-quit__no { padding: 6px 12px; font-size: var(--cc-fs-xs); }
+/* min-height 44px (Apple HIG touch minimum, same as the keypad/recall rows):
+   the one control whose whole job is "a stray palm must not end a match". */
+.arena-quit__yes, .arena-quit__no { min-height: 44px; padding: 6px 12px; font-size: var(--cc-fs-xs); }
 
 /* Room-code badge — out-of-flow (absolute) so it never becomes an implicit
    grid item of .arena-shell; pinned to the shell's top-left corner. */

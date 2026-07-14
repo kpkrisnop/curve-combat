@@ -75,11 +75,16 @@ export function FiringConsole({ makeInput, singleTeam }: { makeInput?: () => any
   // key. Close it on any turn/busy transition instead of relying on tap-away.
   useEffect(() => setRecallOpen(false), [active, busy]);
 
-  // Enable only the field this console types into. No .focus() here: nothing
-  // opens an OS keyboard any more (inputmode="none"), so a focus call buys
-  // nothing and re-introduces the caret/scroll fights of the reverted 90b2d52.
+  // Enable only the field this console types into, and focus it when it's live —
+  // setEnabled(false) BLURS (src/ui/MathInput.ts), so without this a desktop
+  // player would have to click the field again after every shot. Online is the
+  // one that needs it: NetworkGame never calls ui.focus() (LocalGame does).
+  // Programmatic focus was the hazard of the reverted 90b2d52 only because it
+  // popped the OS keyboard; inputmode="none" means it can't any more.
+  // Focus by `active`, never by hudStore.turn — turn is stale in online noTurn.
   useEffect(() => {
     teams.forEach((t) => hudInputs.get(t)?.setEnabled(t === active && !busy && !waiting));
+    if (!busy && !waiting) hudInputs.get(active)?.focus();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `teams` is stable per singleTeam identity
     // ponytail: !waiting locks the field on the opponent's turn (formerly relied on CSS display:none)
   }, [active, busy, waiting, singleTeam]);
@@ -174,13 +179,16 @@ export function FiringConsole({ makeInput, singleTeam }: { makeInput?: () => any
             <RecallPopover
               history={history[active]}
               onPick={(latex) => {
+                // Same invariant as recallStep: recall never destroys unfired
+                // work. Stash the draft first, and land the arrow cursor ON the
+                // picked entry, so ↓ walks back down to the draft.
+                if (recallRef.current.team !== active || recallRef.current.idx === -1) {
+                  draftRef.current[active] = hudInputs.get(active)?.getLatex() ?? "";
+                }
                 programmaticRef.current = true;
                 hudInputs.get(active)?.setLatex(latex);
                 programmaticRef.current = false;
-                // A pick is a fresh starting point, not a position in the history
-                // walk: reset the arrow-key cursor so ↑ still steps from the top
-                // (and ↓ can't blank the field into a stale draft).
-                recallRef.current = { team: null, idx: -1 };
+                recallRef.current = { team: active, idx: history[active].indexOf(latex) };
                 setLive((l) => ({ ...l, [active]: latex }));
                 setRecallOpen(false);
               }}

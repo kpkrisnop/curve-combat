@@ -168,6 +168,31 @@ describe("FiringConsole", () => {
     expect(inputs[0].insertText).toHaveBeenCalledWith("sin(");
   });
 
+  it("log inserts a call, not a base subscript", () => {
+    // Regression: `log_` dropped the caret into the BASE subscript, so typing
+    // (x) produced \log_{(x)} — log base (x), with no argument.
+    act(() => hudController.setTurn("red"));
+    render(<FiringConsole makeInput={makeInput} />);
+    fireEvent.click(screen.getByRole("button", { name: "log" }));
+    expect(inputs[0].insertText).toHaveBeenCalledWith("log(");
+  });
+
+  it("focuses the active team's field when it becomes their turn, but never a waiting one", () => {
+    // Online has no other focus caller (NetworkGame never calls ui.focus()), so
+    // without this the desktop player must click the field every single turn.
+    act(() => hudController.setTurn("blue"));
+    render(<FiringConsole makeInput={makeInput} singleTeam="red" />);
+    expect(inputs[0].focus).not.toHaveBeenCalled(); // waiting on blue
+    act(() => hudController.setTurn("red"));
+    expect(inputs[0].focus).toHaveBeenCalled();
+
+    inputs[0].focus.mockClear();
+    act(() => hudController.setBusy("red", true)); // shot in flight — field blurred
+    expect(inputs[0].focus).not.toHaveBeenCalled();
+    act(() => hudController.setBusy("red", false)); // my turn again -> refocus
+    expect(inputs[0].focus).toHaveBeenCalled();
+  });
+
   it("routes backspace as a keystroke, not as text", () => {
     act(() => hudController.setTurn("red"));
     render(<FiringConsole makeInput={makeInput} />);
@@ -276,6 +301,22 @@ describe("FiringConsole", () => {
     act(() => hudController.setTurn("blue"));
     act(() => inputs[1].fireUpOutOf());
     expect(inputs[1].setLatex).toHaveBeenLastCalledWith("blueshot");
+  });
+
+  it("picking from the recall popover stashes the draft, so ↓ walks back to it", () => {
+    // Regression: the popover path used to overwrite the field without saving
+    // the draft — a peek at Recall destroyed unfired work, unrecoverably.
+    act(() => hudController.setTurn("red"));
+    render(<FiringConsole makeInput={makeInput} />);
+    act(() => hudController.pushHistory("red", "redshot"));
+    act(() => inputs[0].typeLatex("my draft"));
+
+    fireEvent.click(screen.getByRole("button", { name: "Recall" }));
+    fireEvent.click(screen.getByRole("option", { name: /redshot/ }));
+    expect(inputs[0].setLatex).toHaveBeenLastCalledWith("redshot");
+
+    act(() => inputs[0].fireDownOutOf()); // back down to the draft
+    expect(inputs[0].setLatex).toHaveBeenLastCalledWith("my draft");
   });
 
   it("closes the recall popover on a turn change so it can't reappear over the wrong team", () => {
