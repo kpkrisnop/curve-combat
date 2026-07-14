@@ -7,7 +7,7 @@
 ADR 0003 (arena-as-waiting-room). Extends `2026-07-01-arena-settings-panel-design.md`
 (map-size semantics) and revises its render model (see §4).
 Source of truth for layout: throwaway prototype
-`scratchpad/graphwar-wireframes.html` (delete on integration).
+`scratchpad/curvecombat-wireframes.html` (delete on integration).
 
 ---
 

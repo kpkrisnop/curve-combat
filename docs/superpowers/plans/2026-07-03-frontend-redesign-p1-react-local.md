@@ -15,8 +15,8 @@
 - Design tokens use the existing `--gw-*` prefix in `src/design/` (foundation.css already exists — extend, don't fork the naming).
 - Visual direction (KP): pitch black, space-time, math, animated; black-hole spacetime fabric on landing; `--gw-red: #ff4444` / `--gw-blue: #4488ff` stay the accent identities.
 - Arena parameters show **no numeric readouts** (ADR-0003). Seed row + Reroll are shown in the **local** flow only.
-- Tutorial localStorage key stays `graphwar.tutorialDone`. WS URL env stays `VITE_WS_URL`.
-- Target ≥1024px landscape; below that a phone-gate overlay ("Graph War needs a bigger screen") covers the app.
+- Tutorial localStorage key stays `curvecombat.tutorialDone`. WS URL env stays `VITE_WS_URL`.
+- Target ≥1024px landscape; below that a phone-gate overlay ("CurveCombat needs a bigger screen") covers the app.
 - `src/sim`, `src/math`, `src/graph`, `src/net` (except one type-only retype in NetworkGame), `src/game/GameRenderer.ts`, `matchState.ts`, `matchLogic.ts`, `resolveFire.ts`, `hpLogic.ts`, `turnQueue.ts`, `configRouter.ts`, `arenaDefaults.ts` are **not** rewritten.
 - Component tests declare `// @vitest-environment jsdom` at the top of the file (the global vitest env stays `node` for sim/server tests).
 - React components never instantiate Pixi in tests — `GameRenderer` is always injected or mocked.
@@ -1518,7 +1518,7 @@ function fakeUi(): GameUiPort & { fire?: (p: "red" | "blue", l: string) => void 
 describe("LocalGame", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    localStorage.setItem("graphwar.tutorialDone", "1"); // skip tutorial in tests
+    localStorage.setItem("curvecombat.tutorialDone", "1"); // skip tutorial in tests
   });
   afterEach(() => vi.useRealTimers());
 
@@ -1633,7 +1633,7 @@ export class LocalGame {
     this.renderer.setNoTurnMode(this.config.noTurn);
     if (this.config.noTurn) this.ui.setNoTurnMode(true);
     this.initRoundHud();
-    if (localStorage.getItem("graphwar.tutorialDone") !== "1") this.runTutorial();
+    if (localStorage.getItem("curvecombat.tutorialDone") !== "1") this.runTutorial();
     else this.ui.focus();
   }
 
@@ -1782,7 +1782,7 @@ export class LocalGame {
 
   private runTutorial(): void {
     const steps = [
-      "Welcome to Graph War! You are the RED dot on the left. BLUE is on the right.",
+      "Welcome to CurveCombat! You are the RED dot on the left. BLUE is on the right.",
       "Type a mathematical function of x (like: 0, x, sin(x)) into the RED input below. Your shot will travel along that curve.",
       "Press Enter or the Fire button to shoot. Try to hit BLUE!",
     ];
@@ -1793,7 +1793,7 @@ export class LocalGame {
     };
     const done = (): void => {
       this.ui.hideTutorial();
-      localStorage.setItem("graphwar.tutorialDone", "1");
+      localStorage.setItem("curvecombat.tutorialDone", "1");
       this.ui.focus();
     };
     show();
@@ -2307,7 +2307,7 @@ npm run dev
 ```
 
 **Test A — Landing:**
-- [ ] `http://localhost:5173` shows pitch-black landing, animated spacetime background moving, glowing GRAPH WAR title, Play Locally / Play Online buttons
+- [ ] `http://localhost:5173` shows pitch-black landing, animated spacetime background moving, glowing CURVECOMBAT title, Play Locally / Play Online buttons
 - [ ] Screenshot
 
 **Test B — Local config = real arena:**

@@ -264,7 +264,7 @@ git commit -m "fix(server): remove lobby players immediately on disconnect, tran
 - Test: `src/app/screens/OnlineFlow.test.tsx` (nickname mock at lines ~48-50; add one test)
 
 **Interfaces:**
-- Consumes: existing `setNickname(n: string): void` from `src/app/net/nickname.ts` (writes `localStorage["graphwar.nickname"]`, trimmed to 12 chars).
+- Consumes: existing `setNickname(n: string): void` from `src/app/net/nickname.ts` (writes `localStorage["curvecombat.nickname"]`, trimmed to 12 chars).
 - Produces: (behavior only) — typing in the footer Name input immediately calls `setNickname(name)`; the debounced `sendSetName` network dispatch is unchanged.
 
 - [ ] **Step 1: Extend the nickname mock and write the failing test**

@@ -14,7 +14,7 @@
 - All existing tests (`npm test`) must stay green after every task.
 - Do not touch `src/sim/` files — those are owned by Group 1.
 - Do not add the Lobby, HP bars, or No-Turn logic — those are Groups 3–5.
-- Tutorial runs once only, gated by `localStorage.getItem('graphwar.tutorialDone')`.
+- Tutorial runs once only, gated by `localStorage.getItem('curvecombat.tutorialDone')`.
 - `MatchConfig.rounds` must be `3 | 5` (union type, not `number`).
 - Loser of the previous round shoots first next round — this is a required mechanic.
 
@@ -603,7 +603,7 @@ After the existing `ui.onReset(start);` line, add the tutorial boot:
 
 ```ts
 function bootWithTutorial() {
-  if (localStorage.getItem("graphwar.tutorialDone")) {
+  if (localStorage.getItem("curvecombat.tutorialDone")) {
     start();
     return;
   }
@@ -612,7 +612,7 @@ function bootWithTutorial() {
   start(); // set up the field so it's visible behind the tutorial
 
   const steps = [
-    "Welcome to Graph War! You are the RED dot on the left. BLUE is on the right.",
+    "Welcome to CurveCombat! You are the RED dot on the left. BLUE is on the right.",
     "Type a mathematical function of x (like: 0, x, sin(x)) into the RED input below. Your shot will travel along that curve.",
     "Press Enter or the Fire button to shoot. Try to hit BLUE!",
   ];
@@ -632,7 +632,7 @@ function bootWithTutorial() {
 
   function finishTutorial() {
     ui.hideTutorial();
-    localStorage.setItem("graphwar.tutorialDone", "1");
+    localStorage.setItem("curvecombat.tutorialDone", "1");
     ui.focus();
   }
 
@@ -700,7 +700,7 @@ Open `http://localhost:5173`.
 
 **Test D — Tutorial skip:**
 - Clear localStorage, reload. Tutorial appears. Click "Skip tutorial".
-- Tutorial disappears, game starts. `graphwar.tutorialDone` is set.
+- Tutorial disappears, game starts. `curvecombat.tutorialDone` is set.
 
 - [ ] **Step 11: Commit**
 

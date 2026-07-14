@@ -1,5 +1,5 @@
 ---
-name: Graph War
+name: CurveCombat
 description: Luminous HUD instrumentation laid around an opaque pitch-black spacetime arena.
 colors:
   pitch-black: "#000000"
@@ -104,13 +104,13 @@ components:
     typography: "{typography.mono-annotation}"
 ---
 
-# Design System: Graph War
+# Design System: CurveCombat
 
 ## 1. Overview
 
 **Creative North Star: "The Instrument Around the Arena"**
 
-Graph War is an opaque Pixi arena on pitch black, and every piece of UI is luminous HUD instrumentation laid *around* that arena — never on it. That single move governs the whole app: the landing, the dense config panel, and the in-match HUD are all the same material — precise, technical, faintly dangerous chrome that frames the play surface and gets out of its way. On the surface it reads in-world and cosmic; underneath it holds Linear/Vercel-grade precision in spacing, alignment, and micro-interaction. The landing's one-shot **Ignition Sequence** (title blurs into focus, tagline and actions rise, corner chrome fades in last) is the flagship expression of this instrument voice, not a separate language.
+CurveCombat is an opaque Pixi arena on pitch black, and every piece of UI is luminous HUD instrumentation laid *around* that arena — never on it. That single move governs the whole app: the landing, the dense config panel, and the in-match HUD are all the same material — precise, technical, faintly dangerous chrome that frames the play surface and gets out of its way. On the surface it reads in-world and cosmic; underneath it holds Linear/Vercel-grade precision in spacing, alignment, and micro-interaction. The landing's one-shot **Ignition Sequence** (title blurs into focus, tagline and actions rise, corner chrome fades in last) is the flagship expression of this instrument voice, not a separate language.
 
 The palette is mostly absence. Pitch black is the field; a cool blue-gray ink ramp carries all text and structure; and color appears only where it *means* something — the two duel/team hues (red vs. blue), one near-white **ivory accent** for "this is selected / important," and a tiny set of status colors for danger. This rejects PRODUCT.md's anti-references directly: no "gamer-RGB / neon-cyberpunk overload" (saturated hue is rationed to team identity and status, never scattered), no "generic admin dashboard" (the config panel is dense but instrument-like, not a SaaS settings form), no "cutesy edu-game" (no mascots or primary-color blocks — the math speaks for itself), and no "glassmorphism-everywhere / sterile flat gray" (blur is reserved for genuinely floating transient overlays, and the base surface is real pitch black, not frosted emptiness).
 
@@ -158,7 +158,7 @@ Near-monochrome by construction: a pitch-black field, a cool blue-gray ink ramp,
 **Character:** A geometric, extra-wide display sans for the few things that carry weight (the title, headings, button and control labels) against a tight monospace for everything instrumental — eyebrows, HUD chrome, hints, room codes, timers. The pairing reads as "hero headline over HUD readout," and the two are far enough apart on the contrast axis to never blur together.
 
 ### Hierarchy
-- **Display** (Archivo 900, `clamp(3.5rem, 8vw, 6rem)`, line-height 1, `0.06em`): the "GRAPH WAR" landing title only. Its letter-spacing settles from `0.11em` on entrance — the one place type geometry animates.
+- **Display** (Archivo 900, `clamp(3.5rem, 8vw, 6rem)`, line-height 1, `0.06em`): the "CURVECOMBAT" landing title only. Its letter-spacing settles from `0.11em` on entrance — the one place type geometry animates.
 - **Title** (Archivo 800, ~`22–32px`, `0.01em`): win banners, round status, section headings inside overlays.
 - **Label** (Archivo 600, `13–15px`, `0.02em`): buttons, config option cards, control copy.
 - **Mono Annotation** (Martian Mono 400–500, `9–14px`, `0.06–0.14em`, often uppercase): section eyebrows (`.gw-label`), landing corner chrome, hints, dividers, the room-code label.

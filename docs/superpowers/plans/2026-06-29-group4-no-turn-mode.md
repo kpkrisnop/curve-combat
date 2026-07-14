@@ -767,7 +767,7 @@ sleep 3
 - Take screenshot
 
 **Test C — Simultaneous fire (Classic + No-Turn):**
-- Skip tutorial: `localStorage.setItem("graphwar.tutorialDone", "1")` then reload
+- Skip tutorial: `localStorage.setItem("curvecombat.tutorialDone", "1")` then reload
 - Start Classic VS + No-Turn game
 - Type `0` in RED's input, click RED's Fire button
 - IMMEDIATELY type `-1` in BLUE's input and click BLUE's Fire button (before RED's shot resolves)

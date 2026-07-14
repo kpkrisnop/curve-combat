@@ -680,7 +680,7 @@ sleep 3
 - Take screenshot
 
 **Test C — HP damage mechanics:**
-- Skip tutorial: `localStorage.setItem("graphwar.tutorialDone", "1")` then reload
+- Skip tutorial: `localStorage.setItem("curvecombat.tutorialDone", "1")` then reload
 - Start HP Mode game
 - Fire a flat shot (`0` — slope ≈ 0) that hits BLUE
 - Verify: floating `-5` number appears and fades on BLUE's position

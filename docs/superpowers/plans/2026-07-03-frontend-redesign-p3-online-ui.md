@@ -15,7 +15,7 @@
 - **ADR-0002:** two teams RED/BLUE, open NvN (cap 5/team); roster UI is list-based, never two fixed slots; auto-place is server-side — the client only renders and offers "Switch team"; Start enabled when both teams ≥ 1 (server re-validates).
 - **ADR-0003:** waiting room renders the REAL round-1 terrain from `lobbyState.round1Seed` at 0.87 scale; NO numeric arena readouts; config lives in a collapsible drawer that never obscures the arena; terrain morph IS the guest's change feedback (plus a brief field flash); seed string never shown online — only the Reroll action (host); countdown is server-authoritative (`matchStarting.startAt`), uncancelable; zoom 0.87 → 1 is the same CSS transform as local.
 - Terminology: Host / Guest / Spectator in all copy ("Waiting for host to start…", "Spectating · WOLF").
-- Nickname: localStorage key `graphwar.nickname`; asked once on the online path; 1–12 chars, default "Player".
+- Nickname: localStorage key `curvecombat.nickname`; asked once on the online path; 1–12 chars, default "Player".
 - Reconnect UX: self-reconnecting → blocking overlay "Reconnecting…"; peer disconnected → non-blocking banner "NAME disconnected — waiting up to 30s" (from `peerStatus`), cleared on reconnect.
 - Spectator view: game screen with input panels replaced by read-only status, "Spectating · CODE" badge, Leave button (→ landing). No spectator lists/chat.
 - Hash routes unchanged: `#room=CODE` is the only online entry; `#join` added for the code-entry screen; `#online` for the create/join choice.
@@ -51,7 +51,7 @@ src/app/net/ReconnectOverlays.tsx   self-blocking overlay + peer banner
 
 ```ts
 // nickname.ts
-export function getNickname(): string;              // localStorage "graphwar.nickname" ?? "Player"
+export function getNickname(): string;              // localStorage "curvecombat.nickname" ?? "Player"
 export function setNickname(n: string): void;       // trimmed, sliced to 12 chars
 // routes.ts — Route union gains { screen: "online" } and { screen: "join" }
 ```

@@ -4,7 +4,7 @@
 
 **Goal:** Rebuild the pre-game and in-game arena UI (Local + Online) as one CSS grid-of-cards shell with a full-bleed grid, drawn play boundary, on-map name badges, a full-width footer, a fixed config gear, and collapse the online entry flow onto the landing page.
 
-**Architecture:** Design spec `docs/superpowers/specs/2026-07-04-arena-shell-redesign-design.md` is authoritative — read it first. Most logic already exists (§13): collision already resolves against `world.bounds`; `switchTeam`/`rerollArena` messages exist; `fitContain` derives scale. Net-new = one protocol message (`setName`), one server refactor (`relayout`), and client render/layout work. The lo-fi layout reference is `scratchpad/graphwar-wireframes.html` (delete on integration).
+**Architecture:** Design spec `docs/superpowers/specs/2026-07-04-arena-shell-redesign-design.md` is authoritative — read it first. Most logic already exists (§13): collision already resolves against `world.bounds`; `switchTeam`/`rerollArena` messages exist; `fitContain` derives scale. Net-new = one protocol message (`setName`), one server refactor (`relayout`), and client render/layout work. The lo-fi layout reference is `scratchpad/curvecombat-wireframes.html` (delete on integration).
 
 **Tech Stack:** React + TypeScript, Vite, Pixi.js (arena/graph renderers), Zustand-style stores, `ws` server (`server/`), Zod protocol schemas, Vitest + @testing-library/react.
 
@@ -206,7 +206,7 @@ it("boundary rect maps sim bounds through fitContain", () => {
 
 ## Phase C — Shell layout (grid of cards)
 
-**Reference:** port structure/CSS from `scratchpad/graphwar-wireframes.html` (`.comp`, `.gear`, grid template). Read spec §3, §5, §6.
+**Reference:** port structure/CSS from `scratchpad/curvecombat-wireframes.html` (`.comp`, `.gear`, grid template). Read spec §3, §5, §6.
 
 ### Task C1: Arena shell as CSS grid
 

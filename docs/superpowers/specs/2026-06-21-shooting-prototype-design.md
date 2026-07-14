@@ -5,7 +5,7 @@
 **Related:** [architecture-decisions.md](../../architecture-decisions.md),
 [component-design.md](../../component-design.md)
 
-> Build the first playable Graph War loop: a single soldier fires a typed math function;
+> Build the first playable CurveCombat loop: a single soldier fires a typed math function;
 > the projectile traces the resulting curve in world space, detonates on the first target it
 > touches, and the round is won when every target is cleared. Runs as an **isolated entry**
 > alongside the existing grapher so it never collides with the in-flight grapher work.

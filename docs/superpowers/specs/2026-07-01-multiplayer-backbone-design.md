@@ -11,7 +11,7 @@ Runs in **parallel** with the Arena Settings Panel session (coordination contrac
 
 ## Goal
 
-Make Graph War playable online with friends: two (later 2–10) people open a shared
+Make CurveCombat playable online with friends: two (later 2–10) people open a shared
 link on their own devices and play a shared match, with an **authoritative Node
 server** that reuses the pure match-state spine as the single source of truth.
 

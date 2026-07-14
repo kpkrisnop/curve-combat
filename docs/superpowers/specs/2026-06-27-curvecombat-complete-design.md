@@ -1,4 +1,4 @@
-# Graph War — Complete Game Design Spec
+# CurveCombat — Complete Game Design Spec
 **Date:** 2026-06-27
 **Status:** Approved by user
 
@@ -6,7 +6,7 @@
 
 ## 1. Overview
 
-Graph War is a 2-player hot-seat browser game where each player fires by
+CurveCombat is a 2-player hot-seat browser game where each player fires by
 typing a mathematical function. The projectile travels along the resulting
 curve through a world of destructible terrain (Planets). This spec covers
 everything needed to take the current prototype to a shippable, multi-mode,
@@ -108,7 +108,7 @@ a match. Shows: `RED 1 — BLUE 0 · Round 2/3`.
 
 ### 4.4 Tutorial (first run only)
 Triggered before the very first match. Stored in `localStorage` key
-`graphwar.tutorialDone`. Skip-able at any step.
+`curvecombat.tutorialDone`. Skip-able at any step.
 
 Steps (sequential overlays on the real game field):
 1. "You are the RED dot. Type a function of x to fire."
@@ -118,7 +118,7 @@ Steps (sequential overlays on the real game field):
 3. Shot plays out normally on the real field.
 4. Tutorial ends; match begins.
 
-After tutorial completes, `localStorage.setItem('graphwar.tutorialDone', '1')`.
+After tutorial completes, `localStorage.setItem('curvecombat.tutorialDone', '1')`.
 
 ---
 
@@ -191,7 +191,7 @@ Add `trailLayerBlue` (second dedicated Graphics layer) alongside existing
 2. Mode / No-Turn / rounds picker (same as local)
 3. Server generates 4-letter code (e.g. `WOLF`)
 4. Waiting screen: large room code + copyable full URL
-   (`https://graphwar.app/#game?room=WOLF`)
+   (`https://curvecombat.app/#game?room=WOLF`)
 5. Guest opens URL → auto-joins → host presses "Start"
 
 **Play Online path (guest):**

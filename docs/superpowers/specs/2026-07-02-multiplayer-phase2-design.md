@@ -156,13 +156,13 @@ Stores `fn` so the retry loop can re-authenticate after reconnecting the WS.
 
 **Token + session storage:**
 - Every `joined` message handler stores `myToken` and writes
-  `{ room, playerId: myId, token }` to `sessionStorage` under key `graphwar-session`.
-- `close()`: clears `sessionStorage["graphwar-session"]`, sets `deliberateClose`
+  `{ room, playerId: myId, token }` to `sessionStorage` under key `curvecombat-session`.
+- `close()`: clears `sessionStorage["curvecombat-session"]`, sets `deliberateClose`
   on the client, removes the `beforeunload` listener, closes the WS.
 
 **`start()` init path:**
 1. Register `beforeunload → this.close()`.
-2. Check `sessionStorage["graphwar-session"]`:
+2. Check `sessionStorage["curvecombat-session"]`:
    - If present and `session.room === currentRoom`: call `client.connect()` then
      `client.send({ type: "reconnect", room, playerId, token })`.
      The server responds with `joined` (fresh token) + `matchState`; the existing

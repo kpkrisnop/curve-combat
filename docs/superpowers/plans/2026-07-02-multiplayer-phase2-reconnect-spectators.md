@@ -573,7 +573,7 @@ export function createServer(port: number): { close: () => Promise<void> } {
 if (process.env.VITEST === undefined) {
   const port = Number(process.env.PORT ?? 3001);
   createServer(port);
-  console.log(`Graph War server on ws://localhost:${port}`);
+  console.log(`CurveCombat server on ws://localhost:${port}`);
 }
 ```
 
@@ -1027,7 +1027,7 @@ import type { GameRenderer } from "../game/GameRenderer";
 import type { GameUI } from "../game/GameUI";
 import type { MatchState, Team } from "../game/matchState";
 
-const SESSION_KEY = "graphwar-session";
+const SESSION_KEY = "curvecombat-session";
 
 export class NetworkGame {
   private myTeam: Team | null = null;

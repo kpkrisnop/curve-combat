@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Extract Graph War's match logic out of `main.ts`'s mutable module-globals into a pure, team-generic `MatchState` + a `resolveFire` reducer, then rewire local hot-seat play to drive through it with zero behavior change.
+**Goal:** Extract CurveCombat's match logic out of `main.ts`'s mutable module-globals into a pure, team-generic `MatchState` + a `resolveFire` reducer, then rewire local hot-seat play to drive through it with zero behavior change.
 
 **Architecture:** A single pure data type (`MatchState`) describes a whole match: players grouped into two teams, planets, turn order, scores, phase. One pure reducer (`resolveFire(state, intent) → { next, shot }`) wraps the existing `sim/engine.fire` and computes the entire next state (crater carving, HP/elimination, round/match end, turn advance). `main.ts` becomes thin orchestration: build intent → `resolveFire` → animate the returned shot → commit the returned state → re-render. The reducer and its helpers stay strictly DOM-free so they later import into the authoritative Node server (Architecture B) unchanged.
 

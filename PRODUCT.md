@@ -20,7 +20,7 @@ nobody is grinding ranked. The math is the fun, not a barrier.
 
 ## Product Purpose
 
-Graph War is a browser game where you aim by *writing a curve*. Success is a match that
+CurveCombat is a browser game where you aim by *writing a curve*. Success is a match that
 starts in seconds, stays legible in the heat of a turn, and feels like a shipped, high-craft
 product rather than a hobby prototype. The design target is **premium and polished** — a
 refined pitch-black theme with precise spacing and confident restraint around an opaque Pixi arena.

@@ -6,7 +6,7 @@ Shaped via `/impeccable shape landing screen` (2026-07-07). Confirmed by KP. Han
 
 ## 1. Feature Summary
 
-The front door of Graph War: a one-fold, straight-to-play landing over the animated
+The front door of CurveCombat: a one-fold, straight-to-play landing over the animated
 spacetime canvas. It must establish "cosmic, sleek, electric" in the first second, then
 get friends into a match with zero friction — Play Locally in one click, an online room
 in three.
@@ -35,7 +35,7 @@ Everything else is atmosphere in service of that choice.
 precise*.
 
 - Display + UI: **Archivo (variable, width axis)** — title wide/expanded at black weight,
-  ALL-CAPS `GRAPH WAR`, letter-spacing slightly open; regular weights for landing UI text.
+  ALL-CAPS `CURVECOMBAT`, letter-spacing slightly open; regular weights for landing UI text.
   One family, committed weight/width contrast.
 - **One technical mono** (e.g. Martian Mono) *only* where content is literally code/math:
   room codes, the tagline's equation fragment, corner readouts. Register-earned.
@@ -85,7 +85,7 @@ closes the panel. Feedback instant — no spinners on this screen.
 
 ## 8. Content Requirements
 
-- Title: `GRAPH WAR` (red/blue split retained)
+- Title: `CURVECOMBAT` (red/blue split retained)
 - Tagline: mono equation-flavored one-liner (final copy at build)
 - Buttons: `Play Locally` (drop the `▶` glyph), `Play Online`, `Create Room`
 - Code input: 4-slot placeholder + accessible label ("Room code")

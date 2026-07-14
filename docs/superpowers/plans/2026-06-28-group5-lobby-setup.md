@@ -746,7 +746,7 @@ function noteFor(kind: string): string {
 // ── Tutorial ──────────────────────────────────────────────────────────────────
 
 function bootWithTutorial() {
-  if (localStorage.getItem("graphwar.tutorialDone")) {
+  if (localStorage.getItem("curvecombat.tutorialDone")) {
     start();
     return;
   }
@@ -754,7 +754,7 @@ function bootWithTutorial() {
   start();
 
   const steps = [
-    "Welcome to Graph War! You are the RED dot on the left. BLUE is on the right.",
+    "Welcome to CurveCombat! You are the RED dot on the left. BLUE is on the right.",
     "Type a mathematical function of x (like: 0, x, sin(x)) into the RED input below. Your shot will travel along that curve.",
     "Press Enter or the Fire button to shoot. Try to hit BLUE!",
   ];
@@ -768,7 +768,7 @@ function bootWithTutorial() {
 
   function finishTutorial() {
     ui!.hideTutorial();
-    localStorage.setItem("graphwar.tutorialDone", "1");
+    localStorage.setItem("curvecombat.tutorialDone", "1");
     ui!.focus();
   }
 
@@ -874,7 +874,7 @@ Navigate to `http://localhost:5173`.
 
 **Test A — Lobby renders correctly:**
 - [ ] Lobby screen visible on load, game canvas NOT visible (no game elements)
-- [ ] Title shows "GRAPH WAR" with RED/BLUE colour split
+- [ ] Title shows "CURVECOMBAT" with RED/BLUE colour split
 - [ ] "Classic VS" mode button is highlighted (active state), "HP Mode" is greyed/disabled with "Soon" badge
 - [ ] "Best of 3" rounds button is active, "Best of 5" is not
 - [ ] No-Turn row is present but dimmed and checkbox is disabled

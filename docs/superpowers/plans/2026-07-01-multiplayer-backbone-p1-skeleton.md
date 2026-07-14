@@ -683,7 +683,7 @@ export function createServer(port: number): { close: () => Promise<void> } {
 if (process.env.VITEST === undefined) {
   const port = Number(process.env.PORT ?? 3001);
   createServer(port);
-  console.log(`Graph War server on ws://localhost:${port}`);
+  console.log(`CurveCombat server on ws://localhost:${port}`);
 }
 ```
 
