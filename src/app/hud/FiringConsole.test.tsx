@@ -10,6 +10,9 @@ function makeTrackedInput() {
   let editCb: (() => void) | null = null;
   let upCb: (() => void) | null = null;
   let downCb: (() => void) | null = null;
+  // Real reformat runs MathQuill's typedText (no MathQuill in jsdom); tests inject
+  // the structured "after" so the guard + revert wiring can still be exercised.
+  let reformatResult: string | null = null;
   const el = document.createElement("span");
   return {
     el,
@@ -20,6 +23,13 @@ function makeTrackedInput() {
     reflow: vi.fn(),
     insertText: vi.fn((chars: string) => { latex += chars; editCb?.(); }),
     keystroke: vi.fn(),
+    reformat: vi.fn(() => {
+      const before = latex;
+      const after = reformatResult ?? latex;
+      latex = after; editCb?.();
+      return { before, after };
+    }),
+    setReformatResult: (v: string) => { reformatResult = v; },
     onEnter: (cb: () => void) => { enterCb = cb; },
     onEdit: (cb: () => void) => { editCb = cb; },
     onUpOutOf: (cb: () => void) => { upCb = cb; },
@@ -151,6 +161,36 @@ describe("FiringConsole", () => {
     expect((fire as HTMLButtonElement).disabled).toBe(false);
     fireEvent.click(fire);
     expect(cb).toHaveBeenCalledWith("red", "\\sin(x)");
+  });
+
+  it("Format keeps the structured LaTeX when it fires the identical shot", () => {
+    act(() => hudController.setTurn("red"));
+    render(<FiringConsole makeInput={makeInput} />);
+    const flat = "\\sin(100x)/(1+\\exp(-10*(x+-8)))";
+    const structured =
+      "\\frac{\\sin\\left(100x\\right)}{1+\\exp\\left(-10\\cdot\\left(x+-8\\right)\\right)}";
+    act(() => inputs[0].typeLatex(flat));
+    inputs[0].setReformatResult(structured);
+    act(() => fireEvent.click(screen.getByRole("button", { name: "Format" })));
+    expect(inputs[0].getLatex()).toBe(structured);
+  });
+
+  it("Format reverts to the original when restructuring would change the shot", () => {
+    act(() => hudController.setTurn("red"));
+    render(<FiringConsole makeInput={makeInput} />);
+    // typedText would mis-group x/2-1 as x/(2-1); the guard must reject it.
+    act(() => inputs[0].typeLatex("x/2-1"));
+    inputs[0].setReformatResult("\\frac{x}{2-1}");
+    act(() => fireEvent.click(screen.getByRole("button", { name: "Format" })));
+    expect(inputs[0].getLatex()).toBe("x/2-1");
+  });
+
+  it("flags 'needs formatting' in the status line and lights up Format on raw ASCII", () => {
+    act(() => hudController.setTurn("red"));
+    render(<FiringConsole makeInput={makeInput} />);
+    act(() => inputs[0].typeLatex("2*x"));
+    expect(statusEl().textContent).toMatch(/Format/);
+    expect(screen.getByRole("button", { name: "Format" }).className).toContain("is-suggested");
   });
 
   it("routes a digit key into the ACTIVE team's field only", () => {

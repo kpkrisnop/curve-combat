@@ -233,6 +233,13 @@
 .keypad__key:active:not(:disabled) { background: oklch(1 0 0 / 0.14); }
 .keypad__key:disabled { opacity: 0.4; cursor: default; }
 .keypad__key.is-util { background: oklch(1 0 0 / 0.02); color: var(--cc-text-muted); font-size: var(--cc-fs-sm); }
+/* Format: a persistent action, not a nav glyph — reads in the text colour. When
+   the input still looks like pasted ASCII, it lights up to point players at it. */
+.keypad__key.is-format { color: var(--cc-text); }
+.keypad__key.is-format.is-suggested {
+  color: var(--cc-accent); border-color: var(--cc-accent);
+  background: var(--cc-accent-tint);
+}
 /* The variable — the most-typed symbol in the game, and NOT a multiply sign.
    It is set in the same italic serif MathQuill renders variables in, so the key
    looks like the `x` it produces. That typographic difference is what separates

@@ -44,6 +44,9 @@ export interface HudInputHandle {
   insertText(chars: string): void;
   /** Send a non-text key: "Left", "Right", "Backspace" (keypad nav keys). */
   keystroke(chars: string): void;
+  /** Restructure flat/pasted ASCII into proper LaTeX; returns before/after so the
+   *  caller can guard the change against the compiled curve (Format button). */
+  reformat(): { before: string; after: string };
 }
 
 export class HudInputRegistry {

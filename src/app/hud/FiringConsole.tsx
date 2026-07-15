@@ -21,6 +21,8 @@ import { TimerBadge } from "./TimerBadge";
 import { Keypad, NAV_KEYS } from "./Keypad";
 import { RecallPopover } from "./RecallPopover";
 import type { KeyAction } from "./keypadKeys";
+import { needsFormatting } from "../../ui/latexFormat";
+import { curvesEquivalent } from "../../math/equivalent";
 
 // Shown only while a shot is actually in flight — flavour that's earned by an
 // event, never idle decoration. (A permanently-jokey status line would train
@@ -134,8 +136,27 @@ export function FiringConsole({ makeInput, singleTeam }: { makeInput?: () => any
     setLive((l) => ({ ...l, [active]: hudInputs.get(active)?.getLatex() ?? "" }));
   };
 
+  // Format: restructure flat/pasted ASCII into proper LaTeX via MathQuill's own
+  // typing, but only keep it when it fires the identical shot — so Format can
+  // never silently change the math. If typing mis-grouped it (bare `a/b-c`,
+  // `sqrt(...)`), or there was nothing to do, we revert to the original text,
+  // which already fires. Always-on: pressing it on clean input is a no-op.
+  const onFormat = () => {
+    if (waiting || busy) return;
+    const input = hudInputs.get(active);
+    if (!input) return;
+    programmaticRef.current = true;
+    const { before, after } = input.reformat();
+    if (after !== before && !curvesEquivalent(before, after)) input.setLatex(before);
+    programmaticRef.current = false;
+    recallRef.current = { team: null, idx: -1 };
+    setLive((l) => ({ ...l, [active]: hudInputs.get(active)?.getLatex() ?? "" }));
+    input.focus();
+  };
+
   const canFire = !waiting && !busy && live[active].trim() !== "";
   const label = displayed.toUpperCase();
+  const showFormatHint = !waiting && !busy && needsFormatting(live[active]);
 
   // ── The status line ──────────────────────────────────────────────────────
   // One channel, in priority order: whatever the game last said (an error, a
@@ -152,7 +173,9 @@ export function FiringConsole({ makeInput, singleTeam }: { makeInput?: () => any
     ? [status, statusTone]
     : busy
       ? [flavour, "flavour" as const]
-      : [tip, "tip" as const];
+      : showFormatHint
+        ? ["Looks like pasted text — tap Format to tidy it into an equation", "tip" as const]
+        : [tip, "tip" as const];
 
   return (
     <div className="hud-console">
@@ -238,6 +261,7 @@ export function FiringConsole({ makeInput, singleTeam }: { makeInput?: () => any
               type="button"
               className="keypad__key is-util"
               disabled={waiting || busy}
+              aria-label={k.ariaLabel}
               // See Keypad's Key: a button tap would steal focus from MathQuill's
               // hidden textarea and drop the caret.
               onPointerDown={(e) => e.preventDefault()}
@@ -246,6 +270,17 @@ export function FiringConsole({ makeInput, singleTeam }: { makeInput?: () => any
               {k.label}
             </button>
           ))}
+          {/* Always-on: restructures pasted ASCII into a real equation; no-op on
+              clean input. Highlighted while the input still looks like raw text. */}
+          <button
+            type="button"
+            className={`keypad__key is-util is-format ${showFormatHint ? "is-suggested" : ""}`}
+            disabled={waiting || busy}
+            onPointerDown={(e) => e.preventDefault()}
+            onClick={onFormat}
+          >
+            Format
+          </button>
         </div>
 
         <button

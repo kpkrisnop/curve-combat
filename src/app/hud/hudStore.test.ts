@@ -4,7 +4,7 @@ import { HudController, HudInputRegistry, initialHudState, type HudState } from 
 import type { Store } from "../store";
 
 function fakeInput(latex = "x") {
-  return { getLatex: () => latex, setLatex: vi.fn(), focus: vi.fn(), setEnabled: vi.fn(), insertText: vi.fn(), keystroke: vi.fn() };
+  return { getLatex: () => latex, setLatex: vi.fn(), focus: vi.fn(), setEnabled: vi.fn(), insertText: vi.fn(), keystroke: vi.fn(), reformat: () => ({ before: latex, after: latex }) };
 }
 
 describe("HudController", () => {

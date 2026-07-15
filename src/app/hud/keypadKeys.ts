@@ -10,8 +10,10 @@ export type KeyAction =
   | { kind: "action"; name: "clear" | "recall" };
 
 export interface KeyDef {
-  /** What the player sees. Also the accessible name. */
+  /** What the player sees. Also the accessible name, unless `ariaLabel` overrides. */
   label: string;
+  /** Screen-reader name when the visible label is a bare glyph (e.g. "⌫"). */
+  ariaLabel?: string;
   action: KeyAction;
   className?: string;
 }
@@ -40,7 +42,9 @@ export const OP_KEYS: KeyDef[] = [
 export const NAV_KEYS: KeyDef[] = [
   { label: "←", action: { kind: "keystroke", keys: "Left" } },
   { label: "→", action: { kind: "keystroke", keys: "Right" } },
-  { label: "Backspace", action: { kind: "keystroke", keys: "Backspace" } },
+  // ⌫ (not "Backspace"): the glyph frees room in the nav row for the Format
+  // button. aria-label keeps it announced as "Backspace" for screen readers.
+  { label: "⌫", ariaLabel: "Backspace", action: { kind: "keystroke", keys: "Backspace" } },
   { label: "Clear", action: { kind: "action", name: "clear" } },
   { label: "Recall", action: { kind: "action", name: "recall" } },
 ];

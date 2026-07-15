@@ -11,6 +11,7 @@ interface MathInputLike {
   reflow(): void;
   insertText(chars: string): void;
   keystroke(chars: string): void;
+  reformat(): { before: string; after: string };
   onEnter(cb: () => void): void;
   onEdit(cb: () => void): void;
   onUpOutOf(cb: () => void): void;

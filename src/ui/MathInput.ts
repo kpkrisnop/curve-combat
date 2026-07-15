@@ -7,6 +7,7 @@
 import "./jquery-global";
 import "@edtr-io/mathquill/build/mathquill.js";
 import "@edtr-io/mathquill/build/mathquill.css";
+import { latexToTyped } from "./latexFormat";
 
 const MQ = window.MathQuill.getInterface(2);
 
@@ -143,6 +144,23 @@ export class MathInput {
     this.mq.keystroke(keys);
     this.mq.focus();
     this.syncPlaceholder();
+  }
+
+  /**
+   * Re-run the current input through MathQuill's own typing so flat pasted ASCII
+   * (`sin(100x)/(1+exp(...))`) becomes structured LaTeX (real fractions,
+   * superscripts, upright function names) — the same result the player would get
+   * typing it key-by-key on the keypad. Returns { before, after } so the caller
+   * can guard the change against the compiled curve and revert with setLatex if
+   * typing mis-grouped the math (bare `a/b-c`, `sqrt(...)`). Callers wrap this in
+   * their programmatic-edit flag: typedText fires the edit handler.
+   */
+  reformat(): { before: string; after: string } {
+    const before = this.mq.latex();
+    this.mq.latex("");
+    this.mq.typedText(latexToTyped(before));
+    this.syncPlaceholder();
+    return { before, after: this.mq.latex() };
   }
 
   /** Recompute layout — call once after el is attached to the DOM. */
