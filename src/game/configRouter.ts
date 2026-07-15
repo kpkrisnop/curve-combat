@@ -66,7 +66,7 @@ export function parseConfigFromHash(hash: string): MatchConfig {
     gapMax: clampNum(p.get("gmx"), 0, 6, DEFAULT_SCATTER.gapMax),
     spawnClearance: clampNum(p.get("sc"), 0, 5, DEFAULT_SCATTER.spawnClearance),
     fieldMargin: clampNum(p.get("fm"), 0, 3, DEFAULT_SCATTER.fieldMargin),
-    maxPlanets: Math.round(clampNum(p.get("mp"), 1, 24, DEFAULT_SCATTER.maxPlanets)),
+    maxPlanets: Math.round(clampNum(p.get("mp"), 0, 24, DEFAULT_SCATTER.maxPlanets)),
     spawnEdgeGap: clampNum(p.get("eg"), 0, 6, DEFAULT_SCATTER.spawnEdgeGap),
     spawnBandX: clampNum(p.get("bx"), 0, 8, DEFAULT_SCATTER.spawnBandX),
     spawnYMargin: clampNum(p.get("ym"), 0, 5, DEFAULT_SCATTER.spawnYMargin),

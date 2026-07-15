@@ -73,7 +73,7 @@ describe("parseConfigFromHash", () => {
     const cfg = parseConfigFromHash(hash);
     expect(cfg.map.width).toBeLessThanOrEqual(60);
     expect(cfg.map.height).toBe(12);
-    expect(cfg.scatter.maxPlanets).toBeGreaterThanOrEqual(1);
+    expect(cfg.scatter.maxPlanets).toBe(0); // planet count floor is 0 (terrain-free arena)
     expect(cfg.teamSize).toBe(5);
   });
 

@@ -191,6 +191,10 @@ describe("generatePlanets", () => {
     const ps = generatePlanets(123, bounds, spawns, { ...DEFAULT_SCATTER, maxPlanets: 4 });
     expect(ps.length).toBeLessThanOrEqual(4);
   });
+  it("yields a terrain-free arena when maxPlanets is 0", () => {
+    const ps = generatePlanets(123, bounds, spawns, { ...DEFAULT_SCATTER, maxPlanets: 0 });
+    expect(ps).toEqual([]);
+  });
   it("assigns unique ids and empty craters", () => {
     const ps = generatePlanets(123, bounds, spawns, DEFAULT_SCATTER);
     expect(new Set(ps.map((p) => p.id)).size).toBe(ps.length);

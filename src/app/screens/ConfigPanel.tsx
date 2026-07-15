@@ -26,7 +26,7 @@ const ARENA_CLUSTERS: [string, ArenaSpec[]][] = [
     ["scatter.rMax", "planet size max", 0.3, 4, 0.1],
     ["scatter.gapMin", "gap min", 0, 6, 0.1],
     ["scatter.gapMax", "gap max", 0, 6, 0.1],
-    ["scatter.maxPlanets", "planet count", 1, 24, 1],
+    ["scatter.maxPlanets", "planet count", 0, 24, 1],
   ]],
   ["Spawns", [
     ["scatter.spawnClearance", "spawn clearance", 0, 5, 0.1],

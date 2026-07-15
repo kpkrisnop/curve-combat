@@ -86,6 +86,18 @@ describe("protocol v2 (NvN + arena + countdown)", () => {
     if (parsed.type === "configureRoom") expect(parsed.map?.width).toBe(24);
   });
 
+  it("configureRoom accepts a terrain-free arena (maxPlanets: 0)", () => {
+    const msg = {
+      type: "configureRoom", mode: "classic", rounds: 3, noTurn: false, turnSeconds: 60,
+      scatter: {
+        rMin: 0.8, rMax: 2, gapMin: 0.5, gapMax: 2, spawnClearance: 2, fieldMargin: 0.5, maxPlanets: 0,
+        spawnEdgeGap: 1, spawnBandX: 3, spawnYMargin: 1.5, spawnSeparation: 2, spawnMirror: false,
+      },
+    };
+    const parsed = parseClientMessage(msg);
+    if (parsed.type === "configureRoom") expect(parsed.scatter?.maxPlanets).toBe(0);
+  });
+
   it("parses matchStarting and lobbyState with round1Seed", () => {
     expect(parseServerMessage({ type: "matchStarting", startAt: 123 }).type).toBe("matchStarting");
     const lobby = parseServerMessage({
