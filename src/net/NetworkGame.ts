@@ -132,6 +132,13 @@ export class NetworkGame {
         this.client.send({ type: "join", room: this.room, name: this.name });
         return;
       }
+      // A rejected fireIntent gets no matchState back, so nothing else would
+      // clear our busy lock — the player would stay stuck in "Firing…". Release
+      // it here so they can retry the shot.
+      if (this.myBusy) {
+        this.myBusy = false;
+        if (this.myTeam) this.ui.setBusy(this.myTeam, false);
+      }
       this.ui.setStatus(m.message, "error");
     });
 

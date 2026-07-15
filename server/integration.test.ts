@@ -197,6 +197,42 @@ describe("server integration (Phase 2)", () => {
     a.close(); b.close(); s.close(); await server.close();
   });
 
+  it("a rejected fireIntent must not kill the active player's turn timer (deadlock regression)", async () => {
+    // Real-world trigger: a last-second fire (e.g. right after Recall) lands as
+    // `not-active` because the server already ticked the turn over. That reject
+    // used to cancel the turn timer without re-arming it — the countdown then
+    // froze at 0 forever and neither player could shoot. Modeled here with the
+    // non-active player firing, which the server rejects deterministically.
+    const port = 3760 + Math.floor(Math.random() * 140);
+    const server = createServer(port);
+    const a = await open(port), b = await open(port);
+    a.send(encode({ type: "join", room: "TMR", name: "Ann" })); const aJ = await next(a, "joined");
+    b.send(encode({ type: "join", room: "TMR", name: "Bo" }));  await next(b, "joined");
+    // Shortest allowed turn (15s), kept under the 30s heartbeat so the single
+    // clock advance below can't cross two ping cycles and false-terminate a socket.
+    a.send(encode({ type: "configureRoom", mode: "classic", rounds: 3, noTurn: false, turnSeconds: 15 }));
+    await next(a, "lobbyState");
+    a.send(encode({ type: "startMatch" }));
+    const started = await next(a, "matchState");
+    const activeId = (started as any).state.activePlayerId;
+    const nonActive = activeId === (aJ as any).playerId ? b : a;
+    const active = activeId === (aJ as any).playerId ? a : b;
+
+    // Non-active player fires -> rejected `not-active`. Must leave the timer alone.
+    const errP = next(nonActive, "error");
+    nonActive.send(encode({ type: "fireIntent", latex: "0" }));
+    expect((await errP as any).code).toBe("not-active");
+
+    // The active player's turn timer must still fire and auto-skip the turn.
+    // Pre-fix this matchState never arrives (dead timer) and the test times out.
+    const skipP = next(active, "matchState");
+    vi.advanceTimersByTime(16_000);
+    const skipped = await skipP;
+    expect((skipped as any).state.activePlayerId).not.toBe(activeId);
+
+    a.close(); b.close(); await server.close();
+  });
+
   it("stale close after reconnect does not arm grace or destroy room", async () => {
     const port = 3700 + Math.floor(Math.random() * 150);
     const server = createServer(port);
