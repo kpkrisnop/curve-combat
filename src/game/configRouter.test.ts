@@ -3,10 +3,11 @@ import { parseConfigFromHash, configToHash } from "./configRouter";
 import type { MatchConfig } from "./matchLogic";
 import { arenaDefaults } from "./arenaDefaults";
 
-const DEFAULT: MatchConfig = { mode: "classic", rounds: 3, noTurn: false, turnSeconds: 60, role: "local", ...arenaDefaults() };
+const DEFAULT: MatchConfig = { mode: "classic", rounds: 3, noTurn: false, turnSeconds: 60, role: "local", gridMode: "full", ...arenaDefaults() };
 // sm=0: spawnMirror defaults to FALSE (flipped deliberately in cfd58cd — sides
 // roll independently unless the player asks for symmetry).
-const ARENA_HASH = "&w=20&h=12&rmn=0.5&rmx=2&gmn=0.5&gmx=2&sc=1.5&fm=1&mp=15&ts=1&eg=1&bx=3&ym=1.5&sp=2&sm=0";
+// grid=full: gridMode is cosmetic and defaults to the full grid.
+const ARENA_HASH = "&w=20&h=12&rmn=0.5&rmx=2&gmn=0.5&gmx=2&sc=1.5&fm=1&mp=15&ts=1&eg=1&bx=3&ym=1.5&sp=2&sm=0&grid=full";
 
 describe("configToHash", () => {
   it("encodes classic 3-round default config with arena fields", () => {
@@ -32,6 +33,7 @@ describe("parseConfigFromHash", () => {
       noTurn: true,
       turnSeconds: 60,
       role: "local",
+      gridMode: "full",
       map: { width: 30, height: 18 },
       scatter: {
         rMin: 1, rMax: 3, gapMin: 1, gapMax: 4, spawnClearance: 2.5, fieldMargin: 1, maxPlanets: 8,
@@ -84,6 +86,7 @@ describe("parseConfigFromHash", () => {
       noTurn: false,
       turnSeconds: 45,
       role: "local",
+      gridMode: "minimal",
       map: { width: 28, height: 16 },
       scatter: {
         rMin: 0.5, rMax: 2.5, gapMin: 0.2, gapMax: 3, spawnClearance: 1.5, fieldMargin: 0.8, maxPlanets: 10,
@@ -92,5 +95,13 @@ describe("parseConfigFromHash", () => {
       teamSize: 2,
     };
     expect(parseConfigFromHash(configToHash(original))).toEqual(original);
+  });
+
+  it("defaults gridMode to full and round-trips an explicit minimal", () => {
+    // Old links without &grid: full.
+    expect(parseConfigFromHash("#game?mode=classic&rounds=3&noTurn=false").gridMode).toBe("full");
+    // Explicit values survive the hash round-trip.
+    expect(parseConfigFromHash("#game?mode=classic&rounds=3&noTurn=false&grid=minimal").gridMode).toBe("minimal");
+    expect(parseConfigFromHash("#game?mode=classic&rounds=3&noTurn=false&grid=full").gridMode).toBe("full");
   });
 });

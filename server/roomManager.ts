@@ -241,6 +241,7 @@ export class RoomManager {
       turnSeconds: number;
       map?: MapConfig;
       scatter?: ScatterConfig;
+      gridMode?: "full" | "minimal";
     },
   ): void {
     const room = this.rooms.get(code);

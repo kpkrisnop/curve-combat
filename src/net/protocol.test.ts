@@ -86,6 +86,17 @@ describe("protocol v2 (NvN + arena + countdown)", () => {
     if (parsed.type === "configureRoom") expect(parsed.map?.width).toBe(24);
   });
 
+  it("configureRoom carries an optional gridMode", () => {
+    const msg = {
+      type: "configureRoom", mode: "classic", rounds: 3, noTurn: false, turnSeconds: 60, gridMode: "minimal",
+    };
+    const parsed = parseClientMessage(msg);
+    if (parsed.type === "configureRoom") expect(parsed.gridMode).toBe("minimal");
+    // Absent gridMode still parses (old clients).
+    const bare = parseClientMessage({ type: "configureRoom", mode: "classic", rounds: 3, noTurn: false, turnSeconds: 60 });
+    if (bare.type === "configureRoom") expect(bare.gridMode).toBeUndefined();
+  });
+
   it("configureRoom accepts a terrain-free arena (maxPlanets: 0)", () => {
     const msg = {
       type: "configureRoom", mode: "classic", rounds: 3, noTurn: false, turnSeconds: 60,

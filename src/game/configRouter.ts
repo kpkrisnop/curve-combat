@@ -7,6 +7,7 @@ const DEFAULT_CONFIG: MatchConfig = {
   noTurn: false,
   turnSeconds: 60,
   role: "local",
+  gridMode: "full",
   ...arenaDefaults(),
 };
 
@@ -28,7 +29,8 @@ export function configToHash(c: MatchConfig): string {
     `&mp=${scatter.maxPlanets}&ts=${teamSize}` +
     `&eg=${n(scatter.spawnEdgeGap)}&bx=${n(scatter.spawnBandX)}` +
     `&ym=${n(scatter.spawnYMargin)}&sp=${n(scatter.spawnSeparation)}` +
-    `&sm=${scatter.spawnMirror ? 1 : 0}`
+    `&sm=${scatter.spawnMirror ? 1 : 0}` +
+    `&grid=${c.gridMode ?? "full"}`
   );
 }
 
@@ -76,6 +78,8 @@ export function parseConfigFromHash(hash: string): MatchConfig {
   };
   const teamSize = Math.round(clampNum(p.get("ts"), 1, 5, arenaDefaults().teamSize)) as 1 | 2 | 3 | 4 | 5;
   const turnSeconds = Math.round(clampNum(p.get("tt"), 15, 120, 60) / 5) * 5; // snap to 5s grid
+  // Absent (old links) → "full"; only an explicit "minimal" opts into the sparse grid.
+  const gridMode: MatchConfig["gridMode"] = p.get("grid") === "minimal" ? "minimal" : "full";
 
-  return { mode, rounds, noTurn, turnSeconds, role: "local", map, scatter, teamSize };
+  return { mode, rounds, noTurn, turnSeconds, role: "local", gridMode, map, scatter, teamSize };
 }

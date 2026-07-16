@@ -21,6 +21,7 @@ export interface LobbySnapshot {
     turnSeconds: number;
     map?: { width: number; height: number };
     scatter?: ScatterConfig;
+    gridMode?: "full" | "minimal";
   };
   round1Seed?: number;
 }
@@ -186,6 +187,7 @@ export class NetworkGame {
     turnSeconds: number;
     map?: { width: number; height: number };
     scatter?: ScatterConfig;
+    gridMode?: "full" | "minimal";
   }): void {
     this.client.send({
       type: "configureRoom",
@@ -195,6 +197,7 @@ export class NetworkGame {
       turnSeconds: partial.turnSeconds,
       ...(partial.map ? { map: partial.map } : {}),
       ...(partial.scatter ? { scatter: partial.scatter } : {}),
+      ...(partial.gridMode ? { gridMode: partial.gridMode } : {}),
     });
   }
 
@@ -315,6 +318,7 @@ export class NetworkGame {
           mode: state.config.mode,
           activePlayerId: state.activePlayerId,
           scatter: state.config.scatter,
+          gridMode: state.config.gridMode,
         },
       );
     }

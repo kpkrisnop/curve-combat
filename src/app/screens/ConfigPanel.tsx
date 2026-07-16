@@ -7,6 +7,7 @@ import { arenaDefaults } from "../../game/arenaDefaults";
 
 export interface PanelConfig {
   mode: "classic" | "hp"; rounds: 3 | 5; noTurn: boolean; turnSeconds: number;
+  gridMode: "full" | "minimal";
   map: MapConfig; scatter: ScatterConfig;
 }
 
@@ -185,6 +186,10 @@ export function ConfigPanel({ value, onChange, seed, onReroll, readOnly, hideSee
           <Check checked={value.scatter.spawnMirror}
             onChange={(on) => onChange({ scatter: { ...value.scatter, spawnMirror: on } })}>
             Symmetrical spawns (mirror both sides)
+          </Check>
+          <Check checked={value.gridMode === "minimal"}
+            onChange={(on) => onChange({ gridMode: on ? "minimal" : "full" })}>
+            Minimal grid (axes + boundary numbers only)
           </Check>
         </div>
 

@@ -36,6 +36,7 @@ export function createServer(port: number): { close: () => Promise<void> } {
       turnSeconds: room.config.turnSeconds ?? 60,
       map: room.config.map,
       scatter: room.config.scatter,
+      gridMode: room.config.gridMode,
     },
   });
   const makeTTLExpiry = (code: string) => () => {
@@ -184,6 +185,7 @@ export function createServer(port: number): { close: () => Promise<void> } {
             turnSeconds: msg.turnSeconds,
             ...(msg.map !== undefined ? { map: msg.map } : {}),
             ...(msg.scatter !== undefined ? { scatter: msg.scatter } : {}),
+            ...(msg.gridMode !== undefined ? { gridMode: msg.gridMode } : {}),
           });
           broadcast(room.code, rosterMsg(room));
         } catch (e) {

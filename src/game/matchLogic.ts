@@ -32,6 +32,9 @@ export interface MatchConfig {
   turnSeconds?: number;
   roomCode?: string;
   role?: "local" | "online";
+  /** Cosmetic-only: "full" grid + all labels, or "minimal" (axes + boundary
+   *  labels). Never a sim input — absent means "full". */
+  gridMode?: "full" | "minimal";
   map: MapConfig;
   scatter: ScatterConfig;
   teamSize: 1 | 2 | 3 | 4 | 5;

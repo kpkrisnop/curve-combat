@@ -28,6 +28,7 @@ const configureRoom = z.object({
   turnSeconds: z.number().int().min(15).max(120),
   map: mapShape.optional(),
   scatter: scatterShape.optional(),
+  gridMode: z.enum(["full", "minimal"]).optional(),
 });
 const switchTeam = z.object({ type: z.literal("switchTeam"), team: z.enum(["red", "blue"]) });
 const rerollArena = z.object({ type: z.literal("rerollArena") });
@@ -51,6 +52,7 @@ const lobbyState = z.object({
     turnSeconds: z.number(),
     map: mapShape.optional(),
     scatter: scatterShape.optional(),
+    gridMode: z.enum(["full", "minimal"]).optional(),
   }).optional(),
 });
 const shotPlayback = z.object({

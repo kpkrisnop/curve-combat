@@ -25,6 +25,7 @@ export interface RendererPort {
       mode: MatchConfig["mode"];
       activePlayerId: string | null;
       scatter?: ScatterConfig;
+      gridMode?: MatchConfig["gridMode"];
     },
   ): void;
   setNoTurnMode(enabled: boolean): void;
@@ -101,6 +102,7 @@ export class LocalGame {
       mode: this.config.mode,
       activePlayerId: m.activePlayerId,
       scatter: this.config.scatter,
+      gridMode: this.config.gridMode,
     });
   }
 

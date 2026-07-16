@@ -46,6 +46,7 @@ const DEFAULT_PANEL_CONFIG: PanelConfig = {
   rounds: 3,
   noTurn: false,
   turnSeconds: 60,
+  gridMode: "full",
   map: { ...DEFAULT_MAP },
   scatter: { ...DEFAULT_SCATTER },
 };
@@ -92,6 +93,7 @@ function snapshotToPanel(
     rounds: incoming.rounds,
     noTurn: incoming.noTurn,
     turnSeconds: incoming.turnSeconds,
+    gridMode: incoming.gridMode ?? current.gridMode,
     map: incoming.map ?? current.map,
     scatter: incoming.scatter ?? current.scatter,
   };

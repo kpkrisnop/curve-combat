@@ -25,7 +25,7 @@ export function LocalFlow({ initial, autostart = false }: Props) {
   const [config, setConfig] = useState<PanelConfig>({
     mode: initial.mode, rounds: initial.rounds,
     noTurn: false, // local hotseat can't do simultaneous fire — one keypad, two players (never trust `initial`, which may carry a stale/shared noTurn:true)
-    turnSeconds: initial.turnSeconds ?? 60, map: initial.map, scatter: initial.scatter,
+    turnSeconds: initial.turnSeconds ?? 60, gridMode: initial.gridMode ?? "full", map: initial.map, scatter: initial.scatter,
   });
   const [seed, setSeed] = useState(newSeed);
   const gameRef = useRef<LocalGame | null>(null);

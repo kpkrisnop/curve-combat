@@ -159,7 +159,7 @@ export function OnlineFlow({ code }: Props) {
       },
       "red",
       namedPlayers,
-      { phase: "pregame", mode: cfg.mode, activePlayerId: previewActivePlayerId, scatter: cfg.scatter },
+      { phase: "pregame", mode: cfg.mode, activePlayerId: previewActivePlayerId, scatter: cfg.scatter, gridMode: cfg.gridMode },
     );
   }, []);
 
@@ -212,6 +212,7 @@ export function OnlineFlow({ code }: Props) {
         turnSeconds: cfg.turnSeconds,
         map: cfg.map,
         scatter: cfg.scatter,
+        gridMode: cfg.gridMode,
       });
     }, 250);
   }, [amHost]);

@@ -141,6 +141,9 @@ export class GameRenderer {
   private players: PlayerState[] = [];
   private badgePhase: BadgePhase = "pregame";
   private badgeMode: MatchMode = "classic";
+  // Cosmetic grid density (ADR: F5). "full" = grid hairlines + a label per line;
+  // "minimal" = axes only, with a value label where each axis meets the boundary.
+  private gridMode: "full" | "minimal" = "full";
   /** Live scatter config for the pre-game margin guides (undefined ⇒ guides stay hidden). */
   private arenaScatter: ScatterConfig | undefined;
 
@@ -229,7 +232,7 @@ export class GameRenderer {
     world: World,
     activeTurn: "red" | "blue",
     players: PlayerState[],
-    opts: { phase: BadgePhase; mode: MatchMode; activePlayerId: string | null; scatter?: ScatterConfig },
+    opts: { phase: BadgePhase; mode: MatchMode; activePlayerId: string | null; scatter?: ScatterConfig; gridMode?: "full" | "minimal" },
   ) {
     this.world = world;
     this.activeTurn = activeTurn;
@@ -238,6 +241,7 @@ export class GameRenderer {
     this.badgeMode = opts.mode;
     this.activePlayerId = opts.activePlayerId;
     this.arenaScatter = opts.scatter;
+    this.gridMode = opts.gridMode ?? "full";
     this.recomputeEffectiveBounds();
     this.trailLayerRed.clear();
     this.trailLayerBlue.clear();
@@ -299,41 +303,71 @@ export class GameRenderer {
     a.clear();
     destroyLayerChildren(this.labelLayer);
 
-    // The spacetime grid is ambient and paints the entire viewport — it is not
-    // clipped to the world/play bounds. The play boundary is drawn separately
-    // (drawBoundary()) as an explicit rect at the sim's collision bounds.
-    const step = niceStep(45 / cam.scale);
-    // Normalize the world-x span: a mirrored camera maps screen-left to a LARGER
-    // world x than screen-right, so screenToWorldX(0) > screenToWorldX(w). Taking
-    // min/max keeps the sweep non-empty either way (ADR 0008); worldToScreenX
-    // still places each line on the correct (mirrored) side.
-    const edgeA = cam.screenToWorldX(0);
-    const edgeB = cam.screenToWorldX(w);
-    const left = Math.min(edgeA, edgeB);
-    const right = Math.max(edgeA, edgeB);
-    const top = cam.screenToWorldY(0);
-    const bottom = cam.screenToWorldY(h);
-    const axisX = clamp(cam.worldToScreenX(0), 0, w);
-    const axisY = clamp(cam.worldToScreenY(0), 0, h);
+    // Grid density is cosmetic (F5): "full" paints the ambient spacetime grid
+    // (hairlines across the whole viewport, a label per line); "minimal" drops
+    // both, leaving only the two axes plus a value label where each axis meets
+    // the play boundary. The axes and the boundary rect draw either way.
+    if (this.gridMode === "full") {
+      const step = niceStep(45 / cam.scale);
+      // Normalize the world-x span: a mirrored camera maps screen-left to a LARGER
+      // world x than screen-right, so screenToWorldX(0) > screenToWorldX(w). Taking
+      // min/max keeps the sweep non-empty either way (ADR 0008); worldToScreenX
+      // still places each line on the correct (mirrored) side.
+      const edgeA = cam.screenToWorldX(0);
+      const edgeB = cam.screenToWorldX(w);
+      const left = Math.min(edgeA, edgeB);
+      const right = Math.max(edgeA, edgeB);
+      const top = cam.screenToWorldY(0);
+      const bottom = cam.screenToWorldY(h);
+      const axisX = clamp(cam.worldToScreenX(0), 0, w);
+      const axisY = clamp(cam.worldToScreenY(0), 0, h);
 
-    for (let x = Math.ceil(left / step) * step; x <= right; x += step) {
-      const sx = cam.worldToScreenX(x);
-      g.moveTo(sx, 0).lineTo(sx, h);
-      // Axis numbering reads the VIEW coordinate: mirrored, x_view = -x_world (ADR 0008).
-      if (Math.abs(x) > 1e-9) this.addLabel(fmt(cam.mirror ? -x : x), sx + 3, clamp(axisY, 2, h - 14));
+      for (let x = Math.ceil(left / step) * step; x <= right; x += step) {
+        const sx = cam.worldToScreenX(x);
+        g.moveTo(sx, 0).lineTo(sx, h);
+        // Axis numbering reads the VIEW coordinate: mirrored, x_view = -x_world (ADR 0008).
+        if (Math.abs(x) > 1e-9) this.addLabel(fmt(cam.mirror ? -x : x), sx + 3, clamp(axisY, 2, h - 14));
+      }
+      for (let y = Math.ceil(bottom / step) * step; y <= top; y += step) {
+        const sy = cam.worldToScreenY(y);
+        g.moveTo(0, sy).lineTo(w, sy);
+        if (Math.abs(y) > 1e-9) this.addLabel(fmt(y), clamp(axisX + 3, 2, w - 30), sy + 2);
+      }
+      g.stroke({ width: 1, color: COLORS.grid });
+    } else {
+      this.drawBoundaryLabels();
     }
-    for (let y = Math.ceil(bottom / step) * step; y <= top; y += step) {
-      const sy = cam.worldToScreenY(y);
-      g.moveTo(0, sy).lineTo(w, sy);
-      if (Math.abs(y) > 1e-9) this.addLabel(fmt(y), clamp(axisX + 3, 2, w - 30), sy + 2);
-    }
-    g.stroke({ width: 1, color: COLORS.grid });
 
     a.moveTo(0, cam.worldToScreenY(0)).lineTo(w, cam.worldToScreenY(0));
     a.moveTo(cam.worldToScreenX(0), 0).lineTo(cam.worldToScreenX(0), h);
     a.stroke({ width: 1.5, color: COLORS.axis });
 
     this.drawBoundary();
+  }
+
+  /**
+   * Minimal-grid labels: the coordinate value where each axis crosses the play
+   * boundary — x-axis at the left/right edges, y-axis at the top/bottom. x reads
+   * the VIEW coordinate (mirrored: x_view = -x_world, ADR 0008); y is never
+   * mirrored. Each label is clamped into the viewport so it stays visible even
+   * when the boundary corner sits off-screen (zoomed in).
+   */
+  private drawBoundaryLabels(): void {
+    const cam = this.camera;
+    const w = cam.width;
+    const h = cam.height;
+    const b = this.effectiveBounds;
+    const viewX = (wx: number) => (cam.mirror ? -wx : wx);
+    const place = (text: string, world: Vec2) => {
+      const s = this.toScreen(world);
+      this.addLabel(text, clamp(s.x + 3, 2, w - 30), clamp(s.y + 2, 2, h - 14));
+    };
+    // x-axis ends (y = 0)
+    place(fmt(viewX(b.minX)), { x: b.minX, y: 0 });
+    place(fmt(viewX(b.maxX)), { x: b.maxX, y: 0 });
+    // y-axis ends (x = 0)
+    place(fmt(b.minY), { x: 0, y: b.minY });
+    place(fmt(b.maxY), { x: 0, y: b.maxY });
   }
 
   /**
