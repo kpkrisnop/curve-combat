@@ -256,13 +256,18 @@ export function createServer(port: number): { close: () => Promise<void> } {
 
       // ── fireIntent ────────────────────────────────────────────────────────
       if (msg.type === "fireIntent") {
-        cancelTurnTimer(conn.room!);
         if (conn.isSpectator)
           return send(ws, { type: "error", code: "not-a-player", message: "spectators cannot fire" });
         const engine = room.engine;
         if (!engine) return send(ws, { type: "error", code: "not-started", message: "no match" });
         const r = engine.fire(conn.playerId, msg.latex);
         if (!r.ok) return send(ws, { type: "error", code: r.code, message: r.code });
+        // Only now that a shot is actually committed do we stop the turn timer —
+        // re-armed after the shot resolves. Cancelling earlier let any rejected
+        // or early-returned fireIntent (a stale last-second/not-active shot, a
+        // spectator, a dead engine) leave the timer dead, freezing the countdown
+        // at 0 and deadlocking the match.
+        cancelTurnTimer(conn.room!);
         broadcast(room.code, { type: "shotPlayback", firerId: r.firerId, shot: r.shot, duration: r.duration });
         const firerId = r.firerId;
         setTimeout(() => {
