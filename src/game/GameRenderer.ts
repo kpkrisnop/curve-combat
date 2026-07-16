@@ -54,6 +54,16 @@ const BANG_DECAY_RATE = 1; // a
 const BANG_SPEED_MULTIPLIER = 3; // c
 const BARREL_PX = 18;
 
+// On-soldier fired-equation label lifecycle (ADR 0010): type it on over a short
+// reveal, hold for 5s, then settle out (fade) like impact dust over ~1s.
+const EQ_BASE_ALPHA = 0.92;
+const EQ_REVEAL_PER_CHAR_MS = 28;
+const EQ_REVEAL_MAX_MS = 700;
+const EQ_FADE_START_MS = 5000;
+const EQ_FADE_MS = 900;
+const EQ_TOTAL_MS = EQ_FADE_START_MS + EQ_FADE_MS;
+const eqRevealMs = (len: number) => Math.min(EQ_REVEAL_MAX_MS, len * EQ_REVEAL_PER_CHAR_MS);
+
 /**
  * Detach and destroy every child of a Pixi layer (M4 fix). `removeChildren()`
  * alone only detaches — it never frees the child's GPU-side resources
@@ -141,14 +151,16 @@ export class GameRenderer {
   private players: PlayerState[] = [];
   private badgePhase: BadgePhase = "pregame";
   private badgeMode: MatchMode = "classic";
-  // Cosmetic grid density (ADR: F5). "full" = grid hairlines + a label per line;
+  // Cosmetic grid density (feature F5). "full" = grid hairlines + a label per line;
   // "minimal" = axes only, with a value label where each axis meets the boundary.
   private gridMode: "full" | "minimal" = "full";
   // On-soldier fired-equation label (ADR 0010): the toggle, plus a per-player
   // transient (verbatim text + when fired) and its 5s expiry timer.
   private showFiredEquation = true;
   private firedEquations = new Map<string, { text: string; firedAt: number }>();
-  private firedEqTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  // The ticker callback that animates the labels (reveal → hold → fade), or null
+  // when none are live. Driven by the Pixi ticker, same as playShot.
+  private eqTick: (() => void) | null = null;
   /** Live scatter config for the pre-game margin guides (undefined ⇒ guides stay hidden). */
   private arenaScatter: ScatterConfig | undefined;
 
@@ -640,24 +652,49 @@ export class GameRenderer {
   recordEquation(playerId: string, text: string): void {
     const t = text.trim();
     if (t === "") return;
-    const prev = this.firedEqTimers.get(playerId);
-    if (prev) clearTimeout(prev); // refire: kill the old expiry before it can clear the new label
-    this.firedEquations.set(playerId, { text: t, firedAt: Date.now() });
-    this.firedEqTimers.set(
-      playerId,
-      setTimeout(() => {
-        this.firedEquations.delete(playerId);
-        this.firedEqTimers.delete(playerId);
-        this.drawField();
-      }, 5000),
-    );
+    // Refire just overwrites: a fresh firedAt restarts the reveal and the old
+    // label is gone — no stale expiry can wipe the new one early.
+    this.firedEquations.set(playerId, { text: t, firedAt: performance.now() });
+    this.startEquationTicker();
     this.drawField();
+  }
+
+  /** Animate the labels off the Pixi ticker until none remain (reveal/fade). */
+  private startEquationTicker(): void {
+    if (this.eqTick) return;
+    this.eqTick = () => {
+      const now = performance.now();
+      let active = false;
+      let changing = false; // only redraw while something actually moves
+      for (const [id, e] of this.firedEquations) {
+        const el = now - e.firedAt;
+        if (el >= EQ_TOTAL_MS) {
+          this.firedEquations.delete(id);
+          changing = true; // this frame must clear it
+          continue;
+        }
+        active = true;
+        if (el < eqRevealMs(e.text.length) || el >= EQ_FADE_START_MS) changing = true;
+      }
+      // ponytail: redraws the whole field layer per animating frame, but only
+      // during reveal + fade (the static hold skips) — cheap for a few labels.
+      // If it ever costs, give the label its own persistent layer.
+      if (changing) this.drawField();
+      if (!active) this.stopEquationTicker();
+    };
+    this.app.ticker.add(this.eqTick);
+  }
+
+  private stopEquationTicker(): void {
+    if (!this.eqTick) return;
+    this.app.ticker.remove(this.eqTick);
+    this.eqTick = null;
   }
 
   private drawBadge(p: PlayerState, dotScreenPos: Vec2, color: number, dotRadiusPx: number): void {
     const big = badgeSize(this.badgePhase) === "lg";
     const withHp = showHpBar(this.badgeMode);
-    const fontSize = big ? 12 : 9;
+    const fontSize = big ? 15 : 12;
     const barW = big ? 36 : 26;
     const barH = 5;
 
@@ -677,14 +714,26 @@ export class GameRenderer {
     // gated by the toggle. Verbatim typed text — plain, never mirrored (ADR 0010).
     const eq = this.showFiredEquation ? this.firedEquations.get(p.id) : undefined;
     if (eq) {
-      const eqText = new Text({
-        text: eq.text,
-        style: { fill: color, fontSize: big ? 11 : 9, fontFamily: "monospace" },
-      });
-      eqText.anchor.set(0.5, 1);
-      eqText.position.set(0, nameY - fontSize - 3);
-      eqText.alpha = 0.92;
-      group.addChild(eqText);
+      const el = performance.now() - eq.firedAt;
+      const revealMs = eqRevealMs(eq.text.length);
+      // Type it on: reveal a growing prefix over `revealMs`, then the full text.
+      const shown = el >= revealMs
+        ? eq.text
+        : eq.text.slice(0, Math.max(1, Math.ceil((el / revealMs) * eq.text.length)));
+      // Hold at base alpha, then settle out over EQ_FADE_MS like impact dust.
+      const alpha = el <= EQ_FADE_START_MS
+        ? EQ_BASE_ALPHA
+        : EQ_BASE_ALPHA * Math.max(0, 1 - (el - EQ_FADE_START_MS) / EQ_FADE_MS);
+      if (alpha > 0.001) {
+        const eqText = new Text({
+          text: shown,
+          style: { fill: color, fontSize: Math.round(fontSize * 1.2), fontFamily: "monospace" },
+        });
+        eqText.anchor.set(0.5, 1);
+        eqText.position.set(0, nameY - fontSize - 3);
+        eqText.alpha = alpha;
+        group.addChild(eqText);
+      }
     }
 
     if (withHp) {

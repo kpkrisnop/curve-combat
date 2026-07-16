@@ -1,6 +1,7 @@
 // src/net/NetworkGame.ts
 import type { ServerClient } from "./ServerClient";
 import type { GameRenderer } from "../game/GameRenderer";
+import { latexToText } from "../math/latexToText";
 import type { GameUiPort } from "../game/GameUiPort";
 import type { MatchState, Team } from "../game/matchState";
 import { mirroredForTeam, mirrorLatex } from "../game/viewMirror";
@@ -95,7 +96,7 @@ export class NetworkGame {
         // Every client (incl. the shooter) gets shotPlayback, so this one path
         // shows the equation on the firer's soldier everywhere (ADR 0010). The
         // renderer gates on the config toggle; refire clears the prior label.
-        if (m.latex) this.renderer.recordEquation(m.firerId, m.latex);
+        if (m.latex) this.renderer.recordEquation(m.firerId, latexToText(m.latex));
         await this.renderer.playShot(m.shot, firer?.team);
         let dmg: number | undefined;
         if (

@@ -2,6 +2,7 @@
 import type { GameUiPort } from "./GameUiPort";
 import type { MatchConfig, MapConfig, ScatterConfig } from "./matchLogic";
 import { firstShooterNextRound } from "./matchLogic";
+import { latexToText } from "../math/latexToText";
 import {
   createMatch, beginRound, worldFor, playerById, skipTurn,
   type MatchState, type Team, type PlayerState,
@@ -175,9 +176,9 @@ export class LocalGame {
       return;
     }
 
-    // Show the shooter's verbatim typed equation on their soldier (ADR 0010).
-    // `latex` here is the view-frame string as typed, not the mirrored worldLatex.
-    this.renderer.recordEquation(shooter.id, latex);
+    // Show the shooter's typed equation on their soldier (ADR 0010), rendered as
+    // readable ASCII. `latex` is the view-frame string as typed, not worldLatex.
+    this.renderer.recordEquation(shooter.id, latexToText(latex));
 
     this.ui.setBusy(player, true);
     await this.renderer.playShot(res.shot!, player);
