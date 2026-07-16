@@ -105,6 +105,9 @@ describe("LocalGame", () => {
     vi.advanceTimersByTime(15_000);
     expect(ui.setTurn).toHaveBeenLastCalledWith("blue"); // no wiping "" arg
     expect(ui.inputs.red).toBe("x^2"); // timed-out player keeps their equation
+    // A timeout must flip the view like a fire does, or blue plays in red's
+    // frame (ADR 0008 regression).
+    expect(r.setMirror).toHaveBeenLastCalledWith(true);
     g.dispose();
   });
 

@@ -135,6 +135,10 @@ export class LocalGame {
         this.match = skipTurn(this.match);
         const viewTeam: Team = this.match.activePlayerId
           ? playerById(this.match, this.match.activePlayerId)!.team : "red";
+        // Re-render the arena for the new shooter — this is what flips the view
+        // mirror (ADR 0008). A fire re-renders via onFire()→renderFrom(); a
+        // timeout must do the same or the view stays in the old team's frame.
+        this.renderFrom(this.match, viewTeam);
         // Don't wipe the timed-out player's equation — like a normal fire, they
         // keep what they typed so they can resume aiming next turn (see onFire).
         this.ui.setTurn(viewTeam);

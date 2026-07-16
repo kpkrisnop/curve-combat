@@ -303,8 +303,14 @@ export class GameRenderer {
     // clipped to the world/play bounds. The play boundary is drawn separately
     // (drawBoundary()) as an explicit rect at the sim's collision bounds.
     const step = niceStep(45 / cam.scale);
-    const left = cam.screenToWorldX(0);
-    const right = cam.screenToWorldX(w);
+    // Normalize the world-x span: a mirrored camera maps screen-left to a LARGER
+    // world x than screen-right, so screenToWorldX(0) > screenToWorldX(w). Taking
+    // min/max keeps the sweep non-empty either way (ADR 0008); worldToScreenX
+    // still places each line on the correct (mirrored) side.
+    const edgeA = cam.screenToWorldX(0);
+    const edgeB = cam.screenToWorldX(w);
+    const left = Math.min(edgeA, edgeB);
+    const right = Math.max(edgeA, edgeB);
     const top = cam.screenToWorldY(0);
     const bottom = cam.screenToWorldY(h);
     const axisX = clamp(cam.worldToScreenX(0), 0, w);
@@ -341,12 +347,24 @@ export class GameRenderer {
    */
   private drawBoundary() {
     const b = this.effectiveBounds;
-    const tl = this.toScreen({ x: b.minX, y: b.maxY });
-    const br = this.toScreen({ x: b.maxX, y: b.minY });
+    const r = this.worldRectScreen(b.minX, b.minY, b.maxX, b.maxY);
     this.boundaryLayer.clear();
     this.boundaryLayer
-      .rect(tl.x, tl.y, br.x - tl.x, br.y - tl.y)
+      .rect(r.x, r.y, r.w, r.h)
       .stroke({ width: 1.5, color: COLORS.boundary, alpha: 0.55 });
+  }
+
+  /**
+   * Map an axis-aligned WORLD rectangle to a normalized SCREEN rect. Both
+   * corners route through toScreen(), then min/abs — so a mirrored view (which
+   * swaps screen left/right, see Camera.mirror / ADR 0008) still yields a
+   * positive-width rect on the correct side. Any rect built from world extents
+   * MUST use this, never raw `maxScreen - minScreen`, or the mirror inverts it.
+   */
+  private worldRectScreen(x0: number, y0: number, x1: number, y1: number): { x: number; y: number; w: number; h: number } {
+    const a = this.toScreen({ x: x0, y: y0 });
+    const b = this.toScreen({ x: x1, y: y1 });
+    return { x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: Math.abs(b.x - a.x), h: Math.abs(b.y - a.y) };
   }
 
   private addLabel(text: string, x: number, y: number) {
@@ -486,26 +504,16 @@ export class GameRenderer {
     const b = this.effectiveBounds;
 
     // Field-margin box — grey dashed rectangle, bounds inset by fieldMargin.
+    // Built from both world corners so it survives the mirror (see worldRectScreen).
     const fm = scatter.fieldMargin;
-    const marginTopLeft = this.toScreen({ x: b.minX + fm, y: b.maxY - fm });
-    this.strokeDashedRect(
-      g,
-      marginTopLeft,
-      (b.maxX - b.minX - 2 * fm) * cam.scale,
-      (b.maxY - b.minY - 2 * fm) * cam.scale,
-      7,
-      5,
-      GUIDE_COLORS.margin,
-      0.3,
-    );
+    const margin = this.worldRectScreen(b.minX + fm, b.minY + fm, b.maxX - fm, b.maxY - fm);
+    this.strokeDashedRect(g, { x: margin.x, y: margin.y }, margin.w, margin.h, 7, 5, GUIDE_COLORS.margin, 0.3);
 
     // Spawn zone rects — one per side, team-tinted fill + stroke (solid, no dash).
     for (const zone of spawnZoneRects(b, scatter)) {
-      const topLeft = this.toScreen({ x: Math.min(zone.xLo, zone.xHi), y: zone.yHi });
-      const w = Math.abs(zone.xHi - zone.xLo) * cam.scale;
-      const h = (zone.yHi - zone.yLo) * cam.scale;
+      const r = this.worldRectScreen(zone.xLo, zone.yLo, zone.xHi, zone.yHi);
       const color = zone.sign < 0 ? COLORS.red : COLORS.blue;
-      g.rect(topLeft.x, topLeft.y, w, h)
+      g.rect(r.x, r.y, r.w, r.h)
         .fill({ color, alpha: 0.07 })
         .stroke({ width: 1, color, alpha: 0.3 });
     }
