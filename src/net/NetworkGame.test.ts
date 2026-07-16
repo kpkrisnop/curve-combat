@@ -6,6 +6,7 @@ import type { GameRenderer } from "../game/GameRenderer";
 import type { GameUiPort } from "../game/GameUiPort";
 import type { MatchState } from "../game/matchState";
 import { NetworkGame } from "./NetworkGame";
+import { mirrorLatex } from "../game/viewMirror";
 import { netLobbyStore, initialNetLobbyState } from "../app/net/netLobbyStore";
 
 // ── Minimal mock for GameRenderer ────────────────────────────────────────────
@@ -15,6 +16,7 @@ const makeRenderer = () => ({
   setMap: vi.fn(),
   setWorld: vi.fn(),
   setNoTurnMode: vi.fn(),
+  setMirror: vi.fn(),
 });
 
 // ── Minimal mock for GameUiPort ───────────────────────────────────────────────
@@ -266,6 +268,25 @@ describe("NetworkGame send helpers", () => {
     const { game, client } = await makeGame();
     game.sendReroll();
     expect(client.sent.at(-1)).toEqual({ type: "rerollArena" });
+  });
+
+  it("reflects a mirrored (BLUE) player's equation to world frame before the wire (ADR 0008)", async () => {
+    const { client, ui } = await makeGame("p2"); // p2 is BLUE in lobbyMsg → mirrored
+    client.inject(lobbyMsg);
+    const fire = (ui.onFire as ReturnType<typeof vi.fn>).mock.calls[0][0] as (p: string, l: string) => void;
+    fire("blue", "2x");
+    const sent = client.sent.at(-1) as unknown as { type: string; latex: string };
+    expect(sent.type).toBe("fireIntent");
+    expect(sent.latex).toBe(mirrorLatex("2x"));
+    expect(sent.latex).not.toBe("2x"); // the server must never receive the view-frame text
+  });
+
+  it("sends a RED (un-mirrored) player's equation verbatim", async () => {
+    const { client, ui } = await makeGame("p1"); // p1 is RED in lobbyMsg → not mirrored
+    client.inject(lobbyMsg);
+    const fire = (ui.onFire as ReturnType<typeof vi.fn>).mock.calls[0][0] as (p: string, l: string) => void;
+    fire("red", "2x");
+    expect(client.sent.at(-1)).toMatchObject({ type: "fireIntent", latex: "2x" });
   });
 
   it("sendConfigure sends configureRoom with merged fields", async () => {

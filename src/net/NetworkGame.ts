@@ -3,6 +3,7 @@ import type { ServerClient } from "./ServerClient";
 import type { GameRenderer } from "../game/GameRenderer";
 import type { GameUiPort } from "../game/GameUiPort";
 import type { MatchState, Team } from "../game/matchState";
+import { mirroredForTeam, mirrorLatex } from "../game/viewMirror";
 import { computeDamage } from "../game/hpLogic";
 import { shotCommentary } from "../game/shotCommentary";
 import type { ScatterConfig } from "../game/matchLogic";
@@ -146,7 +147,11 @@ export class NetworkGame {
       if (this.myBusy) return;
       this.myBusy = true;
       if (this.myTeam) this.ui.setBusy(this.myTeam, true);
-      this.client.send({ type: "fireIntent", latex });
+      // I typed in my own view frame; a world-right (mirrored) team's equation
+      // is reflected to world frame BEFORE the wire so the authoritative server
+      // stays world-frame-only (ADR 0008 — the mirror never reaches the server).
+      const worldLatex = mirroredForTeam(this.myTeam) ? mirrorLatex(latex) : latex;
+      this.client.send({ type: "fireIntent", latex: worldLatex });
     });
 
     await this.client.connect();
@@ -297,6 +302,9 @@ export class NetworkGame {
       // never set for online play, so isPlayerActive() fell back to comparing
       // team only (highlighting an entire NvN team instead of the one shooter).
       this.renderer.setNoTurnMode(state.config.noTurn);
+      // Each client plays its own team's frame, fixed for the whole match — no
+      // per-turn flipping (ADR 0008). Spectators (myTeam null) stay RED-left.
+      this.renderer.setMirror(mirroredForTeam(this.myTeam));
       this.renderer.setWorld(
         { soldier: { pos: viewer.pos, dir: viewTeam === "red" ? 1 : -1 }, bounds: state.bounds,
           targets: state.players.filter((p) => p.team !== viewTeam && p.alive).map((p) => ({ id: p.id, pos: p.pos, radius: 0.1 })),

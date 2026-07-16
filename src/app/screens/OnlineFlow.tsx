@@ -16,6 +16,7 @@ import { ServerClient } from "../../net/ServerClient";
 import { netLobbyStore, initialNetLobbyState, bindNetworkGame } from "../net/netLobbyStore";
 import { ReconnectOverlays } from "../net/ReconnectOverlays";
 import { buildArenaPreview } from "../net/arenaPreview";
+import { mirroredForTeam } from "../../game/viewMirror";
 import { getNickname, setNickname } from "../net/nickname";
 import { useStore } from "../store";
 import { ConfigPanel } from "./ConfigPanel";
@@ -104,12 +105,18 @@ export function OnlineFlow({ code }: Props) {
     seed: number | null,
     renderer: GameRenderer,
     pls: typeof players,
+    mirrored: boolean,
   ) => {
     if (seed === null) return;
     // H3 fix: pregame preview needs the same no-turn flag the live match uses
     // so isPlayerActive() (src/game/badge.ts) glows the right dot(s) before
     // any real turn has been assigned.
     renderer.setNoTurnMode(cfg.noTurn);
+    // WYSIWYG lobby: a world-right (BLUE) viewer previews the arena in the exact
+    // mirrored frame they will play (ADR 0008). Pressing "Switch side" changes
+    // myLobbyTeam → this effect re-runs → the preview flips. Spectators (null)
+    // stay canonical RED-left.
+    renderer.setMirror(mirrored);
     renderer.setMap(cfg.map);
     const bounds = renderer.getEffectiveBounds();
     const counts = {
@@ -160,8 +167,8 @@ export function OnlineFlow({ code }: Props) {
     if (phase !== "lobby") return;
     const renderer = rendererRef.current;
     if (!renderer) return;
-    applyPreview(config, round1Seed, renderer, players);
-  }, [phase, config, round1Seed, players, applyPreview]);
+    applyPreview(config, round1Seed, renderer, players, mirroredForTeam(myLobbyTeam));
+  }, [phase, config, round1Seed, players, myLobbyTeam, applyPreview]);
 
   // ── ArenaStage onReady — called once renderer is mounted ──────────────────
   const onReady = useCallback((renderer: GameRenderer) => {
@@ -181,9 +188,10 @@ export function OnlineFlow({ code }: Props) {
     void net.start(code, getNickname());
 
     // Initial preview with current store state
-    const { config: cfg, round1Seed: seed, players: pls, phase: ph } = netLobbyStore.get();
+    const { config: cfg, round1Seed: seed, players: pls, phase: ph, myId: mid } = netLobbyStore.get();
     if (ph === "lobby") {
-      applyPreview(cfg, seed, renderer, pls);
+      const myTeamNow = pls.find((p) => p.id === mid)?.team ?? null;
+      applyPreview(cfg, seed, renderer, pls, mirroredForTeam(myTeamNow));
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code, applyPreview]);

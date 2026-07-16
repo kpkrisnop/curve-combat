@@ -10,6 +10,13 @@ export class Camera {
   /** Pixels per world unit. */
   scale = 48;
 
+  /**
+   * Reflect the world about x=0 on the way to the screen, so a world-right team
+   * plays "from the left" (ADR 0008). Presentation only — world coordinates are
+   * unchanged; every layer that maps through this camera mirrors together.
+   */
+  mirror = false;
+
   constructor(public width: number, public height: number) {}
 
   resize(width: number, height: number) {
@@ -18,7 +25,8 @@ export class Camera {
   }
 
   worldToScreenX(wx: number): number {
-    return this.width / 2 + (wx - this.centerX) * this.scale;
+    const x = this.mirror ? -wx : wx;
+    return this.width / 2 + (x - this.centerX) * this.scale;
   }
 
   worldToScreenY(wy: number): number {
@@ -26,7 +34,8 @@ export class Camera {
   }
 
   screenToWorldX(sx: number): number {
-    return this.centerX + (sx - this.width / 2) / this.scale;
+    const wx = this.centerX + (sx - this.width / 2) / this.scale;
+    return this.mirror ? -wx : wx;
   }
 
   screenToWorldY(sy: number): number {

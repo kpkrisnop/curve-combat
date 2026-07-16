@@ -36,6 +36,7 @@ function fakeRenderer() {
     getEffectiveBounds: () => boundsFromMap(cfg.map),
     setWorld: vi.fn(),
     setNoTurnMode: vi.fn(),
+    setMirror: vi.fn(),
     playShot: vi.fn().mockResolvedValue(undefined),
     showFloatingDamage: vi.fn(),
   };
@@ -134,6 +135,36 @@ describe("LocalGame", () => {
     // must survive so red can tweak their aim next turn.
     expect(ui.inputs.red).toBe("x^2");
     expect(ui.setTurn).toHaveBeenLastCalledWith("blue");
+    g.dispose();
+  });
+
+  it("flips the view mirror to match the active shooter each turn (ADR 0008)", async () => {
+    const r = fakeRenderer(); const ui = fakeUi();
+    const g = new LocalGame(r as never, ui);
+    g.preview({ ...cfg, scatter: { ...cfg.scatter, maxPlanets: 0 } }, 42);
+    g.begin();
+    // Red opens on the left — un-mirrored.
+    expect(r.setMirror).toHaveBeenLastCalledWith(false);
+    await (ui as any).fire("red", "x^2"); // arcs off the top → miss, turn → blue
+    // Blue is up now; the whole view mirrors so blue also plays from the left.
+    expect(r.setMirror).toHaveBeenLastCalledWith(true);
+    g.dispose();
+  });
+
+  it("reflects a mirrored (BLUE) shooter's function into the world frame before firing", async () => {
+    const r = fakeRenderer(); const ui = fakeUi();
+    const g = new LocalGame(r as never, ui);
+    // No-turn so blue can fire directly; empty field so the shot flies clean.
+    g.preview({ ...cfg, noTurn: true, scatter: { ...cfg.scatter, maxPlanets: 0 } }, 42);
+    g.begin();
+    await (ui as any).fire("blue", "2x");
+    const shot = (r.playShot as any).mock.calls.at(-1)![0];
+    const s = shot.samples;
+    // Blue typed y=2x in its left-seated frame. Reflected to world (y=-2x), the
+    // trajectory CLIMBS as the shot marches toward the enemy; an un-reflected raw
+    // 2x would descend. The sign of the path is the observable proof of x→-x.
+    expect(s.length).toBeGreaterThan(1);
+    expect(s[1].p.y).toBeGreaterThan(s[0].p.y);
     g.dispose();
   });
 });

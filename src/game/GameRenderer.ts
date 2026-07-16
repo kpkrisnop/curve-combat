@@ -313,7 +313,8 @@ export class GameRenderer {
     for (let x = Math.ceil(left / step) * step; x <= right; x += step) {
       const sx = cam.worldToScreenX(x);
       g.moveTo(sx, 0).lineTo(sx, h);
-      if (Math.abs(x) > 1e-9) this.addLabel(fmt(x), sx + 3, clamp(axisY, 2, h - 14));
+      // Axis numbering reads the VIEW coordinate: mirrored, x_view = -x_world (ADR 0008).
+      if (Math.abs(x) > 1e-9) this.addLabel(fmt(cam.mirror ? -x : x), sx + 3, clamp(axisY, 2, h - 14));
     }
     for (let y = Math.ceil(bottom / step) * step; y <= top; y += step) {
       const sy = cam.worldToScreenY(y);
@@ -411,6 +412,26 @@ export class GameRenderer {
   }
 
   /**
+   * Reflect the view about world x=0 (ADR 0008) so a world-right team plays
+   * "from the left". Every layer inherits it via the shared camera; redraws in
+   * place when a world is loaded.
+   */
+  setMirror(enabled: boolean): void {
+    if (this.camera.mirror === enabled) return;
+    this.camera.mirror = enabled;
+    if (this.world) {
+      this.drawStatic();
+      this.drawPlanets();
+      this.drawField();
+    }
+  }
+
+  /** Whether the view is currently mirrored (world-right team's frame). */
+  get mirrored(): boolean {
+    return this.camera.mirror;
+  }
+
+  /**
    * Draws every alive soldier as a dot (full brightness on the active team,
    * dimmed otherwise) plus its anchored name badge. Runs for any NvN roster
    * size, not just one red + one blue — badges track camera scale/pan because
@@ -437,7 +458,9 @@ export class GameRenderer {
       }
       g.circle(s.x, s.y, rPx).fill({ color, alpha: isActive ? 1.0 : 0.4 });
       if (isActive) {
-        const dir = p.team === "red" ? 1 : -1;
+        // Barrel points "rightward" in the viewer's own frame: the world dir,
+        // flipped when the view is mirrored (ADR 0008) — everyone fires right.
+        const dir = (p.team === "red" ? 1 : -1) * (cam.mirror ? -1 : 1);
         g.moveTo(s.x, s.y).lineTo(s.x + dir * BARREL_PX, s.y).stroke({ width: 3, color });
       }
 

@@ -26,6 +26,7 @@ const fakeRenderer = {
   getEffectiveBounds: vi.fn(() => ({ xMin: -10, xMax: 10, yMin: -8, yMax: 8 })),
   setWorld: vi.fn(),
   setNoTurnMode: vi.fn(),
+  setMirror: vi.fn(),
   playShot: vi.fn(() => Promise.resolve()),
   showFloatingDamage: vi.fn(),
 };

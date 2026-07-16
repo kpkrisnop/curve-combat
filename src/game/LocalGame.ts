@@ -7,6 +7,7 @@ import {
   type MatchState, type Team, type PlayerState,
 } from "./matchState";
 import { resolveFire } from "./resolveFire";
+import { mirroredForTeam, mirrorLatex } from "./viewMirror";
 import { shotCommentary } from "./shotCommentary";
 import { buildLocalLayout } from "./localLayout";
 import type { Bounds, World, Vec2, ShotResult } from "../sim/types";
@@ -27,6 +28,7 @@ export interface RendererPort {
     },
   ): void;
   setNoTurnMode(enabled: boolean): void;
+  setMirror(enabled: boolean): void;
   playShot(result: ShotResult, player?: Team): Promise<void>;
   showFloatingDamage(at: Vec2, dmg: number, player: Team): void;
 }
@@ -91,6 +93,9 @@ export class LocalGame {
 
   private renderFrom(m: MatchState, viewTeam: Team): void {
     const viewer = m.players.find((p) => p.team === viewTeam && p.alive) ?? this.redOf(m);
+    // Hotseat: the whole view flips each turn so the current shooter is on the
+    // left (ADR 0008). The world-right team (BLUE) plays mirrored.
+    this.renderer.setMirror(mirroredForTeam(viewTeam));
     this.renderer.setWorld(worldFor(m, viewer), viewTeam, m.players, {
       phase: this.started ? "ingame" : "pregame",
       mode: this.config.mode,
@@ -148,7 +153,11 @@ export class LocalGame {
     const shooter = m.players.find((p) => p.team === player && p.alive);
     if (!shooter) return;
 
-    const res = resolveFire(m, { playerId: shooter.id, latex });
+    // The shooter typed in their own view frame; reflect it into the world frame
+    // before the sim sees it (ADR 0008). resolveFire stays world-frame-only.
+    const worldLatex = mirroredForTeam(player) ? mirrorLatex(latex) : latex;
+
+    const res = resolveFire(m, { playerId: shooter.id, latex: worldLatex });
     if (res.rejected) {
       if (res.rejected === "bad-function") {
         this.ui.setStatus("Not a plottable function of x", "error");
@@ -164,7 +173,7 @@ export class LocalGame {
     // Commit against LIVE state (no-turn: enemy may have mutated match mid-flight).
     let commit = res;
     if (this.config.noTurn) {
-      commit = resolveFire(this.match!, { playerId: shooter.id, latex });
+      commit = resolveFire(this.match!, { playerId: shooter.id, latex: worldLatex });
       if (commit.rejected) { this.ui.focus(); return; }
     }
     this.match = commit.next;
