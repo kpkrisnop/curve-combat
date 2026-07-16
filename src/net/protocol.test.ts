@@ -97,6 +97,28 @@ describe("protocol v2 (NvN + arena + countdown)", () => {
     if (bare.type === "configureRoom") expect(bare.gridMode).toBeUndefined();
   });
 
+  it("fireIntent carries an optional verbatim displayLatex alongside world latex", () => {
+    const parsed = parseClientMessage({ type: "fireIntent", latex: "x^2", displayLatex: "x^2" });
+    if (parsed.type === "fireIntent") expect(parsed.displayLatex).toBe("x^2");
+    // Old clients send latex only.
+    const bare = parseClientMessage({ type: "fireIntent", latex: "x^2" });
+    if (bare.type === "fireIntent") expect(bare.displayLatex).toBeUndefined();
+  });
+
+  it("shotPlayback echoes an optional latex for the on-soldier label", () => {
+    const parsed = parseServerMessage({
+      type: "shotPlayback", firerId: "p1", shot: {}, duration: 1.2, latex: "sin(x)",
+    });
+    if (parsed.type === "shotPlayback") expect(parsed.latex).toBe("sin(x)");
+  });
+
+  it("configureRoom carries an optional showFiredEquation", () => {
+    const parsed = parseClientMessage({
+      type: "configureRoom", mode: "classic", rounds: 3, noTurn: false, turnSeconds: 60, showFiredEquation: false,
+    });
+    if (parsed.type === "configureRoom") expect(parsed.showFiredEquation).toBe(false);
+  });
+
   it("configureRoom accepts a terrain-free arena (maxPlanets: 0)", () => {
     const msg = {
       type: "configureRoom", mode: "classic", rounds: 3, noTurn: false, turnSeconds: 60,

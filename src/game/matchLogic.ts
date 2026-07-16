@@ -35,6 +35,9 @@ export interface MatchConfig {
   /** Cosmetic-only: "full" grid + all labels, or "minimal" (axes + boundary
    *  labels). Never a sim input — absent means "full". */
   gridMode?: "full" | "minimal";
+  /** Cosmetic-only: show the shooter's typed equation on their soldier for 5s
+   *  after firing (ADR 0010). Never a sim input — absent means on. */
+  showFiredEquation?: boolean;
   map: MapConfig;
   scatter: ScatterConfig;
   teamSize: 1 | 2 | 3 | 4 | 5;

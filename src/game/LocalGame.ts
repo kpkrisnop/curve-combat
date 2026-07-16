@@ -26,12 +26,14 @@ export interface RendererPort {
       activePlayerId: string | null;
       scatter?: ScatterConfig;
       gridMode?: MatchConfig["gridMode"];
+      showFiredEquation?: boolean;
     },
   ): void;
   setNoTurnMode(enabled: boolean): void;
   setMirror(enabled: boolean): void;
   playShot(result: ShotResult, player?: Team): Promise<void>;
   showFloatingDamage(at: Vec2, dmg: number, player: Team): void;
+  recordEquation(playerId: string, text: string): void;
 }
 
 const SPLASH_MS = 2000;
@@ -103,6 +105,7 @@ export class LocalGame {
       activePlayerId: m.activePlayerId,
       scatter: this.config.scatter,
       gridMode: this.config.gridMode,
+      showFiredEquation: this.config.showFiredEquation,
     });
   }
 
@@ -171,6 +174,10 @@ export class LocalGame {
       if (!this.config.noTurn) this.armTimer();
       return;
     }
+
+    // Show the shooter's verbatim typed equation on their soldier (ADR 0010).
+    // `latex` here is the view-frame string as typed, not the mirrored worldLatex.
+    this.renderer.recordEquation(shooter.id, latex);
 
     this.ui.setBusy(player, true);
     await this.renderer.playShot(res.shot!, player);

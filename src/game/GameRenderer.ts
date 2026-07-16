@@ -144,6 +144,11 @@ export class GameRenderer {
   // Cosmetic grid density (ADR: F5). "full" = grid hairlines + a label per line;
   // "minimal" = axes only, with a value label where each axis meets the boundary.
   private gridMode: "full" | "minimal" = "full";
+  // On-soldier fired-equation label (ADR 0010): the toggle, plus a per-player
+  // transient (verbatim text + when fired) and its 5s expiry timer.
+  private showFiredEquation = true;
+  private firedEquations = new Map<string, { text: string; firedAt: number }>();
+  private firedEqTimers = new Map<string, ReturnType<typeof setTimeout>>();
   /** Live scatter config for the pre-game margin guides (undefined ⇒ guides stay hidden). */
   private arenaScatter: ScatterConfig | undefined;
 
@@ -232,7 +237,7 @@ export class GameRenderer {
     world: World,
     activeTurn: "red" | "blue",
     players: PlayerState[],
-    opts: { phase: BadgePhase; mode: MatchMode; activePlayerId: string | null; scatter?: ScatterConfig; gridMode?: "full" | "minimal" },
+    opts: { phase: BadgePhase; mode: MatchMode; activePlayerId: string | null; scatter?: ScatterConfig; gridMode?: "full" | "minimal"; showFiredEquation?: boolean },
   ) {
     this.world = world;
     this.activeTurn = activeTurn;
@@ -242,6 +247,7 @@ export class GameRenderer {
     this.activePlayerId = opts.activePlayerId;
     this.arenaScatter = opts.scatter;
     this.gridMode = opts.gridMode ?? "full";
+    this.showFiredEquation = opts.showFiredEquation ?? true;
     this.recomputeEffectiveBounds();
     this.trailLayerRed.clear();
     this.trailLayerBlue.clear();
@@ -624,6 +630,30 @@ export class GameRenderer {
    * mini fill bar + the numeric HP (badge.ts:showHpBar/hpFraction) — Classic
    * mode shows only the name. Never interactive, so never part of the hitbox.
    */
+  /**
+   * Record the shooter's verbatim typed equation to show on their soldier for
+   * 5s (ADR 0010). Keyed by playerId (NvN-correct). Refiring clears the prior
+   * label first — its expiry timer is cancelled so it can't wipe the fresh one
+   * early. Whether it actually renders is gated by `showFiredEquation` at draw
+   * time, so recording while the toggle is off is harmless.
+   */
+  recordEquation(playerId: string, text: string): void {
+    const t = text.trim();
+    if (t === "") return;
+    const prev = this.firedEqTimers.get(playerId);
+    if (prev) clearTimeout(prev); // refire: kill the old expiry before it can clear the new label
+    this.firedEquations.set(playerId, { text: t, firedAt: Date.now() });
+    this.firedEqTimers.set(
+      playerId,
+      setTimeout(() => {
+        this.firedEquations.delete(playerId);
+        this.firedEqTimers.delete(playerId);
+        this.drawField();
+      }, 5000),
+    );
+    this.drawField();
+  }
+
   private drawBadge(p: PlayerState, dotScreenPos: Vec2, color: number, dotRadiusPx: number): void {
     const big = badgeSize(this.badgePhase) === "lg";
     const withHp = showHpBar(this.badgeMode);
@@ -633,13 +663,29 @@ export class GameRenderer {
 
     const group = new Container();
 
+    const nameY = withHp ? -(barH + 6) : 0;
     const nameText = new Text({
       text: badgeText(p.name),
       style: { fill: color, fontSize, fontFamily: "monospace", fontWeight: "600" },
     });
     nameText.anchor.set(0.5, 1);
-    nameText.position.set(0, withHp ? -(barH + 6) : 0);
+    nameText.position.set(0, nameY);
     group.addChild(nameText);
+
+    // The fired-equation line sits just above the name (so above the HP bar in
+    // HP mode, since the name already clears it). Shown for 5s after firing,
+    // gated by the toggle. Verbatim typed text — plain, never mirrored (ADR 0010).
+    const eq = this.showFiredEquation ? this.firedEquations.get(p.id) : undefined;
+    if (eq) {
+      const eqText = new Text({
+        text: eq.text,
+        style: { fill: color, fontSize: big ? 11 : 9, fontFamily: "monospace" },
+      });
+      eqText.anchor.set(0.5, 1);
+      eqText.position.set(0, nameY - fontSize - 3);
+      eqText.alpha = 0.92;
+      group.addChild(eqText);
+    }
 
     if (withHp) {
       const frac = hpFraction(p.hp, HP_MAX);

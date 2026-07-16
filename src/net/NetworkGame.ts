@@ -22,6 +22,7 @@ export interface LobbySnapshot {
     map?: { width: number; height: number };
     scatter?: ScatterConfig;
     gridMode?: "full" | "minimal";
+    showFiredEquation?: boolean;
   };
   round1Seed?: number;
 }
@@ -91,6 +92,10 @@ export class NetworkGame {
       if (m.type !== "shotPlayback") return;
       void (async () => {
         const firer = this.lastState?.players.find((p) => p.id === m.firerId);
+        // Every client (incl. the shooter) gets shotPlayback, so this one path
+        // shows the equation on the firer's soldier everywhere (ADR 0010). The
+        // renderer gates on the config toggle; refire clears the prior label.
+        if (m.latex) this.renderer.recordEquation(m.firerId, m.latex);
         await this.renderer.playShot(m.shot, firer?.team);
         let dmg: number | undefined;
         if (
@@ -152,7 +157,9 @@ export class NetworkGame {
       // is reflected to world frame BEFORE the wire so the authoritative server
       // stays world-frame-only (ADR 0008 — the mirror never reaches the server).
       const worldLatex = mirroredForTeam(this.myTeam) ? mirrorLatex(latex) : latex;
-      this.client.send({ type: "fireIntent", latex: worldLatex });
+      // `displayLatex` is the verbatim typed (view-frame) string — echoed back on
+      // shotPlayback for the on-soldier equation label (ADR 0010), never mirrored.
+      this.client.send({ type: "fireIntent", latex: worldLatex, displayLatex: latex });
     });
 
     await this.client.connect();
@@ -188,6 +195,7 @@ export class NetworkGame {
     map?: { width: number; height: number };
     scatter?: ScatterConfig;
     gridMode?: "full" | "minimal";
+    showFiredEquation?: boolean;
   }): void {
     this.client.send({
       type: "configureRoom",
@@ -198,6 +206,7 @@ export class NetworkGame {
       ...(partial.map ? { map: partial.map } : {}),
       ...(partial.scatter ? { scatter: partial.scatter } : {}),
       ...(partial.gridMode ? { gridMode: partial.gridMode } : {}),
+      ...(partial.showFiredEquation !== undefined ? { showFiredEquation: partial.showFiredEquation } : {}),
     });
   }
 
@@ -319,6 +328,7 @@ export class NetworkGame {
           activePlayerId: state.activePlayerId,
           scatter: state.config.scatter,
           gridMode: state.config.gridMode,
+          showFiredEquation: state.config.showFiredEquation,
         },
       );
     }

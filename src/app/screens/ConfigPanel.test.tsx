@@ -5,7 +5,7 @@ import { ConfigPanel } from "./ConfigPanel";
 import { arenaDefaults } from "../../game/arenaDefaults";
 
 const base = { mode: "classic" as const, rounds: 3 as const, noTurn: false, turnSeconds: 60,
-  gridMode: "full" as const, map: arenaDefaults().map, scatter: arenaDefaults().scatter };
+  gridMode: "full" as const, showFiredEquation: true, map: arenaDefaults().map, scatter: arenaDefaults().scatter };
 
 describe("ConfigPanel", () => {
   it("mode buttons emit onChange", () => {

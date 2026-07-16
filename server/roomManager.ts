@@ -242,6 +242,7 @@ export class RoomManager {
       map?: MapConfig;
       scatter?: ScatterConfig;
       gridMode?: "full" | "minimal";
+      showFiredEquation?: boolean;
     },
   ): void {
     const room = this.rooms.get(code);

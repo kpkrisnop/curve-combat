@@ -19,7 +19,10 @@ const scatterShape = z.object({
 const join = z.object({ type: z.literal("join"), room: z.string(), name: z.string(), asSpectator: z.boolean().optional() });
 const reconnect = z.object({ type: z.literal("reconnect"), room: z.string(), playerId: z.string(), token: z.string() });
 const startMatch = z.object({ type: z.literal("startMatch") });
-const fireIntent = z.object({ type: z.literal("fireIntent"), latex: z.string() });
+// `latex` is world-frame (what the sim resolves). `displayLatex` is the verbatim
+// view-frame string the shooter typed — echoed back for the on-soldier equation
+// label (ADR 0010); never mirrored, never evaluated.
+const fireIntent = z.object({ type: z.literal("fireIntent"), latex: z.string(), displayLatex: z.string().optional() });
 const configureRoom = z.object({
   type: z.literal("configureRoom"),
   mode: z.enum(["classic", "hp"]),
@@ -29,6 +32,7 @@ const configureRoom = z.object({
   map: mapShape.optional(),
   scatter: scatterShape.optional(),
   gridMode: z.enum(["full", "minimal"]).optional(),
+  showFiredEquation: z.boolean().optional(),
 });
 const switchTeam = z.object({ type: z.literal("switchTeam"), team: z.enum(["red", "blue"]) });
 const rerollArena = z.object({ type: z.literal("rerollArena") });
@@ -53,6 +57,7 @@ const lobbyState = z.object({
     map: mapShape.optional(),
     scatter: scatterShape.optional(),
     gridMode: z.enum(["full", "minimal"]).optional(),
+    showFiredEquation: z.boolean().optional(),
   }).optional(),
 });
 const shotPlayback = z.object({
@@ -60,6 +65,9 @@ const shotPlayback = z.object({
   firerId: z.string(),
   shot: z.custom<ShotResult>(),
   duration: z.number(),
+  // Verbatim view-frame equation the shooter typed, for the on-soldier label
+  // (ADR 0010). Optional: old servers / spectral shots may omit it.
+  latex: z.string().optional(),
 });
 const matchStateMsg = z.object({ type: z.literal("matchState"), state: z.custom<MatchState>() });
 const errorMsg = z.object({ type: z.literal("error"), code: z.string(), message: z.string() });

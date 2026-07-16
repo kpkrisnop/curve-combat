@@ -8,6 +8,7 @@ const DEFAULT_CONFIG: MatchConfig = {
   turnSeconds: 60,
   role: "local",
   gridMode: "full",
+  showFiredEquation: true,
   ...arenaDefaults(),
 };
 
@@ -30,7 +31,8 @@ export function configToHash(c: MatchConfig): string {
     `&eg=${n(scatter.spawnEdgeGap)}&bx=${n(scatter.spawnBandX)}` +
     `&ym=${n(scatter.spawnYMargin)}&sp=${n(scatter.spawnSeparation)}` +
     `&sm=${scatter.spawnMirror ? 1 : 0}` +
-    `&grid=${c.gridMode ?? "full"}`
+    `&grid=${c.gridMode ?? "full"}` +
+    `&eq=${(c.showFiredEquation ?? true) ? 1 : 0}`
   );
 }
 
@@ -80,6 +82,8 @@ export function parseConfigFromHash(hash: string): MatchConfig {
   const turnSeconds = Math.round(clampNum(p.get("tt"), 15, 120, 60) / 5) * 5; // snap to 5s grid
   // Absent (old links) → "full"; only an explicit "minimal" opts into the sparse grid.
   const gridMode: MatchConfig["gridMode"] = p.get("grid") === "minimal" ? "minimal" : "full";
+  // Absent (old links) → on; only an explicit "0" turns the equation label off.
+  const showFiredEquation = p.get("eq") !== "0";
 
-  return { mode, rounds, noTurn, turnSeconds, role: "local", gridMode, map, scatter, teamSize };
+  return { mode, rounds, noTurn, turnSeconds, role: "local", gridMode, showFiredEquation, map, scatter, teamSize };
 }

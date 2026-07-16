@@ -37,6 +37,7 @@ export function createServer(port: number): { close: () => Promise<void> } {
       map: room.config.map,
       scatter: room.config.scatter,
       gridMode: room.config.gridMode,
+      showFiredEquation: room.config.showFiredEquation,
     },
   });
   const makeTTLExpiry = (code: string) => () => {
@@ -186,6 +187,7 @@ export function createServer(port: number): { close: () => Promise<void> } {
             ...(msg.map !== undefined ? { map: msg.map } : {}),
             ...(msg.scatter !== undefined ? { scatter: msg.scatter } : {}),
             ...(msg.gridMode !== undefined ? { gridMode: msg.gridMode } : {}),
+            ...(msg.showFiredEquation !== undefined ? { showFiredEquation: msg.showFiredEquation } : {}),
           });
           broadcast(room.code, rosterMsg(room));
         } catch (e) {
@@ -270,7 +272,7 @@ export function createServer(port: number): { close: () => Promise<void> } {
         // spectator, a dead engine) leave the timer dead, freezing the countdown
         // at 0 and deadlocking the match.
         cancelTurnTimer(conn.room!);
-        broadcast(room.code, { type: "shotPlayback", firerId: r.firerId, shot: r.shot, duration: r.duration });
+        broadcast(room.code, { type: "shotPlayback", firerId: r.firerId, shot: r.shot, duration: r.duration, latex: msg.displayLatex });
         const firerId = r.firerId;
         setTimeout(() => {
           const rm = rooms.get(room.code);

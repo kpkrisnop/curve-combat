@@ -7,7 +7,7 @@ import { arenaDefaults } from "../../game/arenaDefaults";
 
 export interface PanelConfig {
   mode: "classic" | "hp"; rounds: 3 | 5; noTurn: boolean; turnSeconds: number;
-  gridMode: "full" | "minimal";
+  gridMode: "full" | "minimal"; showFiredEquation: boolean;
   map: MapConfig; scatter: ScatterConfig;
 }
 
@@ -190,6 +190,10 @@ export function ConfigPanel({ value, onChange, seed, onReroll, readOnly, hideSee
           <Check checked={value.gridMode === "minimal"}
             onChange={(on) => onChange({ gridMode: on ? "minimal" : "full" })}>
             Minimal grid (axes + boundary numbers only)
+          </Check>
+          <Check checked={value.showFiredEquation}
+            onChange={(on) => onChange({ showFiredEquation: on })}>
+            Show the fired equation on each soldier
           </Check>
         </div>
 

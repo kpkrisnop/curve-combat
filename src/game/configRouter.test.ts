@@ -3,11 +3,12 @@ import { parseConfigFromHash, configToHash } from "./configRouter";
 import type { MatchConfig } from "./matchLogic";
 import { arenaDefaults } from "./arenaDefaults";
 
-const DEFAULT: MatchConfig = { mode: "classic", rounds: 3, noTurn: false, turnSeconds: 60, role: "local", gridMode: "full", ...arenaDefaults() };
+const DEFAULT: MatchConfig = { mode: "classic", rounds: 3, noTurn: false, turnSeconds: 60, role: "local", gridMode: "full", showFiredEquation: true, ...arenaDefaults() };
 // sm=0: spawnMirror defaults to FALSE (flipped deliberately in cfd58cd — sides
 // roll independently unless the player asks for symmetry).
 // grid=full: gridMode is cosmetic and defaults to the full grid.
-const ARENA_HASH = "&w=20&h=12&rmn=0.5&rmx=2&gmn=0.5&gmx=2&sc=1.5&fm=1&mp=15&ts=1&eg=1&bx=3&ym=1.5&sp=2&sm=0&grid=full";
+// eq=1: showFiredEquation is cosmetic and defaults on.
+const ARENA_HASH = "&w=20&h=12&rmn=0.5&rmx=2&gmn=0.5&gmx=2&sc=1.5&fm=1&mp=15&ts=1&eg=1&bx=3&ym=1.5&sp=2&sm=0&grid=full&eq=1";
 
 describe("configToHash", () => {
   it("encodes classic 3-round default config with arena fields", () => {
@@ -34,6 +35,7 @@ describe("parseConfigFromHash", () => {
       turnSeconds: 60,
       role: "local",
       gridMode: "full",
+      showFiredEquation: true,
       map: { width: 30, height: 18 },
       scatter: {
         rMin: 1, rMax: 3, gapMin: 1, gapMax: 4, spawnClearance: 2.5, fieldMargin: 1, maxPlanets: 8,
@@ -87,6 +89,7 @@ describe("parseConfigFromHash", () => {
       turnSeconds: 45,
       role: "local",
       gridMode: "minimal",
+      showFiredEquation: false,
       map: { width: 28, height: 16 },
       scatter: {
         rMin: 0.5, rMax: 2.5, gapMin: 0.2, gapMax: 3, spawnClearance: 1.5, fieldMargin: 0.8, maxPlanets: 10,
@@ -103,5 +106,11 @@ describe("parseConfigFromHash", () => {
     // Explicit values survive the hash round-trip.
     expect(parseConfigFromHash("#game?mode=classic&rounds=3&noTurn=false&grid=minimal").gridMode).toBe("minimal");
     expect(parseConfigFromHash("#game?mode=classic&rounds=3&noTurn=false&grid=full").gridMode).toBe("full");
+  });
+
+  it("defaults showFiredEquation on and round-trips an explicit off", () => {
+    expect(parseConfigFromHash("#game?mode=classic&rounds=3&noTurn=false").showFiredEquation).toBe(true);
+    expect(parseConfigFromHash("#game?mode=classic&rounds=3&noTurn=false&eq=0").showFiredEquation).toBe(false);
+    expect(parseConfigFromHash("#game?mode=classic&rounds=3&noTurn=false&eq=1").showFiredEquation).toBe(true);
   });
 });

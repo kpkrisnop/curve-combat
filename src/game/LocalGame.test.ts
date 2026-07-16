@@ -39,6 +39,7 @@ function fakeRenderer() {
     setMirror: vi.fn(),
     playShot: vi.fn().mockResolvedValue(undefined),
     showFloatingDamage: vi.fn(),
+    recordEquation: vi.fn(),
   };
 }
 
@@ -168,6 +169,19 @@ describe("LocalGame", () => {
     // 2x would descend. The sign of the path is the observable proof of x→-x.
     expect(s.length).toBeGreaterThan(1);
     expect(s[1].p.y).toBeGreaterThan(s[0].p.y);
+    g.dispose();
+  });
+
+  it("records the VERBATIM typed equation for the on-soldier label, not the mirrored world latex (ADR 0010)", async () => {
+    const r = fakeRenderer(); const ui = fakeUi();
+    const g = new LocalGame(r as never, ui);
+    g.preview({ ...cfg, noTurn: true, scatter: { ...cfg.scatter, maxPlanets: 0 } }, 42);
+    g.begin();
+    await (ui as any).fire("blue", "2x");
+    // The sim got the reflected world latex (proved above); the badge must get
+    // exactly what BLUE typed — "2x", never the x→-x form. call = (playerId, text).
+    const call = (r.recordEquation as any).mock.calls.at(-1)!;
+    expect(call[1]).toBe("2x");
     g.dispose();
   });
 });
